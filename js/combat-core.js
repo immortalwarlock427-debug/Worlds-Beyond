@@ -126,10 +126,97 @@
     const before=m || {ft:0,left:0,surge:0};
     return {ft:before.ft+ft,left:plan.leftAfter,surge:before.surge+plan.free};
   }
+  // Attack / damage resolution. Dice are rolled by an adapter and passed in;
+  // the same outcomes can be checked by the sheet, a DM room or the server.
+  function attackHits(total, evasion, naturalDie) {
+    return naturalDie === 20 || total >= evasion;
+  }
+  function dualHits(mainTotal, offTotal, mainDie, offDie, evasion) {
+    return {
+      main: attackHits(mainTotal,evasion,mainDie),
+      off: attackHits(offTotal,evasion,offDie)
+    };
+  }
+  function criticalTotal(rolled, diceMaximum, critical) {
+    return rolled + (critical ? diceMaximum : 0);
+  }
+  function damagePacket(baseRoll, statModifier, flatBonus, extraRolls) {
+    const weaponDmg = Math.max(0,baseRoll+statModifier+flatBonus);
+    const extras = (extraRolls || []).map(value => Math.max(0,value));
+    return { weaponDmg, extras, total: weaponDmg + extras.reduce((sum,v) => sum+v,0) };
+  }
+  function offhandDamage(total) { return Math.floor(total/2); }
+  function armorDamage(total, armor) { return Math.max(0,total-armor); }
+  function dualArmorDamage(mainTotal,offTotal,armor,mainHit=true,offHit=true) {
+    return (mainHit ? armorDamage(mainTotal,armor) : 0) +
+      (offHit ? armorDamage(offhandDamage(offTotal),armor) : 0);
+  }
+  // Resistance is applied before armor. Overwhelming Force sets a final
+  // damage floor except for successful avoidance (dodge/parry in current UI).
+  function overwhelmFloor(amount, df) {
+    return df.of && df.dmg != null ? Math.max(amount,Math.floor(df.dmg/2)) : amount;
+  }
+  function resistedDamage(df) {
+    return df.res ? Math.floor(df.dmg/2) : df.dmg;
+  }
+  function afterArmor(df) {
+    return df.dmg == null ? null :
+      overwhelmFloor(Math.max(0,resistedDamage(df)-df.ar),df);
+  }
+  // The dice roll and any forced success are inputs; no randomness or UI state
+  // is held here. A save meets its DC; a dodge/parry beats an attack roll.
+  function defenseResult(df,rollTotal,forcedSuccess) {
+    const after=afterArmor(df);
+    if (df.type === 'block') {
+      return { won:false, unresolved:false,
+        take:after == null ? null : overwhelmFloor(Math.max(0,after-df.amt),df) };
+    }
+    if (df.vs == null && !forcedSuccess) {
+      return { won:false, unresolved:true, take:null };
+    }
+    const won=!!forcedSuccess || (df.area ? rollTotal>=df.vs : rollTotal>df.vs);
+    let take=null;
+    if (df.dmg != null) {
+      if (!won) take=after;
+      else if (df.type === 'dodge') {
+        take=df.area ? overwhelmFloor(Math.max(0,Math.floor(resistedDamage(df)/2)-df.ar),df) : 0;
+      } else take=overwhelmFloor(0,df);
+    }
+    return { won, unresolved:false, take };
+  }
+  function deathThreshold(levelScore, vitScore, trauma) {
+    return vitScore == null ? null : Math.max(0,levelScore+vitScore-5*(trauma || 0));
+  }
+  function diesAt(h,threshold) {
+    return threshold != null && (threshold === 0 ? h<0 : h<=-threshold);
+  }
+  // Health damage returns the next state, without modifying the character.
+  // Death's Mercy caps the first below-zero hit; concentration remains a
+  // separate reaction/roll managed by the sheet.
+  function damageHealth(before,amount,threshold,down) {
+    const amt=Math.max(0,Math.round(amount));
+    let after=before-amt;
+    const dropped=before>0 && after<=0;
+    let nextDown=down ? {mercy:!!down.mercy,stable:!!down.stable} : null;
+    if (after<=0 && (dropped || !nextDown)) nextDown={mercy:false,stable:false};
+    let mercyCapped=false;
+    if (after<0 && !nextDown.mercy) {
+      nextDown.mercy=true;
+      if (threshold!=null && threshold>0) {
+        const cap=Math.floor(threshold/2);
+        if (after < -cap) {after=-cap;mercyCapped=true;}
+      }
+    }
+    return {after,down:nextDown,dropped,dead:diesAt(after,threshold),mercyCapped,
+      concentrationDc:Math.max(12,Math.floor(amt/2)),amount:amt};
+  }
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
     autoMod,modifier,attackApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
-    spendAp,refundAp,movePlan,movementAfter
+    spendAp,refundAp,movePlan,movementAfter,
+    attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,
+    armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
+    defenseResult,deathThreshold,diesAt,damageHealth
   };
 })();
