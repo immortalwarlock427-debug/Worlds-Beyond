@@ -13,8 +13,20 @@
   };
   const TYPES = ['active', 'passive', 'reaction', 'other'];
   const propNames = ['name', 'category', 'type', 'description', 'apCost', 'resourceId',
-    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes'];
+    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes', 'effectTarget', 'effectValue'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
+  const effectTargets = ['none', 'movement'];
+  const signedNumber = (n) => {
+    if (n == null || String(n).trim() === '') return 0;
+    const value = Number(n);
+    return Number.isFinite(value) ? Math.max(-99999, Math.min(99999, Math.round(value))) : 0;
+  };
+  // Effect bonuses are derived, not written to character fields or gear totals.
+  function movementBonus(state) {
+    return (state.abilities || []).reduce((total, ability) =>
+      total + (ability.effectTarget === 'movement' && ability.durationLeft > 0 ?
+        signedNumber(ability.effectValue) : 0), 0);
+  }
 
   function normalizeAbility(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -40,6 +52,8 @@
         Math.min(optionalNumber(value.capacityMax), optionalNumber(value.capacityCurrent) || 0),
       cooldownLeft: optionalNumber(value.cooldownLeft) || 0,
       durationLeft: optionalNumber(value.durationLeft) || 0,
+      effectTarget: effectTargets.includes(value.effectTarget) ? value.effectTarget : 'none',
+      effectValue: signedNumber(value.effectValue),
       favorite: value.favorite === true
     };
   }
@@ -64,6 +78,9 @@
     if (a.uses !== '' && a.usesLeft <= 0) return { ok: false, message: a.name + ' has no uses left.' };
     if (a.capacityMax !== '' && a.capacityCurrent >= a.capacityMax) {
       return { ok: false, message: a.name + ' is at its limit (' + a.capacityCurrent + '/' + a.capacityMax + '). Release something first.' };
+    }
+    if (a.effectTarget === 'movement' && a.effectValue !== 0 && (a.duration === '' || a.duration < 1)) {
+      return { ok: false, message: 'Set a duration of at least 1 turn for ' + a.name + ' to apply a Movement effect.' };
     }
     const ap = a.apCost === '' ? 0 : a.apCost;
     if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
@@ -168,6 +185,10 @@
       if (ability.capacityMax !== '') badges.push(ability.capacityCurrent + '/' + ability.capacityMax + ' active');
       if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
       if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
+      if (ability.effectTarget === 'movement' && ability.effectValue) {
+        const amount = (ability.effectValue > 0 ? '+' : '') + ability.effectValue + ' ft/AP';
+        badges.push(amount + (ability.durationLeft ? ' active' : ' effect'));
+      }
       return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') + '" data-ability-id="' + esc(ability.id) + '">' +
         '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
         (open.has(ability.id) ? ' open' : '') + '>' +
@@ -208,6 +229,14 @@
               '<label class="ability-field"><span class="foot-label">Currently active / held</span><input type="number" min="0" max="' + ability.capacityMax + '" value="' + ability.capacityCurrent + '" data-ability-prop="capacityCurrent"></label>' +
               '<button type="button" class="btn" data-ability-action="release" title="Remove one currently active or held object">−1 Release</button>') +
           '</div>' +
+          '<div class="ability-effect-config">' +
+            '<label class="ability-field"><span class="foot-label">Automatic effect</span><select data-ability-prop="effectTarget">' +
+              '<option value="none"' + (ability.effectTarget === 'none' ? ' selected' : '') + '>None — description only</option>' +
+              '<option value="movement"' + (ability.effectTarget === 'movement' ? ' selected' : '') + '>Movement (feet per AP)</option>' +
+            '</select></label>' +
+            field('Bonus / penalty (feet per AP)', 'effectValue', ability.effectValue, 'number', ' step="1" title="Positive adds movement; negative subtracts movement. Set a duration above."') +
+          '</div>' +
+          '<p class="ability-effect-hint">Movement effects require a duration. Active bonuses stack across different abilities and expire on turn start; your base movement and equipment remain unchanged.</p>' +
           '<label class="ability-field"><span class="foot-label">Notes</span>' +
             '<textarea data-ability-prop="notes" rows="2" maxlength="6000" placeholder="Optional conditions, limits, or reminders.">' +
             esc(ability.notes) + '</textarea></label>' +
@@ -310,6 +339,14 @@
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
       if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
+      if (prop === 'effectTarget') {
+        ability.effectTarget = effectTargets.includes(ability.effectTarget) ? ability.effectTarget : 'none';
+        ability.durationLeft = 0; // Reconfigure safely: don't keep an old effect applied.
+      }
+      if (prop === 'effectValue') {
+        ability.effectValue = signedNumber(input.value);
+        ability.durationLeft = 0; // Changing the amount doesn't alter an already-running bonus.
+      }
       if (prop === 'capacityMax') {
         ability.capacityCurrent = ability.capacityMax === '' ? 0 :
           Math.min(ability.capacityMax, ability.capacityCurrent);
@@ -328,6 +365,7 @@
       if (!edit) return;
       if (edit.prop === 'name') edit.ability.name = edit.ability.name.trim() || 'Unnamed ability';
       if (edit.prop === 'category') edit.ability.category = edit.ability.category.trim() || 'General';
+      if ((edit.prop === 'effectTarget' || edit.prop === 'effectValue') && controls.refresh) controls.refresh();
       render();
     });
     list.addEventListener('click', (event) => {
@@ -367,6 +405,7 @@
         ability.durationLeft = 0;
         feedback.textContent = 'Ended ' + ability.name + ' duration.';
         feedback.classList.remove('ability-error');
+        if (controls.refresh) controls.refresh();
       } else if (action === 'release') {
         if (ability.capacityMax !== '' && ability.capacityCurrent > 0) {
           ability.capacityCurrent--;
@@ -388,5 +427,5 @@
     };
   }
 
-  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest };
+  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest, movementBonus };
 })();
