@@ -27,6 +27,12 @@
       total + (ability.effectTarget === 'movement' && ability.durationLeft > 0 ?
         signedNumber(ability.effectValue) : 0), 0);
   }
+  // Display and combat must agree: calculate the same effective movement once
+  // from an unmodified base, never by adding a bonus to an already-adjusted input.
+  function effectiveMovement(state, base) {
+    const value = Number(base);
+    return Number.isFinite(value) ? Math.max(0, Math.floor(value + movementBonus(state))) : 0;
+  }
 
   function normalizeAbility(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -427,5 +433,5 @@
     };
   }
 
-  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest, movementBonus };
+  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest, movementBonus, effectiveMovement };
 })();
