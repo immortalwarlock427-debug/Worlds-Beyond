@@ -120,7 +120,7 @@
           '<div class="ability-editor-row">' +
             field('Cooldown (turns)', 'cooldown', ability.cooldown, 'number') +
             field('Duration (turns)', 'duration', ability.duration, 'number') +
-            field('Uses / charges', 'uses', ability.uses, 'number') +
+            field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Leave blank for unlimited uses. Enter 0 to indicate none available."') +
           '</div>' +
           '<label class="ability-field"><span class="foot-label">Notes</span>' +
             '<textarea data-ability-prop="notes" rows="2" maxlength="6000" placeholder="Optional conditions, limits, or reminders.">' +
