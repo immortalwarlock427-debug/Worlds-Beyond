@@ -83,3 +83,9 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 - Active DM encounters can now move a selected **current actor** along a calculated route by spending AP and Surge, respecting walls, occupied squares, difficult terrain and diagonal corners. The UI previews feet and cost and requires confirmation. Free DM placement stays separate.
 - Imported PC snapshots include effective Movement and Surge from AGL; NPC movement can be edited before combat. New turn restores movement counters. No player sheet, character file, legacy foe record or `game.tokens` data is overwritten.
 - **Next:** shared player-facing encounter movement with robust authoritative state/sync; then initiative/encounter action log and export, server authentication and multiplayer/cloud saves. Animated dice UI can be layered on top of verified roll events afterward.
+
+### PR #25 usability follow-up
+
+- Replaced unreliable native map picker with three visible map selection buttons and added local movement error/status feedback.
+- Auto-select the current turn for MoveToken; disable AP movement once combat is finished.
+- Return finished combat to editable setup with the same players, NPCs, HP, initiative and tokens via **Reuse roster / Edit setup**, while resetting turn/AP/Surge/movement counters. New empty roster remains a separate destructive operation.
