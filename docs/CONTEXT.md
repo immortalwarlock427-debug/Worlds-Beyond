@@ -210,7 +210,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 34)
+## What the site does (Draft 35)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
@@ -413,3 +413,10 @@ See [ROADMAP.md](ROADMAP.md).
 - Fixed equally short paths that zigzagged via unnecessary diagonals. `WBEncounterMap.movementRoute` now ranks routes lexicographically: movement feet first, then fewer diagonal steps, fewer turns, and less drift from the direct line. Direction-aware Dijkstra states preserve correct turn-minimization. Straight horizontal and vertical routes remain straight on open grids.
 - After Confirm move, `WBEncounter.MoveToken` still validates and commits destination/AP immediately. `js/dm-map.js` uses the accepted command's `event.path` to animate a separate temporary token along each square (170 ms/step), hiding the committed destination token until the animation finishes. Interruptions, map changes, or refreshes reveal the final saved position. Reduced-motion preferences are respected; a timed fallback covers browsers without Web Animations.
 - Regression coverage now checks exact straight routes, each animation keyframe, and that AP is deducted once before the animation ends. No sheet saves or legacy map tokens are changed.
+
+## Local Player Encounter Preview (Draft 35)
+
+- A separate `player.html` UI is now available via Character Sheet or DM Room. In the **same browser/origin**, it reads the existing DM-owned optional `game.encounter`, shows the active turn and selected PC's own Health, AP, Movement, Surge, AR and initiative, plus public combatant names/positions on the same map. Other NPC/PC HP and AR do not appear in the player view.
+- Its local **Preview as** selection is a convenience, **not authentication**: anyone with access to this browser can select any imported PC. This cannot be used as a real remote session, an access-control mechanism or a code-based player login.
+- `WBPlayerSession.issue` whitelists only `MoveToken`, `SpendAP`, and `EndTurn`; it forces the selected PC ID, expected revision and role='player', and reuses `WBEncounter` turn/owner/AP/path validation. No player UI commands can alter damage, foes, healing, setup or DM map selection. The DM page receives same-origin changes through local storage events. Character sheet files, old `game.tokens` and `game.foes` remain unchanged.
+- **Next:** a hosted/authenticated session with join code, server-enforced actor ownership and revision-safe writes, then cross-device events and player/DM information filtering from a trusted backend. Browser seat selection is deliberately not secure and does not sync across devices.
