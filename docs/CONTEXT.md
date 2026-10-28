@@ -210,7 +210,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 30)
+## What the site does (Draft 31)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
@@ -374,3 +374,9 @@ tuning together.
 ## Roadmap and website plan
 
 See [ROADMAP.md](ROADMAP.md).
+
+## Offline encounter command foundation (Draft 31)
+
+- `js/encounter-actions.js` exposes `WBEncounter` for a future multi-character DM screen. Commands for adding actors, initiative, turn order, Action Point spending, DM-applied damage/healing, manual placement and ending an encounter are validated against a revisioned snapshot; duplicate action IDs are recognized. All mutations return a new encounter rather than modifying the caller's object.
+- Shared formulas continue to live in `WBCombat`. Turn starts restore AP and apply existing 4-Health bleeding; resistance before Armor Rating and first-hit Death's Mercy are preserved. Healing from 0 or below above 0 adds a Trauma.
+- The optional encounter lives in the separate game save, not the character export. No DM screen, player movement authority, account/cloud sync, secure role enforcement or random-dice verification exists yet. A dice icon or animated dice overlay is future UI polish; the roll must be computed independently of its animation.
