@@ -13,19 +13,54 @@
   };
   const TYPES = ['active', 'passive', 'reaction', 'other'];
   const propNames = ['name', 'category', 'type', 'description', 'apCost', 'resourceId',
-    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes', 'effectTarget', 'effectValue'];
+    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
-  const effectTargets = ['none', 'movement'];
+  const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
+  const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
+  const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  const MAX_EFFECTS = 12;
   const signedNumber = (n) => {
     if (n == null || String(n).trim() === '') return 0;
     const value = Number(n);
     return Number.isFinite(value) ? Math.max(-99999, Math.min(99999, Math.round(value))) : 0;
   };
-  // Effect bonuses are derived, not written to character fields or gear totals.
-  function movementBonus(state) {
-    return (state.abilities || []).reduce((total, ability) =>
-      total + (ability.effectTarget === 'movement' && ability.durationLeft > 0 ?
-        signedNumber(ability.effectValue) : 0), 0);
+  // Migrates existing single-effect characters; effects always describe temporary,
+  // derived bonuses. Base scores, equipment and resource maximums stay untouched.
+  function normalizeEffect(e) {
+    if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
+    return {
+      id: typeof e.id === 'string' && /^eff[a-z0-9]{6,40}$/.test(e.id) ? e.id : effectId(),
+      target: effectTargets.includes(e.target) ? e.target : 'none',
+      value: signedNumber(e.value),
+      stat: STATS.includes(e.stat) ? e.stat : 'STR',
+      resourceId: clean(e.resourceId, 100)
+    };
+  }
+  function normalizeEffects(a) {
+    const source = Array.isArray(a.effects) ? a.effects :
+      (a.effectTarget && a.effectTarget !== 'none' ? [{
+        target: a.effectTarget, value: a.effectValue
+      }] : []);
+    const seen = new Set();
+    return source.slice(0, MAX_EFFECTS).map(normalizeEffect).filter(Boolean).map((e) => {
+      if (seen.has(e.id)) e.id = effectId();
+      seen.add(e.id);
+      return e;
+    });
+  }
+  function effectBonus(state, target, key) {
+    return (state.abilities || []).reduce((total, a) => {
+      if (!(a.durationLeft > 0)) return total;
+      return total + (a.effects || []).reduce((subtotal, e) =>
+        subtotal + (e.target === target &&
+          (target === 'stat' ? e.stat === key :
+           target === 'resource-max' ? e.resourceId === key : true) ?
+           signedNumber(e.value) : 0), 0);
+    }, 0);
+  }
+  const movementBonus = (state) => effectBonus(state, 'movement');
+  function resourceMax(state, resource) {
+    return Math.max(1, (Number(resource.max) || 1) + effectBonus(state, 'resource-max', resource.id));
   }
   // Display and combat must agree: calculate the same effective movement once
   // from an unmodified base, never by adding a bonus to an already-adjusted input.
@@ -58,8 +93,7 @@
         Math.min(optionalNumber(value.capacityMax), optionalNumber(value.capacityCurrent) || 0),
       cooldownLeft: optionalNumber(value.cooldownLeft) || 0,
       durationLeft: optionalNumber(value.durationLeft) || 0,
-      effectTarget: effectTargets.includes(value.effectTarget) ? value.effectTarget : 'none',
-      effectValue: signedNumber(value.effectValue),
+      effects: normalizeEffects(value),
       favorite: value.favorite === true
     };
   }
@@ -85,8 +119,12 @@
     if (a.capacityMax !== '' && a.capacityCurrent >= a.capacityMax) {
       return { ok: false, message: a.name + ' is at its limit (' + a.capacityCurrent + '/' + a.capacityMax + '). Release something first.' };
     }
-    if (a.effectTarget === 'movement' && a.effectValue !== 0 && (a.duration === '' || a.duration < 1)) {
-      return { ok: false, message: 'Set a duration of at least 1 turn for ' + a.name + ' to apply a Movement effect.' };
+    if (a.effects && a.effects.some((e) => e.target !== 'none' && e.value !== 0)) {
+      if (a.duration === '' || a.duration < 1)
+        return { ok: false, message: 'Set a duration of at least 1 turn for ' + a.name + ' to apply its automatic effects.' };
+      const missing = a.effects.find((e) => e.target === 'resource-max' && e.value !== 0 &&
+        !(state.resources || []).some((r) => r.id === e.resourceId));
+      if (missing) return { ok: false, message: 'Choose an existing custom resource for the maximum-resource effect.' };
     }
     const ap = a.apCost === '' ? 0 : a.apCost;
     if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
@@ -175,6 +213,32 @@
         (extra || '') + ' value="' + esc(val) + '"></label>';
     }
 
+    function effectRow(e, state) {
+      const targetOptions = [
+        ['none', 'None'], ['movement', 'Movement (ft/AP)'], ['armor', 'Armor Rating'],
+        ['evasion', 'Natural Evasion'], ['stat', 'Stat score'], ['resource-max', 'Custom resource maximum']
+      ];
+      return '<div class="ability-effect-row" data-effect-id="' + esc(e.id) + '">' +
+        '<label class="ability-field"><span class="foot-label">Target</span><select data-effect-prop="target">' +
+          targetOptions.map(([v, title]) => '<option value="' + v + '"' + (e.target === v ? ' selected' : '') + '>' + title + '</option>').join('') +
+        '</select></label>' +
+        (e.target === 'stat' ?
+          '<label class="ability-field"><span class="foot-label">Stat</span><select data-effect-prop="stat">' +
+          STATS.map((k) => '<option value="' + k + '"' + (k === e.stat ? ' selected' : '') + '>' + k + '</option>').join('') +
+          '</select></label>' : '') +
+        (e.target === 'resource-max' ?
+          '<label class="ability-field"><span class="foot-label">Resource</span><select data-effect-prop="resourceId">' +
+          '<option value="">Choose resource</option>' +
+          (state.resources || []).map((r) => '<option value="' + esc(r.id) + '"' + (e.resourceId === r.id ? ' selected' : '') + '>' + esc(r.name) + '</option>').join('') +
+          (!(state.resources || []).some((r) => r.id === e.resourceId) && e.resourceId ?
+            '<option value="' + esc(e.resourceId) + '" selected>Missing resource</option>' : '') +
+          '</select></label>' : '') +
+        '<label class="ability-field"><span class="foot-label">Bonus / penalty</span>' +
+          '<input data-effect-prop="value" type="number" inputmode="numeric" min="-99999" max="99999" step="1" value="' + e.value + '"></label>' +
+        '<button type="button" class="btn danger" data-ability-action="remove-effect" aria-label="Remove effect">Remove</button>' +
+      '</div>';
+    }
+
     function card(ability) {
       const badges = [ability.type.charAt(0).toUpperCase() + ability.type.slice(1)];
       if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
@@ -191,10 +255,14 @@
       if (ability.capacityMax !== '') badges.push(ability.capacityCurrent + '/' + ability.capacityMax + ' active');
       if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
       if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
-      if (ability.effectTarget === 'movement' && ability.effectValue) {
-        const amount = (ability.effectValue > 0 ? '+' : '') + ability.effectValue + ' ft/AP';
-        badges.push(amount + (ability.durationLeft ? ' active' : ' effect'));
-      }
+      (ability.effects || []).forEach((e) => {
+        if (e.target === 'none' || !e.value) return;
+        const name = e.target === 'movement' ? 'ft/AP' :
+          e.target === 'armor' ? 'Armor' : e.target === 'evasion' ? 'Evasion' :
+          e.target === 'stat' ? e.stat :
+          ((getState().resources || []).find((r) => r.id === e.resourceId) || { name: 'Missing resource' }).name + ' max';
+        badges.push((e.value > 0 ? '+' : '') + e.value + ' ' + name + (ability.durationLeft ? ' active' : ''));
+      });
       return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') + '" data-ability-id="' + esc(ability.id) + '">' +
         '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
         (open.has(ability.id) ? ' open' : '') + '>' +
@@ -235,14 +303,14 @@
               '<label class="ability-field"><span class="foot-label">Currently active / held</span><input type="number" min="0" max="' + ability.capacityMax + '" value="' + ability.capacityCurrent + '" data-ability-prop="capacityCurrent"></label>' +
               '<button type="button" class="btn" data-ability-action="release" title="Remove one currently active or held object">−1 Release</button>') +
           '</div>' +
-          '<div class="ability-effect-config">' +
-            '<label class="ability-field"><span class="foot-label">Automatic effect</span><select data-ability-prop="effectTarget">' +
-              '<option value="none"' + (ability.effectTarget === 'none' ? ' selected' : '') + '>None — description only</option>' +
-              '<option value="movement"' + (ability.effectTarget === 'movement' ? ' selected' : '') + '>Movement (feet per AP)</option>' +
-            '</select></label>' +
-            field('Bonus / penalty (feet per AP)', 'effectValue', ability.effectValue, 'number', ' step="1" title="Positive adds movement; negative subtracts movement. Set a duration above."') +
+          '<div class="ability-effects">' +
+            '<div class="ability-effects-head"><span>Automatic effects</span>' +
+              '<button type="button" class="btn" data-ability-action="add-effect"' +
+                (ability.effects.length >= MAX_EFFECTS ? ' disabled' : '') + '>+ Add effect</button></div>' +
+            (ability.effects.length ? ability.effects.map((e) => effectRow(e, getState())).join('') :
+              '<p class="ability-effect-hint">No automatic effects. Add Movement, Armor, Evasion, a stat, or a custom resource maximum.</p>') +
+            '<p class="ability-effect-hint">Bonuses stack while active and expire with this ability’s duration. Base stats, gear and resource maximums remain unchanged. Maximum-resource effects do not refill the pool.</p>' +
           '</div>' +
-          '<p class="ability-effect-hint">Movement effects require a duration. Active bonuses stack across different abilities and expire on turn start; your base movement and equipment remain unchanged.</p>' +
           '<label class="ability-field"><span class="foot-label">Notes</span>' +
             '<textarea data-ability-prop="notes" rows="2" maxlength="6000" placeholder="Optional conditions, limits, or reminders.">' +
             esc(ability.notes) + '</textarea></label>' +
@@ -345,14 +413,6 @@
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
       if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
-      if (prop === 'effectTarget') {
-        ability.effectTarget = effectTargets.includes(ability.effectTarget) ? ability.effectTarget : 'none';
-        ability.durationLeft = 0; // Reconfigure safely: don't keep an old effect applied.
-      }
-      if (prop === 'effectValue') {
-        ability.effectValue = signedNumber(input.value);
-        ability.durationLeft = 0; // Changing the amount doesn't alter an already-running bonus.
-      }
       if (prop === 'capacityMax') {
         ability.capacityCurrent = ability.capacityMax === '' ? 0 :
           Math.min(ability.capacityMax, ability.capacityCurrent);
@@ -360,18 +420,43 @@
       save();
       return { ability, prop };
     }
+    function updateEffect(input) {
+      const cardElement = input.closest('[data-ability-id]');
+      const a = cardElement && byId(cardElement.dataset.abilityId);
+      const item = input.closest('[data-effect-id]');
+      const effect = a && item && a.effects.find((e) => e.id === item.dataset.effectId);
+      if (!effect) return false;
+      const prop = input.dataset.effectProp;
+      if (prop === 'target') effect.target = effectTargets.includes(input.value) ? input.value : 'none';
+      else if (prop === 'value') effect.value = signedNumber(input.value);
+      else if (prop === 'stat') effect.stat = STATS.includes(input.value) ? input.value : 'STR';
+      else if (prop === 'resourceId') effect.resourceId = clean(input.value, 100);
+      else return false;
+      a.durationLeft = 0; // Editing an active effect cancels it; no stale bonuses.
+      save();
+      return true;
+    }
     list.addEventListener('input', (event) => {
+      const effectInput = event.target.closest('[data-effect-prop]');
+      if (effectInput) { updateEffect(effectInput); return; }
       const input = event.target.closest('[data-ability-prop]');
       if (input) updateInput(input);
     });
     list.addEventListener('change', (event) => {
+      const effectInput = event.target.closest('[data-effect-prop]');
+      if (effectInput) {
+        updateEffect(effectInput);
+        if (controls.refresh) controls.refresh();
+        render();
+        return;
+      }
       const input = event.target.closest('[data-ability-prop]');
       if (!input) return;
       const edit = updateInput(input);
       if (!edit) return;
       if (edit.prop === 'name') edit.ability.name = edit.ability.name.trim() || 'Unnamed ability';
       if (edit.prop === 'category') edit.ability.category = edit.ability.category.trim() || 'General';
-      if ((edit.prop === 'effectTarget' || edit.prop === 'effectValue') && controls.refresh) controls.refresh();
+
       render();
     });
     list.addEventListener('click', (event) => {
@@ -389,11 +474,23 @@
         const copy = normalizeAbility(Object.assign({}, ability, {
           id: id(), name: 'Copy of ' + ability.name, favorite: false,
           usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0,
-          capacityCurrent: 0
+          capacityCurrent: 0,
+          effects: ability.effects.map((e) => Object.assign({}, e, { id: effectId() }))
         }));
         getState().abilities.push(copy);
         open.add(copy.id);
         search.value = ''; category.value = ''; favorites.checked = false;
+      } else if (action === 'add-effect') {
+        if (ability.effects.length < MAX_EFFECTS) ability.effects.push(normalizeEffect({
+          id: effectId(), target: 'none', value: 0
+        }));
+        ability.durationLeft = 0;
+        if (controls.refresh) controls.refresh();
+      } else if (action === 'remove-effect') {
+        const item = button.closest('[data-effect-id]');
+        ability.effects = ability.effects.filter((e) => e.id !== (item && item.dataset.effectId));
+        ability.durationLeft = 0;
+        if (controls.refresh) controls.refresh();
       } else if (action === 'favorite') {
         ability.favorite = !ability.favorite;
       } else if (action === 'use') {
@@ -433,5 +530,8 @@
     };
   }
 
-  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest, movementBonus, effectiveMovement };
+  window.WBAbilities = {
+    normalizeState, init, activate, advanceTurn, resetForRest,
+    movementBonus, effectiveMovement, effectBonus, resourceMax
+  };
 })();
