@@ -1270,3 +1270,28 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
   .sheet-tabs { top: 55px; margin-top: -24px; padding-inline: 0; }
   .sheet-tabs button { font-size: 12px; padding: 9px 10px; }
 }
+
+/* Scalable Ability Library: filter fields wrap, compact cards keep Use accessible. */
+.ability-toolbar { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; align-items:end; }
+.ability-toolbar .ability-search { grid-column:span 2; }
+.ability-toolbar .ability-field, .ability-toolbar label { min-width:0; }
+.ability-view-controls { display:flex; flex-wrap:wrap; align-items:center; gap:9px 16px; }
+.ability-view-controls .ability-favorites { padding:4px 0; }
+.ability-view-controls #abilityAdd { margin-left:auto; }
+.ability-list.is-compact { gap:5px; }
+.ability-list.is-compact .ability-summary { min-height:41px; padding:7px 12px; gap:5px 9px; }
+.ability-list.is-compact .ability-summary-name { font-size:15px; flex:0 1 auto; }
+.ability-list.is-compact .ability-summary-category { font-size:11px; }
+.ability-list.is-compact .ability-summary-badges .ability-tag:nth-child(n+3) { display:none; }
+.ability-list.is-compact .ability-tag { padding:1px 6px; font-size:11px; }
+.ability-list.is-compact .ability-quick-use { top:5px; min-height:30px; }
+.ability-list.is-compact .ability-card[open] .ability-summary { padding-block:10px; }
+@media(max-width:750px) {
+  .ability-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:440px) {
+  .ability-toolbar { grid-template-columns:minmax(0,1fr); }
+  .ability-toolbar .ability-search { grid-column:auto; }
+  .ability-view-controls { gap:7px 10px; }
+  .ability-view-controls #abilityAdd { margin-left:0; }
+}
