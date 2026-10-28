@@ -93,6 +93,10 @@
         list.innerHTML = '<p class="resource-empty">No additional resources. Add Energy, Stamina, Heat, or anything your character uses.</p>';
         return;
       }
+      if (!shown.length) {
+        list.innerHTML = '<p class="resource-empty">No custom resources are available in this form. Switch forms or select “Show resources from other forms” to organize them. Your resource balances are preserved.</p>';
+        return;
+      }
       list.innerHTML = shown.map((r) => {
         const active = resourceVisible(state, r);
         const forms = state.abilityLoadouts || [];
@@ -222,7 +226,7 @@
       if (action === 'remove') {
         if (!window.confirm('Remove ' + r.name + '? This cannot be undone unless you import a saved character.')) return;
         getState().resources = getState().resources.filter((x) => x.id !== r.id);
-      } else if (action === 'refill') r.current = r.max;
+      } else if (action === 'refill') r.current = effectiveMax(r);
       else {
         const field = card.querySelector('[data-resource-amount]');
         // Save the amount before the card is rebuilt; never revert to the default 5.
