@@ -828,7 +828,9 @@ body { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 .views button[aria-pressed="true"] { background: var(--brass); color: var(--sheet); }
 .views button:focus-visible { outline: 2px solid var(--brass); outline-offset: -3px; }
 main.sheet:not(.view-map) > .mapsec { display: none; }
+main.sheet:not(.view-status) > .statussec { display: none; }
 main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
+main.view-status > section:not(.statussec), main.view-status > footer { display: none; }
 
 /* battlemap */
 .note b.free-word { color: var(--verdigris); }
@@ -1169,3 +1171,46 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .ability-effect-row { display:flex; align-items:end; gap:8px; flex-wrap:wrap; border-top:1px dashed var(--rule); padding-top:8px; }
 .ability-effect-row .ability-field { flex:1 1 140px; }
 .resource-effect-bonus { color:var(--verdigris); font-size:12px; font-weight:700; }
+
+/* Status Effects: a third navigable character view, with no new combat engine. */
+.statussec { min-width:0; display:grid; gap:14px; align-content:start; }
+.status-summary { font-family:var(--font-label); font-size:13px; font-weight:700; letter-spacing:.04em; color:var(--verdigris); margin:0; }
+.status-feedback { margin:0; min-height:0; font-size:13px; color:var(--verdigris); }
+.status-feedback:empty { display:none; }
+.status-panel { display:grid; gap:12px; min-width:0; border:1px solid var(--rule); border-radius:5px; padding:14px; }
+.status-section-head { display:flex; align-items:baseline; justify-content:space-between; gap:9px; flex-wrap:wrap; }
+.status-section-head h3 { margin:0; font-family:var(--font-display); font-size:20px; }
+.status-help { font-size:12px; color:var(--muted); }
+.status-list { display:grid; gap:10px; }
+.status-empty { border:1px dashed var(--rule); border-radius:4px; padding:16px; margin:0; font-size:13px; color:var(--muted); }
+.status-card { padding:12px; border:1px solid var(--rule); border-radius:5px; background:var(--field); display:grid; gap:9px; min-width:0; }
+.status-card-top { display:flex; justify-content:space-between; align-items:start; flex-wrap:wrap; gap:10px; }
+.status-card-top h3 { margin:4px 0 0; font-family:var(--font-display); font-size:18px; overflow-wrap:anywhere; }
+.status-kind { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+.status-kind.status-buff { color:var(--verdigris); }
+.status-kind.status-debuff { color:var(--blood); }
+.status-kind.status-condition { color:var(--brass); }
+.status-card-actions { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+.status-turns { font-size:13px; color:var(--brass); }
+.status-modifiers { display:flex; flex-wrap:wrap; gap:7px; }
+.status-modifier { border:1px solid var(--verdigris); border-radius:30px; color:var(--verdigris); padding:4px 9px; font-size:12px; font-weight:700; }
+.status-secondary { margin:0; color:var(--muted); font-size:12px; }
+.status-note { margin:0; white-space:pre-wrap; font-size:13px; overflow-wrap:anywhere; }
+.status-edit { display:flex; gap:10px; flex-wrap:wrap; }
+.status-edit .ability-field { flex:1 1 180px; max-width:320px; }
+.status-form { display:grid; gap:10px; padding-top:15px; border-top:1px dashed var(--rule); }
+.status-form h4 { margin:0; font-family:var(--font-display); font-size:17px; }
+.status-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.status-form .ability-field { display:grid; gap:5px; min-width:0; }
+.status-form input, .status-form select, .status-form textarea, .status-edit input { width:100%; min-width:0; background:var(--field); border:1px solid var(--rule); color:var(--ink); padding:8px; border-radius:4px; font:inherit; }
+.status-form textarea { resize:vertical; }
+.status-form > button { justify-self:start; }
+@media(max-width:540px) {
+ .status-form-grid { grid-template-columns:1fr; }
+ .status-card-actions { width:100%; justify-content:space-between; }
+ .views { display:flex; flex-wrap:nowrap; width:100%; max-width:100%; }
+ .views button { flex:1 1 0; min-width:0; padding:9px 5px; font-size:12px; letter-spacing:0; white-space:nowrap; }
+}
+
+.status-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.status-actions .status-summary { flex:1 1 180px; }

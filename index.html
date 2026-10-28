@@ -25,6 +25,7 @@
 
   <nav class="views" id="viewNav" aria-label="Sheet or battlemap">
     <button type="button" data-view="sheet" aria-pressed="true">Sheet</button>
+    <button type="button" data-view="status" aria-pressed="false">Status Effects</button>
     <button type="button" data-view="map" aria-pressed="false">Battlemap</button>
   </nav>
 
@@ -49,6 +50,35 @@
       </div>
     </div>
   </div>
+
+  <section class="statussec" id="statusSec" aria-labelledby="statusHead">
+    <div class="sec-head">
+      <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
+      <h2 id="statusHead">Status Effects</h2>
+    </div>
+    <p class="note">All currently active timed ability effects and manually recorded conditions, together with their sources and remaining turns. Automatic ability bonuses affect the sheet; manually added conditions are descriptions only until their mechanics are supported.</p>
+    <div class="status-actions"><p id="statusSummary" class="status-summary" role="status" aria-live="polite">0 active statuses</p><button type="button" class="btn strong" id="statusNextTurn">Start my turn</button></div>
+    <p id="statusFeedback" class="status-feedback" role="status" aria-live="polite"></p>
+    <div class="status-panel">
+      <div class="status-section-head"><h3>Active ability effects</h3><span class="status-help">End an effect early without refunding its cost</span></div>
+      <div class="status-list" id="statusAbilityList"></div>
+    </div>
+    <div class="status-panel">
+      <div class="status-section-head"><h3>Conditions and other effects</h3><span class="status-help">Record poison, blessings, injuries, and custom effects</span></div>
+      <div class="status-list" id="statusManualList"></div>
+      <form id="statusAddForm" class="status-form">
+        <h4>Add a condition or effect</h4>
+        <div class="status-form-grid">
+          <label class="ability-field"><span class="foot-label">Name</span><input id="statusName" type="text" maxlength="100" placeholder="e.g. Poisoned" required></label>
+          <label class="ability-field"><span class="foot-label">Type</span><select id="statusType"><option value="condition">Condition</option><option value="buff">Buff</option><option value="debuff">Debuff</option><option value="other">Other</option></select></label>
+          <label class="ability-field"><span class="foot-label">Source</span><input id="statusSource" maxlength="100" placeholder="e.g. Creature or spell"></label>
+          <label class="ability-field"><span class="foot-label">Duration (turns)</span><input id="statusDuration" type="number" min="1" max="999999" placeholder="Until removed"></label>
+        </div>
+        <label class="ability-field"><span class="foot-label">Notes / effect</span><textarea id="statusNotes" rows="2" maxlength="1200" placeholder="Optional mechanics or reminders"></textarea></label>
+        <button class="btn strong" type="submit">+ Add status effect</button>
+      </form>
+    </div>
+  </section>
 
   <section class="mapsec" id="mapSec" aria-labelledby="mapHead">
     <div class="sec-head">
@@ -646,7 +676,7 @@
 
   <section class="ability-section" id="abilitySection" aria-labelledby="abilityHead">
     <div class="sec-head"><svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg><h2 id="abilityHead">Ability Library</h2></div>
-    <p class="note">Create custom techniques, spells, traits, and passives. Use ability automatically spends configured AP and resources, and starts charge and cooldown tracking. Starting your turn advances cooldowns and durations. Durations are tracked only: bonuses to movement, damage, and stats still need to be applied manually.</p>
+    <p class="note">Create custom techniques, spells, traits, and passives. Use ability automatically spends configured AP and resources, and starts charge and cooldown tracking. Starting your turn advances cooldowns and durations. Configured effects on Movement, Armor, Evasion, stats and custom resource maximums apply automatically; other effects remain descriptive.</p>
     <div class="ability-toolbar">
       <label class="ability-search"><span class="foot-label">Search abilities</span><input id="abilitySearch" type="search" autocomplete="off" placeholder="Name, effect, notes…"></label>
       <label class="ability-category"><span class="foot-label">Category</span><select id="abilityCategory"><option value="">All categories</option></select></label>
@@ -726,6 +756,7 @@
 <script src="js/maps.js"></script>
 <script src="js/resources.js"></script>
 <script src="js/abilities.js"></script>
+<script src="js/status.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

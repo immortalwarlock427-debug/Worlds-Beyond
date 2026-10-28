@@ -15,7 +15,7 @@
 - Milestone buttons and trackers: Devastate and Singularity as toggles on attacks; pips for Indomitable, Miracle and
   the once-per-round ones; a New combat button.
 - Block scaling and two-handed damage, once decided.
-- A future Status Effects screen listing every current condition, buff, debuff and timed effect together, with remaining durations and sources; keep this separate from the ability editor.
+- Status Effects view: separate third tab showing active timed ability effects by source with applied bonuses and remaining turns, plus manually entered buffs, debuffs and conditions with optional timers. Effect-ending controls and status expiry work with the character save. Future: built-in combat/health conditions, per-effect target selection, conditions that change combat calculations, status presets, richer filtering.
 - A conditions tracker, after the Exhaustion revamp.
 - Character export/import/clear moved to the top, accessible from Sheet and Battlemap. Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
 - Ability Library enhancements after v1: richer filters (type, resource, cost, cooldown, favorites), organization for large collections.

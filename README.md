@@ -1,6 +1,6 @@
 # Worlds Beyond
 
-A character sheet and battlemap for **Worlds Beyond**, a homebrew D&D combat framework built on 8 stats
+A character sheet, status effects view and battlemap for **Worlds Beyond**, a homebrew D&D combat framework built on 8 stats
 (STR, VIT, DEX, AGL, INT, WIS, CHA, FTH) and Action Points. It's growing into a lightweight, Foundry-style tool
 where a DM runs a game and players join with their characters.
 
