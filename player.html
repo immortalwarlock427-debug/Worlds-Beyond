@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Player Encounter Preview · Worlds Beyond</title>
+<link rel="stylesheet" href="css/sheet.css?v=20261028-player-view-v19">
+<link rel="stylesheet" href="css/dm.css?v=20261028-player-view-v19">
+<link rel="stylesheet" href="css/player.css?v=20261028-player-view-v19">
+</head>
+<body>
+<main class="sheet dm-sheet player-sheet">
+  <header class="masthead">
+    <div><p class="eyebrow">Local player encounter preview</p><h1>Worlds Beyond</h1></div>
+    <p class="meta">Player Preview · Draft 35</p>
+  </header>
+  <nav class="dm-nav" aria-label="Main destinations">
+    <a href="index.html#sheet">Character Sheet</a>
+    <a href="index.html#map">Battlemap</a>
+    <a href="dm.html">DM Room</a>
+    <a href="player.html" aria-current="page">Player Preview</a>
+  </nav>
+  <div class="dm-banner">
+    <div>
+      <strong>Same-browser demonstration — not online multiplayer</strong>
+      <p>Choose a player character in this local encounter. You can preview movement, spend AP and end your own turn. This is a testing seat selector, not a login or permission system. On another device, the DM's encounter will not be available.</p>
+    </div>
+    <span class="dm-local">Local only</span>
+  </div>
+  <section class="player-controls" aria-labelledby="playerSeatTitle">
+    <div>
+      <h2 id="playerSeatTitle">Your encounter</h2>
+      <p class="dm-sub" id="playerStatus">Loading the local encounter…</p>
+    </div>
+    <label class="dm-field-label" for="playerSeat">Preview as
+      <select id="playerSeat" aria-label="Choose player character"></select>
+    </label>
+    <button class="btn" type="button" id="playerRefresh">Refresh</button>
+  </section>
+  <p id="playerFeedback" class="dm-feedback" role="status" aria-live="polite"></p>
+  <section class="player-turn" aria-labelledby="playerTurnHeading">
+    <div>
+      <p class="dm-kicker">Encounter turn</p>
+      <h2 id="playerTurnHeading">No active encounter</h2>
+      <p id="playerTurnHint">Open the DM Room in this browser to set up and start a combat.</p>
+    </div>
+    <div class="player-actions">
+      <button id="playerEndTurn" class="btn strong" type="button" disabled>End my turn</button>
+    </div>
+  </section>
+  <section class="player-own" aria-labelledby="playerOwnHeading">
+    <h3 id="playerOwnHeading">My combat statistics</h3>
+    <div class="player-stats" id="playerStats">
+      <p class="dm-empty">Choose a player character in the selector above.</p>
+    </div>
+    <form id="playerSpendForm" class="player-spend">
+      <label>AP to spend
+        <input name="cost" type="number" min="1" max="40" value="1" required>
+      </label>
+      <button class="btn" id="playerSpendAP" type="submit" disabled>Spend AP</button>
+    </form>
+  </section>
+  <section class="player-map-section" aria-labelledby="playerMapTitle">
+    <div class="dm-section-title">
+      <h3 id="playerMapTitle">Encounter battlemap</h3>
+      <p>All placed tokens appear here. Click an open square to preview moving your character during your turn.</p>
+    </div>
+    <p class="dm-help" id="playerMapHelp">The DM places characters in the DM Room before combat.</p>
+    <div class="dm-move-preview" id="playerMovePreview" hidden>
+      <p id="playerMoveText" role="status"></p>
+      <button class="btn strong" type="button" id="playerMoveConfirm">Confirm movement</button>
+      <button class="btn" type="button" id="playerMoveCancel">Cancel</button>
+    </div>
+    <div class="dm-map-wrap">
+      <div class="dm-map-board" id="playerMapBoard" aria-label="Player encounter tactical map">
+        <div class="dm-map-grid" id="playerMapGrid" aria-hidden="true"></div>
+        <div class="dm-map-path" id="playerMapPath" aria-hidden="true"></div>
+        <div class="dm-map-tokens" id="playerMapTokens"></div>
+        <div class="dm-map-animation" id="playerMapAnimation" aria-hidden="true"></div>
+      </div>
+    </div>
+    <p class="dm-map-status" id="playerMapStatus" role="status">No encounter map loaded.</p>
+  </section>
+  <footer class="dm-footer">
+    <p>Only your selected player's movement, AP spending and end-turn actions are available here. The DM still controls character imports, enemies, damage, healing, initiative and map selection. Your character sheet data is not overwritten. No cloud accounts, join codes, secure identity checks, or cross-device updates have been implemented.</p>
+  </footer>
+</main>
+<script src="js/persistence.js?v=20261028-player-view-v19"></script>
+<script src="js/combat-core.js?v=20261028-player-view-v19"></script>
+<script src="js/encounter-actions.js?v=20261028-player-view-v19"></script>
+<script src="js/game-state.js?v=20261028-player-view-v19"></script>
+<script src="js/maps.js?v=20261028-player-view-v19"></script>
+<script src="js/encounter-map.js?v=20261028-player-view-v19"></script>
+<script src="js/player-session.js?v=20261028-player-view-v19"></script>
+<script src="js/player.js?v=20261028-player-view-v19"></script>
+</body>
+</html>
