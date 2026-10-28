@@ -23,6 +23,8 @@
 
 ## Website
 
+- **Foundation refactor (current PR):** `js/persistence.js` centralizes the existing character/game storage and character JSON import/export with injectable local and in-memory repository adapters; `js/game-state.js` centralizes the current map/token/fog/foe session normalizer for an offline DM screen. Original browser keys and export version are unchanged. Next foundation work: move pure stat/gear/AP/movement rules out of `js/app.js`; define explicit versioned character migrations and revisioned async cloud sync before connecting real accounts.
+
 The sheet grows into a lightweight, Foundry-style tool (not built inside Claude). Done so far: the sheet and
 battlemap are a static site on GitHub Pages, with the character and the game saved separately.
 
@@ -37,8 +39,7 @@ battlemap are a static site on GitHub Pages, with the character and the game sav
 
 ### In this order
 
-1. **A DM screen** that loads exported character files, with no networking. This is when `js/app.js` gets split
-   into modules (rules, character, game, map, sheet view, map view), so both screens share the same rules code.
+1. **Continue the core refactor:** extract reusable combat and character calculations from `js/app.js` with tests; persist via repository interfaces. Then build a **local DM screen** loading multiple exported character files, with no networking. Each screen must use the same rules instead of implementing competing calculations.
 2. **A combat tracker** on it: initiative, Health, targets, then the battlemap with every character's token.
 3. **Accounts, games with join codes, and live sync:** a hosted database with accounts (Supabase or Firebase, both
    have free tiers). The DM creates a game; players join with the code and bring their character.

@@ -5,6 +5,8 @@
 - Navigation: a top-level Character/Battlemap switch and nested character sub-tabs. `js/app.js` toggles the existing section nodes with `data-sheet-section`; no duplicated data or new persistence format. URL fragments `#map`, `#status`, `#sheet` and `#sheet/<tab>` remain supported.
 - `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link). Character Export, Import, and Clear actions are in the top toolbar and work from either view.
 - `css/sheet.css` holds every style. Colors are tokens on `:root` with a dark theme.
+- `js/persistence.js` owns the browser-independent character JSON file contract and injectable local/in-memory **CharacterRepository** / **GameRepository** adapters. Local storage keeps the same two keys. The app uses the repositories instead of calling localStorage directly. Future cloud adapters should preserve this data ownership boundary.
+- `js/game-state.js` owns a pure normalizer and blank factory for DM-owned game/session state (map, tokens, fog, foes, view), shared by the existing battlemap and a future offline DM screen.
 - `js/maps.js` defines `window.WB_MAPS`, the maps that come with the site. Add a map there; the app needs no change.
 - `js/status.js` owns the character-level status screen and manual condition timers. The status UI summarizes existing `js/abilities.js` effects without copying the effective stats into another save.
 - `js/abilities.js` owns the player-built Ability Library (search, categories, favorites, metadata); it stores data on the character, not the game, and does not change combat math.
@@ -13,6 +15,14 @@
   loading and saving, rules math, pools, trackers, AP and movement, Command, defenses, dice and attacks, health and
   death, stat increases, equipment and the Forge, drag and drop, advancement, portraits, the battlemap, rendering,
   export and import. Splitting it into modules is planned with the DM screen (see the roadmap).
+
+## Repository boundary (foundation refactor)
+
+- Character repository: `load()`, `save(state)`, `remove()`. Game repository: `load()`, `save(game)`. `createLocalRepositories(() => window.localStorage)` defers accessing storage until needed; the adapter's errors propagate so the UI can display a warning. `createMemoryRepositories()` provides an isolated in-memory adapter for tests and the offline DM prototype.
+- `WBPersistence.exportCharacter(state)` produces the original `{ format: 'worlds-beyond-character', version: 1, exported, state }` shape; `parseCharacterFile` accepts that version or the old raw `{ fields, hist, ... }` exports, rejecting malformed/future formats. Existing character field normalization and embedded-battlemap migration still happen in `js/app.js` after loading. This is **not yet** a schema-v2 migration engine or cloud sync.
+- Local `save()` still debounces 250ms and writes the character and game independently with the **same storage keys and object layouts**. Immediate portrait saves, import/export and Clear Character use the same repository.
+- New pure `WBGameState.normalizeGame` is an extracted implementation of the previous `normalizeGame`, avoiding separate DM combat data structures.
+- A future online repository requires asynchronous operations, user authentication, revision-based conflict protection and backend authorization. The current synchronous local adapters are an initial interface only, not a secure multiplayer backend.
 
 ## Two separate saves
 

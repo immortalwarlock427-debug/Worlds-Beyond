@@ -1,6 +1,6 @@
 # Future architecture: cloud characters, DM screen and multiplayer
 
-**Status:** engineering plan, not an implemented service. The existing GitHub Pages character sheet and offline exports remain the supported experience until new pieces are tested.
+**Status:** phase-0 persistence repository and DOM-free game normalizer are now implemented in the corresponding refactor PR. The DM screen, cloud services, accounts, authorization and live sync are not implemented. The existing GitHub Pages character sheet and offline exports remain the supported experience until new pieces are tested.
 
 ## Guiding rules
 
@@ -13,7 +13,7 @@
 
 | Phase | Goal | Definition of done |
 |---|---|---|
-| 0. Domain / save boundary | Separate reusable rules functions and define `CharacterRepository` / `GameRepository` interfaces | Existing UI still works, tests cover migrated/imported characters and game saves |
+| 0. Domain / save boundary | Persistence adapters (`js/persistence.js`) and pure game-state normalizer (`js/game-state.js`) started; reusable combat rules and schema migrations remain | Existing UI still works, tests cover v1/legacy imports and separate character/game saves |
 | 1. Offline DM room | DM imports several character JSON files and can create an encounter, initiative order, health and turn tracker | Can run a complete test encounter without accounts, all using shared rules |
 | 2. Cloud character accounts | Sign in, save/list/restore multiple characters, sync between phone and laptop | Private characters, ownership enforced, offline export and recovery available |
 | 3. Online sessions | DM creates session, gives invite/join code, players join with selected characters | Real-time map, tokens, turns and status updates; reconnect safely |
@@ -44,8 +44,8 @@ A candidate is Supabase Auth + PostgreSQL + Row Level Security + Realtime; Fireb
 
 ## Sync and conflicts
 
-- Today `state` is mutable and saved with a 250ms localStorage debounce. Don't directly replace that with constant "upload entire object on every keypress" calls.
-- Add a repository adapter for local saves, with a later cloud adapter. An explicit sync queue can batch changes. Include a `revision`/version token so saving from two devices does not silently overwrite changes.
+- Today `state` is mutable and saved with a 250ms debounce through `WBPersistence` local repositories. Don't directly replace that with constant "upload entire object on every keypress" calls.
+- The synchronous `WBPersistence.createLocalRepositories` and `createMemoryRepositories` adapters now exist; a later authenticated cloud implementation will need an **asynchronous** interface and conflict handling. An explicit sync queue can batch changes. Include a `revision`/version token so saving from two devices does not silently overwrite changes.
 - For **character editing**, detect conflicting revisions, show which copy is newer and allow the player to choose or merge. Keep local backup/export.
 - For **live combat**, send typed commands (e.g. `UseAbility`, `MoveToken`, `EndTurn`, `ApplyDamage`) instead of two clients replacing the same entire session document. Apply them once, in a defined order, to authoritative state.
 - Mobile browsers can suspend background tabs and clear storage. Show last cloud-sync timestamp and the distinction between `Saved on this device` and `Synced to cloud`; test interrupted network/reconnect.
@@ -65,3 +65,7 @@ Reference documentation:
 - Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
 - Supabase Realtime: https://supabase.com/docs/guides/realtime/getting_started
 - Firebase Firestore offline persistence: https://firebase.google.com/docs/firestore/manage-data/enable-offline
+
+## First foundation slice delivered
+
+The character sheet now calls the repository interfaces for startup load, debounce save, immediate portrait save, export/import and Clear Character. The browser keys and export v1 remain exactly the same. The former `normalizeGame` logic lives in a standalone module callable by a future DM view. Test coverage includes local-storage errors, old character exports, unknown future versions, and player vs DM state isolation. **This is not cloud sync**: all current users still have device-local browser storage unless they export/import a file.

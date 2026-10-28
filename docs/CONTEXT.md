@@ -75,6 +75,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - This stage does not copy gear into separate inventories, enforce transformation AP costs, or reset gear progression on every switch.
 - The cloud/DM/multiplayer migration plan lives in `docs/CLOUD_MULTIPLAYER_PLAN.md`: reusable rules modules, versioned state migrations, account-owned characters, DM-owned sessions, backend permissions, local-first sync and later online sessions.
 
+## Multiplayer-ready foundation refactor (current PR)
+- First safe step: `js/persistence.js` owns existing character export/import (format/version 1), browser storage with original character/game keys, and a testable in-memory adapter. `js/app.js` uses it for load, save, clear, portrait upload, import/export; there are no direct localStorage get/set/remove calls left in app. Bad JSON and unsupported future-format imports are rejected. No cloud accounts or network requests yet.
+- `js/game-state.js` extracts the existing pure blank/normalize game state logic for maps, fog, tokens and foes so the future local DM screen can reuse it. The main UI retains its current rules and renderers. Next: extract pure stat/gear/AP movement actions and add versioned migrations, then implement local DM screen before live sessions.
+- Strict ownership: individual characters belong to players, game session map/fog/enemies belong to DM/session; preserve existing separate save formats. Cloud sync later needs authenticated owners, revision/conflict checks, offline queues, and server-side permissions. Full plan: `docs/CLOUD_MULTIPLAYER_PLAN.md`.
+  
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
