@@ -9,6 +9,8 @@ The live site is at https://immortalwarlock427-debug.github.io/Worlds-Beyond/.
 
 ## What's here now
 
+The Character Sheet uses Overview, Attributes, Equipment, Abilities and Status Effects tabs so players can switch without scrolling through the full sheet. Battlemap is a separate main destination. Character save files and game/map saves remain separate.
+
 - **Character sheet:** stats with milestones at 21 and 28, Health and Mana built level by level, death and dying,
   AP, reactions, Wonder, movement, Command, defenses (Block, Dodge, Parry), a Diablo-style paper doll with a Forge,
   weapon attacks, advancement, export and import of a character as a `.json` file.
