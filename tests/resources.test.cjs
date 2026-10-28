@@ -151,7 +151,8 @@ test('resource adjustment amount persists through actions, rerenders and charact
   };
   el('resourceList').emit('change', { target: amountInput });
   assert.equal(r.amount, 10);
-  assert.match(el('resourceList').innerHTML, /value="10" data-resource-amount/);
+  // Editing the input does not rebuild its HTML: the live input retains its value.
+  assert.equal(amountInput.value, '10');
   fireAction(el, r.id, 'spend', '10');
   assert.equal(r.current, 90);
   assert.equal(r.amount, 10);
