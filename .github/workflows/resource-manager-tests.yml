@@ -1,0 +1,26 @@
+name: Resource Manager Checks
+on:
+  push:
+    branches:
+      - codex/custom-resource-manager
+  pull_request:
+    paths:
+      - 'js/resources.js'
+      - 'js/app.js'
+      - 'index.html'
+      - 'tests/resources.test.cjs'
+      - '.github/workflows/resource-manager-tests.yml'
+jobs:
+  resources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax
+        run: |
+          node --check js/resources.js
+          node --check js/app.js
+      - name: Resource manager regression tests
+        run: node --test tests/resources.test.cjs
