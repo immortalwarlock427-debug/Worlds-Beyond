@@ -131,3 +131,9 @@ test('adding a condition through the form persists source, notes, and turn limit
   assert.match(byId('statusManualList').innerHTML,/Wyvern/);
   assert.match(byId('statusManualList').innerHTML,/2 turns left/);
 });
+
+test('status tab advances turns through the existing shared Start Turn action',()=>{
+  const html=read('index.html'), app=read('js/app.js');
+  assert.match(html,/id="statusNextTurn"/);
+  assert.match(app, /\$\('#statusNextTurn'\)\.addEventListener\('click', \(\) => \$\('#turnReset'\)\.click\(\)\)/);
+});
