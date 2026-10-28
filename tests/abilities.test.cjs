@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 function harness() {
   class Element {
-    constructor() { this.value = ''; this.checked = false; this.innerHTML = ''; this.textContent = ''; this.handlers = {}; this.open = false; }
+    constructor() { this.value = ''; this.checked = false; this.innerHTML = ''; this.textContent = ''; this.handlers = {}; this.open = false; this.classList = { toggle() {} }; }
     addEventListener(type, fn) { this.handlers[type] = fn; }
     emit(type, target) { assert.ok(this.handlers[type], 'missing ' + type); this.handlers[type]({ target: target || this }); }
     querySelectorAll() { return []; }
