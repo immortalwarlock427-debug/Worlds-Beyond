@@ -234,3 +234,98 @@ test('DM map previews movement first and only deducts AP after Confirm',()=>{
  assert.equal(state.actors.hero.x,5);
  assert.equal(state.actors.hero.y,5);
 });
+
+test('finished encounter can return to editable setup without losing its roster or tokens',()=>{
+  const {e,map}=gameSetup();
+  let state=gameSetup().state;
+  const positions=plain(state.order.map(id=>({
+    id,x:state.actors[id].x,y:state.actors[id].y,mapId:state.actors[id].mapId
+  })));
+  state=apply(e,state,'StartEncounter');
+  state=apply(e,state,'MoveToken',{actorId:'hero',x:5,y:5},{...dm,map});
+  state=apply(e,state,'ApplyDamage',{actorId:'hero',rawDamage:10});
+  const hp=state.actors.hero.hp;
+  state=apply(e,state,'FinishEncounter');
+  const finished=state;
+  assert.equal(state.phase,'finished');
+  state=apply(e,state,'ReopenSetup');
+  assert.equal(state.phase,'setup');
+  assert.equal(state.round,0);
+  assert.equal(state.actors.hero.hp,hp,'Continuing HP is not silently healed');
+  assert.equal(state.actors.hero.apAvail,state.actors.hero.apMax);
+  assert.deepEqual(plain(state.actors.hero.move),{ft:0,left:0,surge:0});
+  assert.deepEqual(plain(state.order),plain(finished.order));
+  assert.equal(state.actors.npc.mapId,positions[1].mapId);
+  assert.equal(state.actors.npc.x,positions[1].x);
+  assert.equal(state.actors.npc.y,positions[1].y);
+  state=apply(e,state,'AddActor',{actor:{id:'newfoe',name:'Reinforcement',
+    kind:'npc',hp:12,maxHp:12,ar:1,apMax:4,speedFt:5,initiative:2}});
+  state=apply(e,state,'UpdateActor',{actorId:'hero',changes:{hp:22,initiative:19}});
+  state=apply(e,state,'StartEncounter');
+  assert.equal(state.phase,'active');
+  assert.equal(state.round,1);
+  assert.equal(state.order.length,3);
+  const illegal=e.applyAction(state,{id:'bad-reopen',type:'ReopenSetup',
+    expectedRevision:state.revision},{...alice,map});
+  assert.equal(illegal.error,'DM_ONLY');
+  assert.equal(e.applyAction(state,{id:'bad-reopen2',type:'ReopenSetup',
+    expectedRevision:state.revision},dm).error,'ENCOUNTER_NOT_FINISHED');
+});
+
+test('map choice buttons work and movement follows active turn with visible local feedback',()=>{
+  const {w,e,game}=gameSetup();
+  let state=gameSetup().state;
+  state=apply(e,state,'StartEncounter');
+  const elements={},listeners={};
+  const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
+    'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
+    'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices','dmMapNotice'];
+  for(const id of ids)elements['#'+id]={
+    style:{},value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,
+    addEventListener(event,fn){listeners[id+':'+event]=fn;},
+    getBoundingClientRect(){return {left:0,top:0}}
+  };
+  const ctx={window:{WB_MAPS:w.WB_MAPS,WBEncounterMap:w.WBEncounterMap,
+    WBCombat:w.WBCombat},
+    document:{querySelector(id){if(!elements[id])throw Error('No '+id);return elements[id];}}};
+  vm.runInNewContext(read('js/dm-map.js'),ctx);
+  let errors=[],calls=[];
+  const ui=ctx.window.WBDMMap.init({
+    getGame:()=>game,getEncounter:()=>state,
+    command(type,params){
+      calls.push(type);
+      state=apply(e,state,type,params,{...dm,map:w.WBEncounterMap.mapModel(game,w.WB_MAPS)});
+      return true;
+    },
+    selectMap(id){game.map.id=id;return true;},
+    message(text){errors.push(text)}
+  });
+  ui.render();
+  assert.match(elements['#dmMapChoices'].innerHTML,/Blank grid/);
+  assert.match(elements['#dmMapChoices'].innerHTML,/Stone Hall/);
+  assert.equal(elements['#dmMapMode'].value,'move');
+  assert.equal(elements['#dmMapActor'].value,'hero');
+  assert.equal(elements['#dmMapActor'].disabled,true);
+  listeners['dmMapChoices:click']({target:{closest(){return {dataset:{dmMap:'stone-hall'}};}}});
+  assert.equal(game.map.id,'stone-hall');
+  assert.match(elements['#dmMapChoices'].innerHTML,/aria-pressed="true"/);
+  listeners['dmMapChoices:click']({target:{closest(){return {dataset:{dmMap:'blank'}};}}});
+  assert.equal(game.map.id,'blank');
+  listeners['dmMapBoard:click']({target:{closest(){return null}},
+    clientX:5*36+2,clientY:5*36+2});
+  assert.match(elements['#dmMapNotice'].textContent,/Route preview ready/);
+  assert.equal(state.actors.hero.x,3,'Preview alone cannot move an actor');
+  listeners['dmMoveConfirm:click']();
+  assert.equal(state.actors.hero.x,5);
+  assert.equal(state.actors.hero.y,5);
+  assert.match(elements['#dmMapNotice'].textContent,/Movement completed/);
+  state=apply(e,state,'EndTurn',{actorId:'hero'});
+  ui.render();
+  assert.equal(elements['#dmMapActor'].value,'npc','Moves automatically follow initiative');
+  assert.match(elements['#dmMapHelp'].textContent,/current combatant/);
+  state=apply(e,state,'FinishEncounter');
+  ui.render();
+  assert.equal(elements['#dmMapMode'].value,'place');
+  assert.equal(elements['#dmMapMode'].disabled,true);
+  assert.match(elements['#dmMapHelp'].textContent,/Reuse roster/);
+});
