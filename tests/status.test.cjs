@@ -100,17 +100,18 @@ test('view displays manual status and escapes HTML-like user text',()=>{
   assert.match(byId('statusAbilityList').innerHTML,/2 turns left/);
   assert.match(byId('statusSummary').textContent,/2 active statuses/);
 });
-test('character exports/imports carry statuses; dedicated third view and turn hook are wired',()=>{
+test('character exports/imports carry statuses; dedicated sheet status tab and turn hook are wired',()=>{
   const html=read('index.html'),app=read('js/app.js'),css=read('css/sheet.css');
   assert.ok(html.indexOf('src="js/status.js"')<html.indexOf('src="js/app.js"'));
-  assert.match(html,/data-view="status"/);
+  assert.match(html,/data-sheet-tab="statuses"/);
   assert.match(html,/id="statusSec"/);
   assert.match(app,/WBStatus\.normalizeState\(state\)/);
   assert.match(app,/statusManager\.turnStart\(\)/);
   assert.match(app,/statusManager\.render\(\)/);
   assert.match(app,/statuses: \[\]/);
-  assert.match(css,/main\.sheet:not\(\.view-status\) > \.statussec/);
-  assert.match(css,/main\.view-status > section:not\(\.statussec\)/);
+  assert.match(html,/data-sheet-section="statuses"/);
+  assert.match(css,/main\.sheet > section\[hidden\]/);
+  assert.match(app,/if \(onSheet && activeSheetTab === 'statuses'\) statusManager\.render\(\)/);
 });
 
 
