@@ -45,7 +45,9 @@ test('legacy map view settings migrate and malformed session data is sanitized',
  assert.equal(result.foes.length,1);
  assert.equal(result.foes[0].max,1);
  assert.equal(result.foes[0].ar,0);
- assert.deepEqual(plain(core.normalizeGame(null)),plain(core.blankGame()));
+ assert.deepEqual(plain(core.normalizeGame(null)),{
+  map:null,tokens:{},fog:{},foes:[],view:{grid:null,terrainOn:false,reachOff:false}
+ });
 });
 test('app uses game-state module without a second conflicting rules implementation',()=>{
  const app=read('js/app.js'),html=read('index.html');
