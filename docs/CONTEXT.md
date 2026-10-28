@@ -46,6 +46,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - Players can also add manual status entries (Buff, Debuff, Condition or Other), with a source, notes, and optional turn timer. These are descriptive only and do not silently alter combat math. Timed entries expire when the player starts a turn; blank duration persists until removed. Manual statuses are retained across long rests until explicitly removed or expired. All entries save with the character and migrate from older character files as an empty list.
 - Future integration: automatic conditions from the defense/health system, treatment and recovery rules, richer effect sources and filters.
 
+## Ability Library filtering and compact mode (next PR)
+- Ability sub-tab offers search, custom category, type (Active/Passive/Reaction/Other), resource paid with (including Mana/Holy Power and custom pools), AP-cost band, availability (Usable now / Cooling down / Out of uses / Effect active / Passive), favorites, and sorting. Compact view reduces scrolling while preserving the quick Use button and ability editor.
+- The Usable now filter invokes the same validation as activation, including current AP, resources, cooldowns, remaining uses, and capacity; it does not spend anything. Filters do not mutate or delete stored abilities and reset to all when creating or duplicating one. UI presentation preferences are not part of exported character data.
+- CSS and JS assets share a cache-busting release token in index.html, following docs/ARCHITECTURE.md, to prevent the live GitHub Pages site mixing old cached files.
+  
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
