@@ -6,9 +6,11 @@ on:
   pull_request:
     paths:
       - 'js/resources.js'
+      - 'js/abilities.js'
       - 'js/app.js'
       - 'index.html'
       - 'tests/resources.test.cjs'
+      - 'tests/abilities.test.cjs'
       - '.github/workflows/resource-manager-tests.yml'
 jobs:
   resources:
@@ -21,6 +23,7 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check js/resources.js
+          node --check js/abilities.js
           node --check js/app.js
-      - name: Resource manager regression tests
-        run: node --test tests/resources.test.cjs
+      - name: Character features regression tests
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs
