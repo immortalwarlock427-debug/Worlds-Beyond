@@ -53,3 +53,5 @@ each other and make it easy to see who changed what, and why.
   two branches.
 
 - **GitHub Pages cache safety:** whenever publishing CSS or JavaScript changes, bump the matching `?v=...` query token for *every* local CSS/JS asset reference in `index.html`. Keep the token identical across all references; the navigation test enforces this. Without it, the deployed page can show new HTML with older cached scripts/styles (unstyled and unresponsive tabs).
+
+- **Multiplayer foundation:** build new shared logic as DOM-free modules. Use `WBPersistence` character/game repository interfaces instead of direct `localStorage` in new features; keep keys and v1 exports compatible until an explicit migration is approved. `WBGameState` owns the pure session normalizer for the future DM view. Cloud save/auth and backend permissions are not implemented; never imply that local saves synchronize across devices.
