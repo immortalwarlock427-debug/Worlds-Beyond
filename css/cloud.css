@@ -1,0 +1,28 @@
+/* Cloud Saves – inherits Worlds Beyond's paper/dark palette. */
+.cloud-panel {display:grid;gap:12px;padding:20px;border:1px solid var(--rule);
+  border-radius:5px;background:var(--field);}
+.cloud-panel h2 {font:23px var(--font-display);margin:0;}
+.cloud-panel[hidden] {display:none!important;}
+.cloud-form {display:flex;gap:12px;flex-wrap:wrap;align-items:end;}
+.cloud-form label {display:grid;gap:5px;flex:1 1 210px;min-width:170px;
+  font:700 13px var(--font-label);color:var(--muted);}
+.cloud-form input {width:100%;min-width:0;border:1px solid var(--rule);border-radius:3px;
+  padding:9px 10px;min-height:42px;background:var(--sheet);color:var(--ink);
+  font:16px var(--font-body);}
+.cloud-form button,.cloud-actions button {min-height:42px;}
+.cloud-actions {display:flex;gap:8px;flex-wrap:wrap;}
+.cloud-local-summary {border-left:3px solid var(--brass);padding:10px 14px;
+  background:var(--brass-soft);}
+.cloud-list {display:grid;gap:10px;}
+.cloud-item {border:1px solid var(--rule);border-radius:4px;padding:15px;
+  background:var(--sheet);display:flex;align-items:center;gap:12px;
+  justify-content:space-between;flex-wrap:wrap;}
+.cloud-item h3 {font:19px var(--font-display);margin:0;}
+.cloud-item p {color:var(--muted);margin:4px 0 0;font-size:13px;overflow-wrap:anywhere;}
+.cloud-item-actions {display:flex;flex-wrap:wrap;gap:6px;}
+@media(max-width:540px){
+  .cloud-form button {flex:1;}
+  .cloud-item-actions {width:100%;}
+  .cloud-item-actions button {flex:1;}
+  .cloud-panel {padding:14px;}
+}
