@@ -128,7 +128,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: []
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], statuses: []
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -257,6 +257,7 @@
   function normalizeState() {
     window.WBResources.normalizeState(state);
     window.WBAbilities.normalizeState(state);
+    window.WBStatus.normalizeState(state);
   ['fields', 'over', 'hist', 'rolls', 'alloc', 'equip', 'lvGear', 'settled', 'spent'].forEach((k) => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
   ['pool', 'items', 'order'].forEach((k) => { if (!Array.isArray(state[k])) state[k] = []; });
   // Stat increases: { level: { STAT: points } }, at most 2 per stat per level up.
@@ -679,6 +680,7 @@
     },
     refresh: () => refreshAll()
   });
+  const statusManager = window.WBStatus.init(() => state, save, { refresh: () => refreshAll() });
   function updateManaKind() {
     const holy = kind() === 'holy';
     const label = holy ? 'Holy Power' : 'Mana';
@@ -974,6 +976,7 @@
     save();
     resourceManager.turnStart();
     abilityLibrary.turnStart();
+    statusManager.turnStart();
     refreshAll(); // Update movement and the battlemap after timed effects expire.
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
@@ -4101,12 +4104,14 @@
     mapWrap.scrollLeft = Math.max(0, MAP_EDGE + ms.x * S + S / 2 - mapWrap.clientWidth / 2);
     mapWrap.scrollTop = Math.max(0, MAP_EDGE + ms.y * S + S / 2 - mapWrap.clientHeight / 2);
   }
-  // Sheet / Battlemap views, kept in the link as #sheet or #map.
+  // Sheet / Status / Battlemap views, linked as #sheet, #status or #map.
   function setView(v) {
-    view = v === 'map' ? 'map' : 'sheet';
+    view = v === 'map' ? 'map' : v === 'status' ? 'status' : 'sheet';
     mainEl.classList.toggle('view-map', view === 'map');
+    mainEl.classList.toggle('view-status', view === 'status');
     document.querySelectorAll('#viewNav button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
     if (view === 'map') { mapTarget = null; renderMap(true); centerToken(); }
+    if (view === 'status') statusManager.render();
   }
   $('#viewNav').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-view]');
@@ -4114,7 +4119,7 @@
     try { location.hash = b.dataset.view; } catch (err) { /* hash not available */ }
     setView(b.dataset.view);
   });
-  window.addEventListener('hashchange', () => setView(location.hash === '#map' ? 'map' : 'sheet'));
+  window.addEventListener('hashchange', () => setView(location.hash === '#map' ? 'map' : location.hash === '#status' ? 'status' : 'sheet'));
   let resizeT = null;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => renderMap(), 150); });
 
@@ -4203,6 +4208,7 @@
     updateManaKind();
     resourceManager.render();
     abilityLibrary.render();
+    statusManager.render();
     updatePool('hp');
     updatePool('mp');
     syncDown();
@@ -4438,5 +4444,5 @@
 
   fillInputs();
   refreshAll();
-  setView(location.hash === '#map' ? 'map' : 'sheet');
+  setView(location.hash === '#map' ? 'map' : location.hash === '#status' ? 'status' : 'sheet');
 })();
