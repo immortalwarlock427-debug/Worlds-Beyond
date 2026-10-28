@@ -1,6 +1,5 @@
-/* Offline DM encounter map presentation.
- * Reads the shared map definition and encounter actor snapshots. Token clicks
- * use PlaceToken/ClearToken commands; no action point costs or player moves.
+/* Offline DM encounter map presentation. All movement costs verified by
+ * WBEncounter.MoveToken; visual route previews never mutate combat state.
  */
 (function () {
   'use strict';
@@ -19,13 +18,25 @@
       throw new TypeError('DM map callbacks are required.');
     const maps = window.WB_MAPS;
     const helper = window.WBEncounterMap;
+    const combat = window.WBCombat;
     const mapPick = $('#dmMapPick'), actorPick = $('#dmMapActor');
     const stage = $('#dmMapBoard'), layer = $('#dmMapTokens');
-    const grid = $('#dmMapGrid');
-    let selectedActorId = '';
-    mapPick.innerHTML = Object.keys(maps).map(id =>
-      '<option value="' + escapeHtml(id) + '">' +
-        escapeHtml(maps[id].name || id) + '</option>').join('');
+    const grid = $('#dmMapGrid'), pathLayer = $('#dmMapPath');
+    const modePick = $('#dmMapMode');
+    let selectedActorId = '', preview = null, lastPhase = null;
+    function cancelPreview() { preview = null; render(); }
+    function previewMessage(error) {
+      const errors = {
+        ACTOR_NOT_FOUND:'Select a combatant first.',
+        TOKEN_NOT_PLACED:'This combatant needs a starting token on this map. Switch to DM placement.',
+        OUT_OF_BOUNDS:'Destination is outside the map.',
+        ALREADY_THERE:'This combatant is already on that square.',
+        BLOCKED_SQUARE:'The destination is blocked by terrain.',
+        OCCUPIED_SQUARE:'A combatant occupies the destination.',
+        NO_PATH:'No walkable route reaches that square.'
+      };
+      options.message(errors[error] || 'Cannot move to that square.',true);
+    }
     function render() {
       let game;
       try { game = options.getGame(); } catch (error) {
@@ -34,6 +45,11 @@
       }
       const encounter = options.getEncounter();
       const map = helper.mapModel(game,maps);
+      if (lastPhase !== encounter.phase) {
+        modePick.value = encounter.phase === 'active' ? 'move' : 'place';
+        lastPhase = encounter.phase;
+        preview = null;
+      }
       mapPick.value = map.id;
       const actors = (encounter.order || []).map(id =>
         Object.prototype.hasOwnProperty.call(encounter.actors,id) ? encounter.actors[id] : null)
@@ -68,28 +84,62 @@
           helper.squareName(actor.x,actor.y) + '">' +
           escapeHtml(initials(actor.name)) + '</button>';
       }).join('');
+      if (preview && (preview.mapId !== map.id || preview.actorId !== selectedActorId ||
+          preview.encounterId !== encounter.id || preview.revision !== encounter.revision ||
+          modePick.value !== 'move')) preview = null;
+      pathLayer.innerHTML = preview ? preview.route.path.slice(1).map((point,i) =>
+        '<span class="dm-path-cell' + (i === preview.route.path.length-2 ? ' destination' : '') +
+        '" style="left:' + (point.x*SIZE) + 'px;top:' + (point.y*SIZE) + 'px"></span>').join('') : '';
+      $('#dmMovePreview').hidden = !preview;
+      if (preview) {
+        const plan = preview.plan;
+        $('#dmMoveText').textContent = helper.squareName(preview.x,preview.y) +
+          ' · ' + preview.route.ft + ' ft' +
+          (preview.route.rough ? ' (' + preview.route.rough + ' difficult square(s))' : '') +
+          ' · ' + plan.paid + ' AP + ' + plan.free + ' Surge AP' +
+          (plan.fromLeft ? ' + ' + plan.fromLeft + ' ft carried' : '') +
+          ' · ' + plan.leftAfter + ' ft left over after the move.';
+      }
       const selected = actors.find(a=>a.id===selectedActorId);
       $('#dmMapStatus').textContent = map.name + ' · ' + map.cols + ' × ' + map.rows +
         ' squares · ' + shown.length + ' of ' + actors.length + ' combatants placed' +
-        (selected ? ' · Selected: ' + selected.name : '');
+        (selected ? ' · Selected: ' + selected.name : '') +
+        (selected && encounter.phase === 'active' ? ' · ' + selected.speedFt + ' ft/AP · ' +
+          (selected.apAvail + (selected.apGiven ? selected.apGiven.n : 0)) + ' AP remaining' : '');
+      $('#dmMapHelp').textContent = modePick.value === 'move' ?
+        'Combat movement: select the current combatant, then click an open destination to preview distance and AP before confirming.' :
+        'DM placement: click an open square to position or relocate any token without AP cost. Switch modes to spend AP for real movement.';
     }
     actorPick.addEventListener('change', () => {
       selectedActorId = actorPick.value;
+      preview = null;
       render();
     });
+    modePick.addEventListener('change', cancelPreview);
     mapPick.addEventListener('change', () => {
       if (!Object.prototype.hasOwnProperty.call(maps,mapPick.value)) return;
+      preview = null;
       options.selectMap(mapPick.value);
       render();
     });
     $('#dmMapClear').addEventListener('click', () => {
       if (!selectedActorId) return;
+      preview = null;
       options.command('ClearToken',{actorId:selectedActorId});
+    });
+    $('#dmMoveCancel').addEventListener('click', cancelPreview);
+    $('#dmMoveConfirm').addEventListener('click', () => {
+      if (!preview) return;
+      const target = preview;
+      preview = null;
+      options.command('MoveToken',{actorId:target.actorId,x:target.x,y:target.y});
+      render();
     });
     stage.addEventListener('click', event => {
       const selectedToken = event.target.closest('button[data-dm-token]');
       if (selectedToken) {
         selectedActorId = selectedToken.dataset.dmToken;
+        preview = null;
         render();
         return;
       }
@@ -101,21 +151,40 @@
       const x = Math.floor((event.clientX - rect.left) / SIZE);
       const y = Math.floor((event.clientY - rect.top) / SIZE);
       const map = helper.mapModel(options.getGame(),maps);
-      const attempt = helper.checkPlacement(options.getEncounter(),map,selectedActorId,x,y);
-      if (!attempt.ok) {
-        const descriptions = {
-          OUT_OF_BOUNDS: 'Click within the map grid.',
-          BLOCKED_SQUARE: 'That square is blocked by terrain.',
-          OCCUPIED_SQUARE: 'That square is already occupied by ' +
-            (attempt.name || 'another combatant') + '.',
-          ACTOR_NOT_FOUND: 'Select a valid combatant first.'
-        };
-        options.message(descriptions[attempt.error] || 'That placement is not allowed.',true);
+      const encounter = options.getEncounter();
+      if (modePick.value === 'move') {
+        if (encounter.phase !== 'active' || encounter.order[encounter.turnIndex] !== selectedActorId) {
+          options.message('Only the current combatant can move using AP. Use DM placement for administrative changes.',true);
+          return;
+        }
+        const actor = encounter.actors[selectedActorId];
+        if (actor.hp <= 0) {
+          options.message('A downed combatant cannot move using AP.',true);
+          return;
+        }
+        const route = helper.movementRoute(encounter,map,selectedActorId,x,y);
+        if (!route.ok) { previewMessage(route.error); return; }
+        const free = Math.max(0,actor.surgeMax-actor.move.surge);
+        const plan = combat.movePlan(route.ft,actor.speedFt,actor.move,free);
+        if (!actor.speedFt && plan.fromLeft < plan.ft) {
+          options.message('This combatant has 0 Movement and no leftover distance.',true);
+          return;
+        }
+        if (plan.paid > combat.apAvailable(actor,actor.apAvail)) {
+          options.message('Not enough AP. This move costs ' + plan.paid +
+            ' AP and ' + plan.free + ' Surge AP.',true);
+          return;
+        }
+        preview = { actorId:selectedActorId,x,y,route,plan,mapId:map.id,
+          encounterId:encounter.id,revision:encounter.revision };
+        render();
         return;
       }
+      const attempt = helper.checkPlacement(encounter,map,selectedActorId,x,y);
+      if (!attempt.ok) { previewMessage(attempt.error); return; }
       options.command('PlaceToken',{actorId:selectedActorId,x,y});
     });
-    return { render };
+    return {render};
   }
   window.WBDMMap={init};
 })();
