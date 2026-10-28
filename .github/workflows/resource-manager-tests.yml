@@ -8,6 +8,7 @@ on:
       - 'js/resources.js'
       - 'js/persistence.js'
       - 'js/game-state.js'
+      - 'js/combat-core.js'
       - 'js/abilities.js'
       - 'js/status.js'
       - 'js/equipment-profiles.js'
@@ -16,6 +17,7 @@ on:
       - 'tests/resources.test.cjs'
       - 'tests/persistence.test.cjs'
       - 'tests/game-state.test.cjs'
+      - 'tests/combat-core.test.cjs'
       - 'tests/abilities.test.cjs'
       - 'tests/status.test.cjs'
       - 'tests/navigation.test.cjs'
@@ -36,9 +38,10 @@ jobs:
           node --check js/resources.js
           node --check js/persistence.js
           node --check js/game-state.js
+          node --check js/combat-core.js
           node --check js/equipment-profiles.js
           node --check js/abilities.js
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs
