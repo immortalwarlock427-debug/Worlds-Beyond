@@ -249,3 +249,49 @@ test('quick Use stays outside details and remains available when collapsed', () 
   assert.match(js, /data-ability-action="release"/);
   assert.match(js, /'<\/div><\/details>' \+/);
 });
+
+test('temporary movement effects stack while active and expire without changing base fields', () => {
+  const { api } = harness();
+  const state = { fields: { speed: '15' }, resources: [], abilities: [
+    { id: 'abilabcdefg', name: 'Haste', type: 'active', duration: 3, effectTarget: 'movement', effectValue: 15 },
+    { id: 'abilhijklmn', name: 'Slow', type: 'active', duration: 2, effectTarget: 'movement', effectValue: -5 }
+  ] };
+  api.normalizeState(state);
+  const c = { getAp: () => 15, spendAp: () => {} };
+  assert.equal(api.activate(state, state.abilities[0].id, c).ok, true);
+  assert.equal(api.activate(state, state.abilities[1].id, c).ok, true);
+  assert.equal(api.movementBonus(state), 10);
+  api.advanceTurn(state);
+  assert.equal(api.movementBonus(state), 10);
+  api.advanceTurn(state);
+  assert.equal(api.movementBonus(state), 15);
+  api.advanceTurn(state);
+  assert.equal(api.movementBonus(state), 0);
+  assert.equal(state.fields.speed, '15');
+});
+test('automatic movement bonuses require a duration before any costs are spent', () => {
+  const { api } = harness();
+  const state = { abilities: [{ id: 'abilabcdefg', name: 'Speed Up', type: 'active',
+    apCost: 5, duration: '', effectTarget: 'movement', effectValue: 15 }], resources: [] };
+  api.normalizeState(state);
+  let ap = 15;
+  assert.equal(api.activate(state, 'abilabcdefg', { getAp: () => ap, spendAp: n => { ap -= n; } }).ok, false);
+  assert.equal(ap, 15);
+});
+test('effect values and targets persist safely through character import', () => {
+  const { api } = harness();
+  const state = { abilities: [{ name: 'Speed', effectTarget: 'movement', effectValue: 15, durationLeft: 3 },
+    { name: 'Bad target', effectTarget: 'eval', effectValue: 999999 }] };
+  api.normalizeState(state);
+  assert.equal(state.abilities[0].effectValue, 15);
+  assert.equal(state.abilities[1].effectTarget, 'none');
+  assert.equal(state.abilities[1].effectValue, 99999);
+  const recovered = JSON.parse(JSON.stringify(state));
+  api.normalizeState(recovered);
+  assert.equal(api.movementBonus(recovered), 15);
+});
+test('movement panel uses derived movement bonus', () => {
+  const app = read('js/app.js');
+  assert.match(app, /WBAbilities\.movementBonus\(state\)/);
+  assert.match(app, /refreshAll\(\); \/\/ Update movement and the battlemap after timed effects expire/);
+});
