@@ -128,7 +128,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -255,6 +255,7 @@
   normalizeState();
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
+    window.WBResources.normalizeState(state);
   ['fields', 'over', 'hist', 'rolls', 'alloc', 'equip', 'lvGear', 'settled', 'spent'].forEach((k) => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
   ['pool', 'items', 'order'].forEach((k) => { if (!Array.isArray(state[k])) state[k] = []; });
   // Stat increases: { level: { STAT: points } }, at most 2 per stat per level up.
@@ -659,6 +660,7 @@
     bar.classList.remove('idle');
   }
   const manaPool = $('#manaPool');
+  const resourceManager = window.WBResources.init(() => state, save);
   function updateManaKind() {
     const holy = kind() === 'holy';
     const label = holy ? 'Holy Power' : 'Mana';
@@ -946,6 +948,7 @@
     renderEquip();
     renderMap();
     save();
+    resourceManager.turnStart();
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
     if (h != null && h <= 0 && !(state.down && state.down.stable) && !isDead()) applyDamage(4, { bleed: true });
@@ -960,6 +963,7 @@
     state.fields.mpCur = restUndo.mpCur;
     restUndo = null;
     fillInputs();
+    resourceManager.render();
     refreshAll();
     save();
     toastEl.hidden = true;
@@ -967,8 +971,9 @@
   $('#longRest').addEventListener('click', () => {
     restUndo = {
       hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
+      other: JSON.stringify({ resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
     };
+    resourceManager.longRest();
     const hpMax = $('#hpMax').value;
     const mpMax = $('#mpMax').value;
     if (hpMax !== '') state.fields.hpCur = hpMax;
@@ -4143,6 +4148,7 @@
     $('#hpCur').placeholder = $('#hpMax').value || '—';
     $('#mpCur').placeholder = $('#mpMax').value || '—';
     updateManaKind();
+    resourceManager.render();
     updatePool('hp');
     updatePool('mp');
     syncDown();

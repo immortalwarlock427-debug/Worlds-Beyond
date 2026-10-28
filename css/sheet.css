@@ -1065,3 +1065,29 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
   .worn-row { grid-template-columns: minmax(0, 1fr) auto; }
   .worn-slot { grid-column: 1 / -1; padding-top: 0; }
 }
+
+/* Character-specific resources, independent of the legacy Mana/Holy Power pool. */
+.custom-resources { display:grid; gap:10px; }
+.custom-resource-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+.custom-resource-header h3 { margin:0; font:400 19px var(--font-display); }
+.resource-mana-toggle, .resource-refill { display:flex; align-items:center; gap:7px; font-size:14px; }
+.resource-mana-toggle input, .resource-refill input { accent-color:var(--brass); }
+.resource-list { display:grid; gap:14px; }
+.resource-empty { margin:0; font-size:14px; color:var(--muted); }
+.custom-resource { border:1px solid var(--rule); border-radius:4px; background:var(--field); padding:12px; display:grid; gap:10px; min-width:0; }
+.resource-top { display:flex; align-items:flex-end; gap:10px; }
+.resource-name { flex:1; min-width:0; }
+.custom-resource label:not(.resource-refill) { display:grid; gap:3px; min-width:0; }
+.custom-resource input:not([type=checkbox]), .custom-resource select { min-width:0; width:100%; border:1px solid var(--rule); border-radius:3px; background:var(--sheet); color:var(--ink); padding:5px; font:inherit; }
+.resource-figure { font:18px var(--font-display); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.resource-meter { height:9px; background:var(--track); border-radius:3px; overflow:hidden; }
+.resource-meter span { height:100%; display:block; background:var(--verdigris); transition:width .2s ease; }
+.resource-meter.brass span { background:var(--brass); }
+.resource-meter.blue span { background:#548bd8; }
+.resource-meter.red span { background:var(--blood); }
+.resource-values { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.resource-actions { display:flex; align-items:end; gap:8px; flex-wrap:wrap; }
+.resource-adjust { width:90px; }
+.resource-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:end; }
+.resource-refill { grid-column:1/-1; }
+@media(max-width:420px) { .resource-values { grid-template-columns:repeat(2,minmax(0,1fr)); } .resource-actions .btn { padding:6px 8px; } }

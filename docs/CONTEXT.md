@@ -152,10 +152,11 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 29)
+## What the site does (Draft 30)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
+- **Custom resources:** characters can keep or hide the legacy Mana/Holy Power pool and add multiple independent named resources with stable IDs, maximum/current values, point or percent display, colors, turn recovery, long-rest refill toggles, and manual spending/restoring. Resource data stays in the character export. Ability cost integration is future work.
 - **Health and Mana/Holy Power:** a Heal box, Death Threshold with a Trauma counter, and a dying panel (bleeding,
   Stabilized toggle, Indomitable roll, "Treated after combat"). Long rest refills everything, clears Trauma and has
   an undo.
@@ -239,6 +240,10 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
 - Attacks need a clear line to the target, not light.
 - The Barrow's light sources match its picture: braziers 20 ft, daylight on the stairs 15 ft, glowing fungus 10 ft,
   candles in the niches and the sealed door's glow 5 ft.
+
+## Direction: customizable characters
+
+The eight stats, AP and homebrew combat framework remain the default. The site should support unique character resources and abilities rather than require standard D&D classes and spells. The future ability builder will support cooldowns, duration, optional resource/AP costs, multiple forms, and eventual targeted sheet effects. These are not implemented yet.
 
 ## Open design questions
 
