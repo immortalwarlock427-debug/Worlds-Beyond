@@ -51,3 +51,5 @@ each other and make it easy to see who changed what, and why.
   switches them for both of you.
 - **Publish the Claude artifact only from `main`,** after merging, so it never shows unmerged work or flips between
   two branches.
+
+- **GitHub Pages cache safety:** whenever publishing CSS or JavaScript changes, bump the matching `?v=...` query token for *every* local CSS/JS asset reference in `index.html`. Keep the token identical across all references; the navigation test enforces this. Without it, the deployed page can show new HTML with older cached scripts/styles (unstyled and unresponsive tabs).

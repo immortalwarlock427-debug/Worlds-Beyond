@@ -102,7 +102,7 @@ test('view displays manual status and escapes HTML-like user text',()=>{
 });
 test('character exports/imports carry statuses; dedicated sheet status tab and turn hook are wired',()=>{
   const html=read('index.html'),app=read('js/app.js'),css=read('css/sheet.css');
-  assert.ok(html.indexOf('src="js/status.js"')<html.indexOf('src="js/app.js"'));
+  assert.ok(html.indexOf('src="js/status.js')<html.indexOf('src="js/app.js'));
   assert.match(html,/data-sheet-tab="statuses"/);
   assert.match(html,/id="statusSec"/);
   assert.match(app,/WBStatus\.normalizeState\(state\)/);

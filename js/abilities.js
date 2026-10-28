@@ -109,8 +109,8 @@
   }
 
   // Three independent trackers: limited uses, cooldown lock, and active duration.
-  // A duration is informational until sheet-targeted effects are implemented.
-  function activate(state, abilityId, controls) {
+  // The same validation drives both activation and the 'Usable now' filter.
+  function checkActivation(state, abilityId, controls) {
     const a = state.abilities.find((x) => x.id === abilityId);
     if (!a) return { ok: false, message: 'Ability not found.' };
     if (a.type === 'passive') return { ok: false, message: 'Passive abilities do not need activation.' };
@@ -148,6 +148,13 @@
         if (resource.current < cost) return { ok: false, message: 'Not enough ' + resource.name + ' to use ' + a.name + '.' };
       }
     }
+    return { ok: true, ability: a, ap, cost, resource };
+  }
+
+  function activate(state, abilityId, controls) {
+    const check = checkActivation(state, abilityId, controls);
+    if (!check.ok) return check;
+    const { ability: a, ap, cost, resource } = check;
     // Validate all costs first. Only then commit the expenditure as one activation.
     if (ap) controls.spendAp(ap);
     if (cost) {
@@ -159,6 +166,51 @@
     a.cooldownLeft = a.cooldown === '' ? 0 : a.cooldown;
     a.durationLeft = a.duration === '' ? 0 : a.duration;
     return { ok: true, message: 'Used ' + a.name + (a.durationLeft ? ' — duration: ' + a.durationLeft + ' turn(s)' : '') + '.' };
+  }
+
+  const SORT_MODES = ['favorites', 'name', 'ap', 'category', 'usable'];
+  const STATUS_MODES = ['all', 'usable', 'cooldown', 'exhausted', 'active', 'passive'];
+  const AP_MODES = ['all', 'free', '1-5', '6-10', '11+'];
+  function filterAbilities(state, filters, controls) {
+    filters = filters || {};
+    const searchText = String(filters.search || '').trim().toLocaleLowerCase();
+    const category = String(filters.category || '');
+    const type = String(filters.type || '');
+    const resource = String(filters.resource || '');
+    const status = STATUS_MODES.includes(filters.status) ? filters.status : 'all';
+    const apMode = AP_MODES.includes(filters.ap) ? filters.ap : 'all';
+    const sorting = SORT_MODES.includes(filters.sort) ? filters.sort : 'favorites';
+    const apOf = a => a.apCost === '' ? 0 : Number(a.apCost) || 0;
+    const matches = (state.abilities || []).filter(a => {
+      const searchOK = !searchText ||
+        [a.name, a.category, a.type, a.description, a.notes].some(t => String(t || '').toLocaleLowerCase().includes(searchText));
+      if (!searchOK || (filters.favorites && !a.favorite)) return false;
+      if (category && a.category !== category) return false;
+      if (type && a.type !== type) return false;
+      const paid = a.resourceCost !== '' && Number(a.resourceCost) > 0;
+      if (resource === 'none' && paid) return false;
+      if (resource && resource !== 'none' && (!paid || a.resourceId !== resource)) return false;
+      const ap = apOf(a);
+      if ((apMode === 'free' && ap !== 0) ||
+          (apMode === '1-5' && !(ap >= 1 && ap <= 5)) ||
+          (apMode === '6-10' && !(ap >= 6 && ap <= 10)) ||
+          (apMode === '11+' && ap < 11)) return false;
+      if (status === 'cooldown' && !(a.cooldownLeft > 0)) return false;
+      if (status === 'exhausted' && !(a.uses !== '' && a.usesLeft <= 0)) return false;
+      if (status === 'active' && !(a.durationLeft > 0)) return false;
+      if (status === 'passive' && a.type !== 'passive') return false;
+      if (status === 'usable' && !checkActivation(state, a.id, controls).ok) return false;
+      return true;
+    });
+    matches.sort((a,b) => {
+      if (sorting === 'name') return a.name.localeCompare(b.name);
+      if (sorting === 'ap') return apOf(a) - apOf(b) || a.name.localeCompare(b.name);
+      if (sorting === 'category') return a.category.localeCompare(b.category) || a.name.localeCompare(b.name);
+      if (sorting === 'usable') return Number(checkActivation(state,b.id,controls).ok) -
+        Number(checkActivation(state,a.id,controls).ok) || a.name.localeCompare(b.name);
+      return Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name);
+    });
+    return matches;
   }
 
   function advanceTurn(state) {
@@ -185,6 +237,13 @@
     const search = document.getElementById('abilitySearch');
     const category = document.getElementById('abilityCategory');
     const favorites = document.getElementById('abilityFavorites');
+    const typeFilter = document.getElementById('abilityTypeFilter');
+    const resourceFilter = document.getElementById('abilityResourceFilter');
+    const statusFilter = document.getElementById('abilityStatusFilter');
+    const apFilter = document.getElementById('abilityApFilter');
+    const sortFilter = document.getElementById('abilitySortFilter');
+    const compactToggle = document.getElementById('abilityCompact');
+    const clearFilters = document.getElementById('abilityClearFilters');
     const count = document.getElementById('abilityCount');
     const feedback = document.getElementById('abilityFeedback');
     const addButton = document.getElementById('abilityAdd');
@@ -350,33 +409,51 @@
       });
     }
     function render() {
-      const abilities = getState().abilities;
+      const state = getState();
+      const abilities = state.abilities;
       rememberOpen();
-      const previousCategory = category.value || '';
-      const categories = [...new Set(abilities.map((a) => a.category))].sort((a, b) => a.localeCompare(b));
+      const selectedCategory = category.value || '';
+      const categories = [...new Set(abilities.map(a => a.category))].sort((a,b) => a.localeCompare(b));
       category.innerHTML = '<option value="">All categories</option>' +
-        categories.map((c) => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('');
-      category.value = categories.includes(previousCategory) ? previousCategory : '';
-      const needle = search.value.trim().toLowerCase();
-      const matches = abilities.filter((a) =>
-        (!favorites.checked || a.favorite) &&
-        (!category.value || a.category === category.value) &&
-        (!needle || [a.name, a.category, a.type, a.description, a.notes].some((s) => s.toLowerCase().includes(needle)))
-      );
-      matches.sort((a, b) => (Number(b.favorite) - Number(a.favorite)) || a.name.localeCompare(b.name));
+        categories.map(c => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('');
+      category.value = categories.includes(selectedCategory) ? selectedCategory : '';
+      const selectedResource = resourceFilter.value || '';
+      const resources = [
+        { id: 'base-mana', name: state.fields && state.fields.manaKind === 'holy' ? 'Holy Power' : 'Mana' },
+        ...(state.resources || []).map(r => ({ id: r.id, name: r.name }))
+      ];
+      resourceFilter.innerHTML = '<option value="">Any resource</option><option value="none">No resource cost</option>' +
+        resources.map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('');
+      resourceFilter.value = resources.some(r => r.id === selectedResource) || selectedResource === 'none' ?
+        selectedResource : '';
+      const matches = filterAbilities(state, {
+        search: search.value, category: category.value,
+        favorites: favorites.checked, type: typeFilter.value,
+        resource: resourceFilter.value, status: statusFilter.value,
+        ap: apFilter.value, sort: sortFilter.value
+      }, controls);
+      list.classList.toggle('is-compact', compactToggle.checked);
       count.textContent = matches.length + ' shown / ' + abilities.length + ' total';
       list.innerHTML = matches.length ? matches.map(card).join('') :
-        '<p class="ability-empty">' + (abilities.length
-          ? 'No abilities match these filters.' : 'No abilities yet. Add a custom technique, spell, trait, or passive.') +
-        '</p>';
+        '<p class="ability-empty">' + (abilities.length ?
+          'No abilities match these filters. Clear filters to see everything.' :
+          'No abilities yet. Add a custom technique, spell, trait, or passive.') + '</p>';
+    }
+    function resetFilters() {
+      search.value = '';
+      category.value = '';
+      favorites.checked = false;
+      typeFilter.value = '';
+      resourceFilter.value = '';
+      statusFilter.value = 'all';
+      apFilter.value = 'all';
+      sortFilter.value = 'favorites';
     }
 
     addButton.addEventListener('click', () => {
       const ability = normalizeAbility({ id: id(), name: 'New ability', category: 'General' });
       getState().abilities.push(ability);
-      search.value = '';
-      category.value = '';
-      favorites.checked = false;
+      resetFilters();
       open.add(ability.id);
       render();
       save();
@@ -386,8 +463,9 @@
     });
 
     search.addEventListener('input', render);
-    category.addEventListener('change', render);
-    favorites.addEventListener('change', render);
+    [category, favorites, typeFilter, resourceFilter, statusFilter, apFilter, sortFilter,
+      compactToggle].forEach(el => el.addEventListener('change', render));
+    clearFilters.addEventListener('click', () => { resetFilters(); render(); });
 
     function updateInput(input) {
       const cardElement = input.closest('[data-ability-id]');
@@ -480,7 +558,7 @@
         }));
         getState().abilities.push(copy);
         open.add(copy.id);
-        search.value = ''; category.value = ''; favorites.checked = false;
+        resetFilters();
       } else if (action === 'add-effect') {
         if (ability.effects.length < MAX_EFFECTS) ability.effects.push(normalizeEffect({
           id: effectId(), target: 'none', value: 0
@@ -532,7 +610,7 @@
   }
 
   window.WBAbilities = {
-    normalizeState, init, activate, advanceTurn, resetForRest,
+    normalizeState, init, activate, checkActivation, filterAbilities, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();

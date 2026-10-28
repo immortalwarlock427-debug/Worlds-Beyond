@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-abilities-v2">
 </head>
 <body>
 <main class="sheet">
@@ -687,7 +687,16 @@
     <div class="ability-toolbar">
       <label class="ability-search"><span class="foot-label">Search abilities</span><input id="abilitySearch" type="search" autocomplete="off" placeholder="Name, effect, notes…"></label>
       <label class="ability-category"><span class="foot-label">Category</span><select id="abilityCategory"><option value="">All categories</option></select></label>
+      <label class="ability-field ability-type-filter"><span class="foot-label">Type</span><select id="abilityTypeFilter"><option value="">All types</option><option value="active">Active</option><option value="passive">Passive</option><option value="reaction">Reaction</option><option value="other">Other</option></select></label>
+      <label class="ability-field ability-resource-filter"><span class="foot-label">Resource cost</span><select id="abilityResourceFilter"><option value="">Any resource</option><option value="none">No resource cost</option></select></label>
+      <label class="ability-field ability-status-filter"><span class="foot-label">Availability</span><select id="abilityStatusFilter"><option value="all">All states</option><option value="usable">Usable now</option><option value="cooldown">Cooling down</option><option value="exhausted">Out of uses</option><option value="active">Effect active</option><option value="passive">Passive</option></select></label>
+      <label class="ability-field ability-ap-filter"><span class="foot-label">AP cost</span><select id="abilityApFilter"><option value="all">Any AP cost</option><option value="free">Free (0 AP)</option><option value="1-5">1–5 AP</option><option value="6-10">6–10 AP</option><option value="11+">11+ AP</option></select></label>
+      <label class="ability-field ability-sort-filter"><span class="foot-label">Sort</span><select id="abilitySortFilter"><option value="favorites">Favorites first</option><option value="name">Name A–Z</option><option value="ap">AP low to high</option><option value="category">Category A–Z</option><option value="usable">Usable first</option></select></label>
+    </div>
+    <div class="ability-view-controls">
       <label class="ability-favorites"><input id="abilityFavorites" type="checkbox"> Favorites only</label>
+      <label class="ability-favorites"><input id="abilityCompact" type="checkbox"> Compact view</label>
+      <button type="button" class="btn" id="abilityClearFilters">Clear filters</button>
       <button type="button" class="btn strong" id="abilityAdd">+ Add ability</button>
     </div>
     <p class="ability-count" id="abilityCount" aria-live="polite">0 abilities</p>
@@ -760,10 +769,10 @@
   </div>
 </div>
 
-<script src="js/maps.js"></script>
-<script src="js/resources.js"></script>
-<script src="js/abilities.js"></script>
-<script src="js/status.js"></script>
-<script src="js/app.js"></script>
+<script src="js/maps.js?v=20261028-abilities-v2"></script>
+<script src="js/resources.js?v=20261028-abilities-v2"></script>
+<script src="js/abilities.js?v=20261028-abilities-v2"></script>
+<script src="js/status.js?v=20261028-abilities-v2"></script>
+<script src="js/app.js?v=20261028-abilities-v2"></script>
 </body>
 </html>

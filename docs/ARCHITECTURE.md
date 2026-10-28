@@ -59,3 +59,10 @@ The browser keeps two things apart, because a character and a game have differen
   not stood on. Attacks need the target in range (5 ft unless the weapon's Range says otherwise) and a clear line.
   A hit meets or beats Evasion, and a natural 20 always hits and can't be dodged (Block and Parry still work). Armor Rating comes off each hit (for a two-weapon
   attack, each hand separately, the off-hand after halving).
+
+## Ability Library presentation
+- `js/abilities.js` keeps filters and compact mode in view state, not in serialized character data. The readiness filter calls the same `checkActivation` validation as the Use action but never charges AP or resources. Filters respect stable resource identifiers and respond to normal sheet refreshes.
+
+## Static asset versioning
+
+GitHub Pages may serve updated HTML while a visitor's browser still has older CSS/JS cached. The HTML uses a shared `?v=...` release token on `css/sheet.css` and all `js/*.js` script references. **Every release that changes CSS or JavaScript should bump the shared token in `index.html`** so the browser fetches matching files on production rather than mixing versions. The navigation regression suite checks that all references share a token. Avoid changing character storage keys to solve cache issues.

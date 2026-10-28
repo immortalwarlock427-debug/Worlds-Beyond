@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 function harness() {
   class Element {
-    constructor() { this.value = ''; this.checked = false; this.innerHTML = ''; this.textContent = ''; this.handlers = {}; this.open = false; }
+    constructor() { this.value = ''; this.checked = false; this.innerHTML = ''; this.textContent = ''; this.handlers = {}; this.open = false; this.classList = { toggle() {} }; }
     addEventListener(type, fn) { this.handlers[type] = fn; }
     emit(type, target) { assert.ok(this.handlers[type], 'missing ' + type); this.handlers[type]({ target: target || this }); }
     querySelectorAll() { return []; }
@@ -86,7 +86,7 @@ test('search and favorite filtering are independent of saved data', () => {
 test('HTML loads abilities before app, saved in character rather than game', () => {
   const html = read('index.html');
   const app = read('js/app.js');
-  assert.ok(html.indexOf('src="js/abilities.js"') < html.indexOf('src="js/app.js"'));
+  assert.ok(html.indexOf('src="js/abilities.js') < html.indexOf('src="js/app.js'));
   assert.match(html, /id="abilitySection"/);
   assert.match(app, /abilities: \[\]/);
   assert.match(app, /WBAbilities\.normalizeState\(state\)/);
