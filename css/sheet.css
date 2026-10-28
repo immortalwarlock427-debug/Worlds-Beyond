@@ -1125,3 +1125,10 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
 .sheet-actions #saveStatus { flex: 1 1 180px; }
 .sheet-actions .foot-acts { min-width: 0; }
 @media (max-width: 540px) { .sheet-actions .foot-acts { width: 100%; } .sheet-actions .btn { padding: 7px 9px; } }
+
+/* Ability activation status and manual tracker controls */
+.ability-activate {display:flex; align-items:center; flex-wrap:wrap; gap:10px;}
+.ability-status {font-size:13px; color:var(--muted);}
+.ability-feedback {font-size:14px; color:var(--verdigris); margin:8px 0; min-height:1em;}
+.ability-feedback.ability-error {color:var(--blood);}
+.ability-uses-left {max-width:180px;}

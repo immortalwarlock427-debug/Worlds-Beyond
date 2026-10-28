@@ -646,7 +646,7 @@
 
   <section class="ability-section" id="abilitySection" aria-labelledby="abilityHead">
     <div class="sec-head"><svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg><h2 id="abilityHead">Ability Library</h2></div>
-    <p class="note">Record custom homebrew abilities, spells, racial traits, techniques and passives. Costs, cooldowns and durations are reference information for now; no resources or AP are spent automatically.</p>
+    <p class="note">Create custom techniques, spells, traits, and passives. Use ability automatically spends configured AP and resources, and starts charge and cooldown tracking. Starting your turn advances cooldowns and durations. Durations are tracked only: bonuses to movement, damage, and stats still need to be applied manually.</p>
     <div class="ability-toolbar">
       <label class="ability-search"><span class="foot-label">Search abilities</span><input id="abilitySearch" type="search" autocomplete="off" placeholder="Name, effect, notes…"></label>
       <label class="ability-category"><span class="foot-label">Category</span><select id="abilityCategory"><option value="">All categories</option></select></label>
@@ -654,6 +654,7 @@
       <button type="button" class="btn strong" id="abilityAdd">+ Add ability</button>
     </div>
     <p class="ability-count" id="abilityCount" aria-live="polite">0 abilities</p>
+    <p id="abilityFeedback" class="ability-feedback" role="status" aria-live="polite"></p>
     <div id="abilityList" class="ability-list"></div>
   </section>
 

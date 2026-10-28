@@ -90,7 +90,7 @@ test('HTML loads abilities before app, saved in character rather than game', () 
   assert.match(html, /id="abilitySection"/);
   assert.match(app, /abilities: \[\]/);
   assert.match(app, /WBAbilities\.normalizeState\(state\)/);
-  assert.match(app, /WBAbilities\.init\(\(\) => state, save\)/);
+  assert.match(app, /WBAbilities\.init\(\(\) => state, save,/);
   assert.match(app, /JSON\.stringify\(\{ format: 'worlds-beyond-character'/);
 });
 
@@ -121,4 +121,90 @@ test('character file actions are grouped at the top with unique IDs and confirma
   for (const id of ['exportBtn', 'importBtn', 'clearBtn', 'clearConfirm', 'importConfirm', 'footBtns', 'importFile', 'saveStatus']) {
     assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id + ' should be unique');
   }
+});
+
+
+test('activation spends AP and Energy, tracks cooldown, and never spends on failure', () => {
+  const { api } = harness();
+  const state = { abilities: [{
+    id: 'abilabcdefg', name: 'Overdrive', type: 'active', apCost: 5,
+    resourceId: 'resabcdefg', resourceCost: 25, cooldown: 3, duration: 2, uses: ''
+  }], resources: [{ id: 'resabcdefg', name: 'Energy', max: 100, current: 100 }], showMana: false };
+  api.normalizeState(state);
+  let ap = 15;
+  const controls = { getAp: () => ap, spendAp: (n) => { ap -= n; } };
+  assert.equal(api.activate(state, state.abilities[0].id, controls).ok, true);
+  assert.equal(ap, 10);
+  assert.equal(state.resources[0].current, 75);
+  assert.equal(state.abilities[0].usesLeft, null);
+  assert.equal(state.abilities[0].cooldownLeft, 3);
+  assert.equal(state.abilities[0].durationLeft, 2);
+  assert.equal(api.activate(state, state.abilities[0].id, controls).ok, false);
+  assert.equal(ap, 10);
+  assert.equal(state.resources[0].current, 75);
+  api.advanceTurn(state);
+  assert.equal(state.abilities[0].cooldownLeft, 2);
+  assert.equal(state.abilities[0].durationLeft, 1);
+  api.advanceTurn(state);
+  api.advanceTurn(state);
+  assert.equal(state.abilities[0].cooldownLeft, 0);
+  assert.equal(state.abilities[0].durationLeft, 0);
+  assert.equal(api.activate(state, state.abilities[0].id, controls).ok, true);
+  assert.equal(state.resources[0].current, 50);
+});
+
+test('activation requires sufficient AP, resource, charges, and valid resource', () => {
+  const { api } = harness();
+  const state = { abilities: [{
+    id: 'abilabcdefg', name: 'Pulse', type: 'reaction', apCost: 6,
+    resourceId: 'resabcdefg', resourceCost: 10, uses: 1
+  }], resources: [{ id: 'resabcdefg', name: 'Energy', max: 100, current: 5 }] };
+  api.normalizeState(state);
+  let ap = 4;
+  const controls = { getAp: () => ap, spendAp: (n) => { ap -= n; } };
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, false);
+  assert.equal(ap, 4);
+  ap = 12;
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, false);
+  assert.equal(ap, 12);
+  state.resources[0].current = 30;
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, true);
+  assert.equal(ap, 6);
+  assert.equal(state.abilities[0].usesLeft, 0);
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, false);
+  api.resetForRest(state);
+  assert.equal(state.abilities[0].usesLeft, 1);
+});
+
+test('passives cannot be activated; Mana costs require configured visible Mana', () => {
+  const { api } = harness();
+  const state = { abilities: [
+    { id: 'abilabcdefg', name: 'Passive', type: 'passive', apCost: 0 },
+    { id: 'abilhijklmn', name: 'Burst', type: 'active', resourceId: 'base-mana', resourceCost: 20 }
+  ], resources: [], showMana: false };
+  api.normalizeState(state);
+  let mana = 30;
+  let spent = 0;
+  const controls = {
+    getAp: () => 15, spendAp: () => {},
+    getMana: () => mana, spendMana: (n) => { spent += n; mana -= n; }
+  };
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, false);
+  assert.equal(api.activate(state, 'abilhijklmn', controls).ok, false);
+  assert.equal(mana, 30);
+  state.showMana = true;
+  assert.equal(api.activate(state, 'abilhijklmn', controls).ok, true);
+  assert.equal(mana, 10);
+  assert.equal(spent, 20);
+});
+
+test('activation integration uses the same sheet AP, turn, and long-rest controls', () => {
+  const app = read('js/app.js');
+  const html = read('index.html');
+  assert.match(app, /abilityLibrary\.turnStart\(\)/);
+  assert.match(app, /abilityLibrary\.longRest\(\)/);
+  assert.match(app, /getAp: \(\) => apHave\(\)/);
+  assert.match(app, /spendAp: \(cost\) => spendAp\(cost\)/);
+  assert.match(app, /abilities: state\.abilities/);
+  assert.match(html, /id="abilityFeedback"/);
 });
