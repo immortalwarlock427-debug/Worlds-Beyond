@@ -128,7 +128,7 @@ test('DM page has local link, import, roster, turn and error feedback wiring', (
   const index=read('index.html'), html=read('dm.html'),ui=read('js/dm.js');
   assert.match(index,/href="dm\.html"/);
   for(const id of ['dmCharacterFiles','dmImport','dmNpcForm','dmActorList',
-    'newEncounter','startEncounter','nextTurn','finishEncounter','dmSaveStatus','dmFeedback'])
+    'newEncounter','startEncounter','nextTurn','finishEncounter','reuseRoster','dmSaveStatus','dmFeedback'])
     assert.ok(html.includes('id="' + id + '"'),'Missing ' + id);
   const resources=['css/sheet.css','css/dm.css','js/persistence.js','js/combat-core.js',
     'js/encounter-actions.js','js/game-state.js','js/abilities.js','js/dm-characters.js','js/dm.js'];
