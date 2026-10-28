@@ -18,6 +18,7 @@ on:
       - 'tests/persistence.test.cjs'
       - 'tests/game-state.test.cjs'
       - 'tests/combat-core.test.cjs'
+      - 'tests/combat-resolution.test.cjs'
       - 'tests/abilities.test.cjs'
       - 'tests/status.test.cjs'
       - 'tests/navigation.test.cjs'
@@ -44,4 +45,4 @@ jobs:
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs tests/combat-resolution.test.cjs

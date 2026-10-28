@@ -956,10 +956,11 @@
   // Damage for an ally is entered after their own Armor Rating, so yours never comes off it.
   const arFor = (inc) => (inc.ally || inc.noAr ? 0 : armorNow());
   // Overwhelming Force: nothing but a successful dodge brings the damage below half.
-  const ofFloor = (x, df) => (df.of && df.dmg != null ? Math.max(x, Math.floor(df.dmg / 2)) : x);
-  // Resistance halves the damage first, then Armor Rating comes off.
-  const resisted = (df) => (df.res ? Math.floor(df.dmg / 2) : df.dmg);
-  const afterArmor = (df) => (df.dmg == null ? null : ofFloor(Math.max(0, resisted(df) - df.ar), df));
+  const ofFloor = window.WBCombat.overwhelmFloor;
+  // The exact resistance / armor / overwhelming force order lives in the
+  // shared combat rules, not in the DOM defense panel.
+  const resisted = window.WBCombat.resistedDamage;
+  const afterArmor = window.WBCombat.afterArmor;
   function setGear(sel, v) { const el = $(sel); el.hidden = !v; el.textContent = v ? sgn(v) + ' gear' : ''; }
   function clearIncoming() {
     ['#incAtk', '#incDmg', '#incType'].forEach((sel) => { $(sel).value = ''; });
@@ -1208,23 +1209,18 @@
     let won = false;
     const df = r.defense;
     if (df) {
-      const after = afterArmor(df);
+      const outcome = window.WBCombat.defenseResult(df, r.total, r.success);
+      won = outcome.won;
+      take = outcome.take;
       if (df.type === 'block') {
-        if (after != null) {
-          take = ofFloor(Math.max(0, after - df.amt), df);
+        if (take != null) {
           notes.push(take === 0 ? 'Blocked completely' : (df.ally ? 'They take ' : 'You take ') + take);
         } else {
           notes.push('Take ' + df.amt + ' off the damage, after Armor Rating');
         }
-      } else if (df.vs == null && !r.success) {
+      } else if (outcome.unresolved) {
         notes.push(df.area ? 'Meet the save DC to halve the damage' : 'Beat their attack roll to ' + (df.type === 'parry' ? 'negate it' : 'avoid it'));
       } else {
-        won = !!r.success || (df.area ? r.total >= df.vs : r.total > df.vs);
-        if (df.dmg != null) {
-          if (!won) take = after;
-          else if (df.type === 'dodge') take = df.area ? ofFloor(Math.max(0, Math.floor(resisted(df) / 2) - df.ar), df) : 0;
-          else take = ofFloor(0, df);
-        }
         const verdict = won ? (df.type === 'parry' ? 'Parried' : df.area ? 'Saved, half damage' : 'Dodged') : df.area ? 'Failed the save' : 'Hit';
         notes.push(verdict + (take != null ? (df.ally ? '. They take ' : '. You take ') + take : ''));
       }
@@ -1238,12 +1234,13 @@
     const foe = r.foe ? foeById(r.foe) : null;
     if (foe && r.kind === 'attack' && r.total != null) {
       // A natural 20 always hits.
-      r.hit = r.d20 === 20 || r.total >= foe.ev;
+      r.hit = window.WBCombat.attackHits(r.total, foe.ev, r.d20);
       notes.unshift(r.d20 === 20 ? 'Hits ' + foe.name + ': a natural 20 can’t be dodged, only blocked or parried' : (r.hit ? 'Hits ' : 'Misses ') + foe.name + ' (Evasion ' + foe.ev + ')');
     }
     if (foe && r.kind === 'dual') {
-      r.mainHit = r.dual.a === 20 || r.dual.ta >= foe.ev;
-      r.offHit = r.dual.b === 20 || r.dual.tb >= foe.ev;
+      const hits = window.WBCombat.dualHits(r.dual.ta, r.dual.tb, r.dual.a, r.dual.b, foe.ev);
+      r.mainHit = hits.main;
+      r.offHit = hits.off;
       notes.unshift('Main hand ' + (r.mainHit ? 'hits' : 'misses') + ', off-hand ' + (r.offHit ? 'hits' : 'misses') + ' (Evasion ' + foe.ev + ')');
     }
     if (foe && r.kind === 'damage' && r.hurt != null) {
@@ -1307,7 +1304,7 @@
     });
     let math = ps.join(' + ');
     // Critical hit: the dice's maximum, plus the dice rolled again.
-    if (crit) { const mx = diceMax(str); t += mx; math = 'max ' + mx + ' + ' + math; }
+    if (crit) { const mx = diceMax(str); t = window.WBCombat.criticalTotal(t, mx, true); math = 'max ' + mx + ' + ' + math; }
     const flat = flatOf(str);
     return { t: t + flat, math: math + (flat ? modText(flat) : '') };
   }
@@ -1317,19 +1314,18 @@
     const m = mod(w.stat);
     const fb = sumEff(fx, 'flat');
     const base = rollSet(w.dmg, crit);
-    const weaponDmg = Math.max(0, base.t + m + fb);
+    const extras = fx.filter((e) => e.k === 'dmg').map((e) => ({
+      effect: e, roll: rollSet(e.dice, crit)
+    }));
+    const packet = window.WBCombat.damagePacket(base.t, m, fb, extras.map(x => x.roll.t));
     let math = base.math + modText(m) + (fb ? modText(fb) : '');
-    let total = weaponDmg;
     const split = [];
-    fx.filter((e) => e.k === 'dmg').forEach((e) => {
-      const x = rollSet(e.dice, crit);
-      const v = Math.max(0, x.t);
-      total += v;
-      math += ', ' + x.math + (e.dt ? ' ' + e.dt : '');
-      split.push(v + (e.dt ? ' ' + e.dt : ' extra'));
+    extras.forEach((x, i) => {
+      math += ', ' + x.roll.math + (x.effect.dt ? ' ' + x.effect.dt : '');
+      split.push(packet.extras[i] + (x.effect.dt ? ' ' + x.effect.dt : ' extra'));
     });
     const hits = fx.filter((e) => e.k === 'onhit').map((e) => e.text);
-    return { total, math, weaponDmg, split, hits };
+    return { total: packet.total, math, weaponDmg: packet.weaponDmg, split, hits };
   }
   function rollDamage(w, crit, foeId) {
     const d = damageOf(w, crit);
@@ -1338,7 +1334,7 @@
     if (d.hits.length) notes.push('On hit: ' + d.hits.join(', '));
     const foe = foeId ? foeById(foeId) : null;
     // Against a target from the map, its Armor Rating comes off the hit.
-    const hurt = foe ? Math.max(0, d.total - foe.ar) : null;
+    const hurt = foe ? window.WBCombat.armorDamage(d.total, foe.ar) : null;
     showRoll({ title: w.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w, note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
   }
 
@@ -1374,22 +1370,24 @@
     const hits = [];
     let total = 0;
     // Against a target from the map, its Armor Rating comes off each hit separately (the off-hand after halving).
-    let hurt = 0;
+    let mainTotal = 0;
+    let offTotal = 0;
     if (mainHit) {
       const d = damageOf(mw, mainCrit);
       total += d.total;
-      if (foe) hurt += Math.max(0, d.total - foe.ar);
+      mainTotal = d.total;
       parts.push('Main hand' + (mainCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total);
       hits.push(...d.hits);
     }
     if (offHit) {
       const d = damageOf(ow, offCrit);
-      const half = Math.floor(d.total / 2);
+      const half = window.WBCombat.offhandDamage(d.total);
       total += half;
-      if (foe) hurt += Math.max(0, half - foe.ar);
+      offTotal = d.total;
       parts.push('Off-hand' + (offCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total + ', halved to ' + half);
       hits.push(...d.hits);
     }
+    const hurt = foe ? window.WBCombat.dualArmorDamage(mainTotal, offTotal, foe.ar, mainHit, offHit) : 0;
     const uniq = hits.filter((h, i) => hits.indexOf(h) === i);
     showRoll({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
       foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
@@ -1533,11 +1531,10 @@
   }
   // Death Threshold: level + VIT, 5 closer for each Trauma since your last long rest.
   function deathThreshold() {
-    const v = score('VIT');
-    return v == null ? null : Math.max(0, level() + v - 5 * (state.trauma || 0));
+    return window.WBCombat.deathThreshold(level(), score('VIT'), state.trauma);
   }
   // At a Death Threshold of 0, going below 0 at all kills you.
-  const diesAt = (h, dt) => dt != null && (dt === 0 ? h < 0 : h <= -dt);
+  const diesAt = window.WBCombat.diesAt;
   function isDead() { const h = hpNow(); return h != null && diesAt(h, deathThreshold()); }
   // Tracks the current time at 0 or below: whether Death's Mercy is used up and whether you're stabilized.
   function syncDown() {
@@ -1557,25 +1554,19 @@
     const before = hpNow();
     if (before == null) { showRoll({ kind: 'notice', title: 'Health', math: 'Set your Health first, or enter VIT so it can be worked out.' }); return; }
     const dt = deathThreshold();
-    let after = before - amt;
+    const outcome = window.WBCombat.damageHealth(before, amt, dt, state.down);
+    const after = outcome.after;
+    const dropped = outcome.dropped;
+    const dead = outcome.dead;
     const notes = [];
-    const dropped = before > 0 && after <= 0;
-    if (after <= 0 && (dropped || !state.down)) state.down = { mercy: false, stable: false };
-    // Death's Mercy: the first time you go below 0, no more than half your Death Threshold goes below 0.
-    if (after < 0 && !state.down.mercy) {
-      state.down.mercy = true;
-      if (dt != null && dt > 0) {
-        const cap = Math.floor(dt / 2);
-        if (after < -cap) { notes.push("Death's Mercy stopped it at " + fmtHp(-cap)); after = -cap; }
-      }
-    }
+    state.down = outcome.down;
+    if (outcome.mercyCapped) notes.push("Death's Mercy stopped it at " + fmtHp(after));
     state.fields.hpCur = String(after);
-    const dead = diesAt(after, dt);
     if (dead) notes.push(dt === 0 ? 'Below 0 with a Death Threshold of 0' : 'Death Threshold reached');
     else if (dropped) notes.push('Unconscious and bleeding out');
     const acts = [];
     // Taking more damage than your VIT mod calls for a Concentration check.
-    const concDc = Math.max(12, Math.floor(amt / 2));
+    const concDc = outcome.concentrationDc;
     if (!opts.bleed && !dead && state.fields.concOn === '1' && amt > mod('VIT')) acts.push(['conc', 'Concentration check (DC ' + concDc + ')']);
     if (dropped && !dead && reached('VIT', 21)) acts.push(['indom', 'Indomitable roll']);
     fillInputs();

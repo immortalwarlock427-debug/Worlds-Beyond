@@ -4,7 +4,7 @@
 
 ## Shared combat-rules foundation (phase-1 extraction)
 - `js/combat-core.js` now supplies pure functions for scores/modifiers, current gear, AP spending/refunds, and movement planning. The main sheet delegates to these functions instead of maintaining separate formulas. Ability/form effects are supplied explicitly from `WBAbilities`.
-- This still leaves attacks, damage, defenses and the encounter action protocol to extract. Do not ship a DM screen that guesses these values or duplicates their rules. The combat core has no database, permission, or cloud-sync capabilities.
+- The next shared-rules PR also extracts attacks, damage, defenses, death threshold and Death's Mercy; the encounter action protocol, turn/actor permissions and authoritative action application still remain. Do not ship a DM screen that guesses these values or duplicates their rules. The combat core has no database, permission, or cloud-sync capabilities.
 
 ## Guiding rules
 
@@ -73,3 +73,7 @@ Reference documentation:
 ## First foundation slice delivered
 
 The character sheet now calls the repository interfaces for startup load, debounce save, immediate portrait save, export/import and Clear Character. The browser keys and export v1 remain exactly the same. The former `normalizeGame` logic lives in a standalone module callable by a future DM view. Test coverage includes local-storage errors, old character exports, unknown future versions, and player vs DM state isolation. **This is not cloud sync**: all current users still have device-local browser storage unless they export/import a file.
+
+## Combat resolution phase two
+
+The character sheet delegates natural-20 hit checks, dual-wield hit/damage resolution, crit totals, resistance/Armor Rating/Overwhelming Force ordering, block/dodge/parry and saves, and Death Threshold/Mercy math to `WBCombat`. Rolls are supplied to pure functions; browser/DM rendering only formats the results. This provides **shared calculations**, not authenticated multiplayer: before live sessions, implement verified command handling, replay-safe action IDs, revisions, turn ownership and DM permission checks enforced by the backend.

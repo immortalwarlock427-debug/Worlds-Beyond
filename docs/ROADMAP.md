@@ -23,7 +23,7 @@
 
 ## Shared combat engine (current PR)
 - New `js/combat-core.js` extracts deterministic level/ASI stat math, modifiers, gear/Armor Rating, Action Point spending/refunds (Command first), and movement with Surge and leftover feet. The existing sheet now uses this same module.
-- Next: extract attacks, damage and defense resolution, then build an offline DM encounter view importing multiple characters. Cloud authentication, sync, and live multiplayer follow after shared rules and save migrations are stable.
+- Attack/damage/defense/Death's Mercy resolution is now shared in `WBCombat` (current PR), including dual wielding and resistance. Next: validated encounter actions and an offline DM view importing multiple characters. Cloud authentication, sync, and live multiplayer follow after shared rules and save migrations are stable.
 
 ## Website
 
@@ -52,3 +52,8 @@ battlemap are a static site on GitHub Pages, with the character and the game sav
 ## Cloud/mobile and multiplayer readiness
 
 See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud saves**, separate the reusable rules/save logic from DOM handlers, introduce versioned character migrations, and expose a local-first repository interface. Build an offline DM screen using shared rule functions, then choose one hosted authentication/database backend for multi-device saves and synchronized sessions. Enforce player/DM access on the backend rather than relying on client visibility. Keep character and game saves independent.
+
+## Shared combat resolution follow-up
+
+- **Current PR:** extend `WBCombat` for hit rolls, critical/extra damage, off-hand halving, per-hit armor, resistances, Overwhelming Force, defense reactions, saves, and Death Threshold/Mercy. The existing sheet delegates to those rules, preserving its UI and save shape.
+- **Next:** an offline multi-character DM encounter tracker with typed combat commands/revisions; later authenticated players and online real-time session authorization. No cloud infrastructure is part of this phase.
