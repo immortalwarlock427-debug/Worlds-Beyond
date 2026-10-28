@@ -439,7 +439,9 @@
   const baseScore = (k) => scoreAt(k, level());
   // Your score right now: your own score plus whatever your worn equipment adds.
   // Advancement (Health and Mana per level) always uses your own score, never gear.
-  const score = (k) => { const b = baseScore(k); return b == null ? null : b + gear(k) + window.WBAbilities.effectBonus(state, 'stat', k); };
+  const score = (k) => { const b = baseScore(k); return b == null ? null :
+    b + gear(k) + window.WBAbilities.effectBonus(state, 'stat', k) +
+    window.WBAbilities.formStatBonus(state, k); };
   const scoreOr12 = (k) => { const s = score(k); return s == null ? 12 : s; };
   function setLevel(n) {
     n = Math.max(1, Math.min(MAX_LEVEL, Math.floor(n) || 1));
@@ -4165,8 +4167,9 @@
         // Shows your score with gear included; tapping in switches to your own score so you can edit it.
         const own = scoreAt(s.k, level());
         const g = gear(s.k);
-        el.value = own == null ? '' : String(own + g + window.WBAbilities.effectBonus(state, 'stat', s.k));
-        el.classList.toggle('geared', own != null && !!(g || window.WBAbilities.effectBonus(state, 'stat', s.k)));
+        const formBonus = window.WBAbilities.formStatBonus(state, s.k);
+        el.value = own == null ? '' : String(own + g + window.WBAbilities.effectBonus(state, 'stat', s.k) + formBonus);
+        el.classList.toggle('geared', own != null && !!(g || window.WBAbilities.effectBonus(state, 'stat', s.k) || formBonus));
       }
     });
     Object.keys(AUTO).forEach((id) => {
@@ -4182,7 +4185,8 @@
       if (id === 'armor' || id === 'evasion' || statKey)
         el.classList.toggle('ability-adjusted', !manual &&
           (!!window.WBAbilities.effectBonus(state, id) ||
-            !!(affectedStat && window.WBAbilities.effectBonus(state, 'stat', affectedStat))));
+            !!(affectedStat && (window.WBAbilities.effectBonus(state, 'stat', affectedStat) ||
+              window.WBAbilities.formStatBonus(state, affectedStat)))));
       el.title = manual ? 'Set by hand. Clear it to go back to the automatic value.' : '';
       if (el === active) return;
       if (id === 'speed') {
@@ -4190,7 +4194,7 @@
         const base = manual ? num(o) : num(AUTO.speed());
         // Manual overrides remain orange and editable. Automatic effect bonuses
         // are rendered teal, never stored as manual overrides.
-        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move') || !!window.WBAbilities.effectBonus(state, 'stat', 'AGL')));
+        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move') || !!window.WBAbilities.effectBonus(state, 'stat', 'AGL') || !!window.WBAbilities.formStatBonus(state, 'AGL')));
         el.title = manual
           ? 'Manually set base Movement. Effective movement: ' + window.WBAbilities.effectiveMovement(state, base) + ' ft/AP.'
           : bonus ? 'Base: ' + base + ' ft/AP. Abilities: ' + (bonus > 0 ? '+' : '') + bonus + ' ft/AP.' : '';
@@ -4205,10 +4209,12 @@
       const tile = document.getElementById('stat-' + s.k);
       const g = gear(s.k);
       const gEl = document.getElementById('gear-' + s.k);
-      gEl.hidden = !(g || window.WBAbilities.effectBonus(state, 'stat', s.k));
+      gEl.hidden = !(g || window.WBAbilities.effectBonus(state, 'stat', s.k) || window.WBAbilities.formStatBonus(state, s.k));
       const bs = baseScore(s.k);
       const abilityStatBonus = window.WBAbilities.effectBonus(state, 'stat', s.k);
-      gEl.textContent = [g ? sgn(g) + ' gear' : '', abilityStatBonus ? sgn(abilityStatBonus) + ' ability' : ''].filter(Boolean).join(' · ');
+      const formBonus = window.WBAbilities.formStatBonus(state, s.k);
+      gEl.textContent = [g ? sgn(g) + ' gear' : '', abilityStatBonus ? sgn(abilityStatBonus) + ' ability' : '',
+        formBonus ? sgn(formBonus) + ' form' : ''].filter(Boolean).join(' · ');
       gEl.title = g && bs != null ? 'Your own score is ' + bs + '. Gear adds ' + sgn(g) + '.' : '';
       tile.querySelectorAll('.milestones li').forEach((li) => {
         li.classList.toggle('reached', sc != null && sc >= Number(li.dataset.at));
