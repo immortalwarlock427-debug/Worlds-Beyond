@@ -85,6 +85,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - Existing manual modifier overrides, active ability bonuses, form bonuses, item-settled gear progression and character/game saving remain unchanged. Tests exercise form/ability buffs, Command AP, movement/AP accounting and stat history.
 - Remaining refactor: attack and damage resolution, defense and resistances, then DM encounter screen. No networking, player permissions or online saves are introduced by this PR.
 
+## Shared Combat Core phase two (current PR)
+- The shared DOM-free combat module handles hit determination (natural 20; separate dual-wield hits), weapon and crit damage packets, off-hand halving, per-hit Armor Rating, resistance, Overwhelming Force floors, Block/Dodge/Parry and area saves, Death Threshold and Death's Mercy. The current character-sheet UI **uses the pure calculations directly** instead of maintaining different combat rules for future DM/players.
+- Preserve current game mechanics, even where an additional game design decision may eventually be needed: natural 1 is not automatically a miss; the current Overwhelming Force behavior still applies to successful area saves/parries. Dice rolling and UI remain on the client. No session authority, permissions or cloud sync yet.
+- Next architectural stage: typed validated combat actions and local DM encounter tracker, then authenticated live sessions.
+
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
