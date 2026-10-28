@@ -4004,6 +4004,7 @@
   $('#mapUndo').addEventListener('click', () => { mapNote = ''; undoAp(); });
   $('#mapGo').addEventListener('click', () => { if (mapTarget && mapPlan(mapTarget).ok) mapMoveTo(mapTarget); });
   $('#mapTurn').addEventListener('click', () => { mapTarget = null; $('#turnReset').click(); });
+  $('#statusNextTurn').addEventListener('click', () => $('#turnReset').click());
   $('#mapPick').addEventListener('change', (e) => {
     endWalk();
     const id = MAPS[e.target.value] ? e.target.value : 'blank';
