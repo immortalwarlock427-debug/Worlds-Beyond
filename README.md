@@ -67,3 +67,9 @@ Open `dm.html` or select **Open DM Room** on the character sheet. This is a same
 The DM Room now contains a scrollable map with the same built-in artwork as the sheet Battlemap, or an empty grid. Choose a map and combatant, then click a square to place the token. Click a token to select it; choose **Remove selected token** to unplace. Player and NPC tokens are color-coded and the current actor is outlined in combat. Walls, occupied squares and out-of-bounds placements are rejected. Placements are saved with the local encounter and tagged by map ID; map switches do not teleport actors.
 
 The map selector updates the shared game map, but token placements are DM-only encounter snapshots. They do not change player AP, movement, or the legacy battlemap foe set. Until secure movement synchronization exists, use the DM Room for tactical tracking and the existing character Battlemap for each character's own movement. No fog-of-war or online multiplayer yet.
+
+## AP-based movement in the DM Room (Draft 34)
+
+After positioning characters and starting combat, the DM can select **Combat movement (AP)**. Choose the current actor, click an empty destination, review the highlighted shortest route (5 ft per normal square or 10 ft entering rubble, shallow water or bones), and press **Confirm move**. The shared combat engine pays leftover distance first, then free Surge movement if available, then Command/personal AP; the character's position and movement counters save with the encounter. You may change to **DM placement (free)** for setup or administrative corrections, which never consumes AP.
+
+Imported player Movement is calculated from the current exported sheet; NPC movement and Surge are editable in Setup. The DM Room is still a local snapshot and does not push position, health or AP changes to players' character sheets or their separate Battlemap. This is not online multiplayer. No real-time account security or cloud transaction authority has shipped.
