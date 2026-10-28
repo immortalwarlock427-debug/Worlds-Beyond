@@ -97,7 +97,7 @@ test('deleted gear is removed from all form profiles and invalid slots are sanit
   state.equip={head:'helm2',main:'greatsword',off:'shield1',rleg:'boots1'};
   const clean=equip.sanitize(state,state.equip);
   assert.equal(clean.off,undefined,'A twohand weapon blocks the offhand');
-  assert.equal(clean.rleg,undefined,'A pair of boots must use its primary left slot');
+  assert.equal(clean.rleg,'boots1','A paired leg item uses the right/primary slot');
   assert.equal(clean.head,'helm2');
   equip.capture(state);
   equip.removeItem(state,'helm2');
