@@ -1,0 +1,191 @@
+/* Validated encounter movement: pathfinding, AP, Surge, controls and persistence. */
+const test=require('node:test'),assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
+const plain=v=>JSON.parse(JSON.stringify(v));
+function modules(){
+ const ctx={window:{},Math,Number,Object,Set,Map,Date};
+ for(const file of ['js/combat-core.js','js/encounter-actions.js',
+   'js/maps.js','js/encounter-map.js','js/game-state.js',
+   'js/abilities.js','js/dm-characters.js'])
+   vm.runInNewContext(read(file),ctx);
+ return ctx.window;
+}
+const dm={role:'dm',userId:'gm'};
+const alice={role:'player',userId:'alice'};
+const bob={role:'player',userId:'bob'};
+const hero={id:'hero',kind:'pc',ownerId:'alice',name:'Hero',
+ hp:22,maxHp:22,ar:1,apMax:6,speedFt:10,surgeMax:0,initiative:11};
+const npc={id:'npc',kind:'npc',name:'Warden',
+ hp:19,maxHp:19,ar:2,apMax:6,speedFt:5,initiative:7};
+const apply=(api,state,type,detail={},context=dm)=>{
+ const result=api.applyAction(state,{id:'a'+(state.revision+1),
+   type,expectedRevision:state.revision,...detail},context);
+ assert.equal(result.ok,true,result.error);
+ return result.state;
+};
+function gameSetup(id='blank'){
+ const w=modules(),e=w.WBEncounter, m=w.WBEncounterMap;
+ const game={map:{id,cols:20,rows:15}};
+ const map=m.mapModel(game,w.WB_MAPS);
+ let state=e.createEncounter('movement');
+ state=apply(e,state,'AddActor',{actor:hero});
+ state=apply(e,state,'AddActor',{actor:npc});
+ const pos=id==='blank'?[[3,3],[8,8]]:[[16,13],[18,13]];
+ for(let i=0;i<state.order.length;i++){
+   state=apply(e,state,'PlaceToken',{actorId:state.order[i],
+     x:pos[i][0],y:pos[i][1]},{...dm,map});
+ }
+ return {w,e,m,map,game,state};
+}
+test('shortest routes count 5-foot diagonals and 10-foot difficult terrain',()=>{
+ let {m,map,state}=gameSetup();
+ const direct=m.movementRoute(state,map,'hero',5,5);
+ assert.equal(direct.ok,true);
+ assert.equal(direct.ft,10);
+ assert.equal(direct.path.length,3);
+ assert.equal(direct.rough,0);
+ const same=m.movementRoute(state,map,'hero',3,3);
+ assert.equal(same.error,'ALREADY_THERE');
+ const occupied=m.movementRoute(state,map,'hero',8,8);
+ assert.equal(occupied.error,'OCCUPIED_SQUARE');
+ ({m,map,state}=gameSetup('stone-hall'));
+ const a=m.movementRoute(state,map,'hero',15,12);
+ assert.equal(a.ok,true);assert.ok(a.ft>=10);
+ const blocked=m.movementRoute(state,map,'hero',0,0);
+ assert.equal(blocked.error,'BLOCKED_SQUARE');
+ const out=m.movementRoute(state,map,'hero',31,13);
+ assert.equal(out.error,'OUT_OF_BOUNDS');
+ const noSpot=m.movementRoute({...state,actors:{...state.actors,hero:{...state.actors.hero,
+   x:null,y:null,mapId:null}}},map,'hero',16,13);
+ assert.equal(noSpot.error,'TOKEN_NOT_PLACED');
+ // Single row of rubble must cost 10 ft per square.
+ const local={...map,id:'rough-grid',cols:5,rows:5,def:{
+   terrain:['#####','#.r##','##r##','##..#','#####'] }};
+ const enc={order:['hero'],actors:{hero:{...state.actors.hero,mapId:'rough-grid',x:1,y:1}}};
+ const rough=m.movementRoute(enc,local,'hero',2,2);
+ assert.equal(rough.ok,true);
+ assert.equal(rough.ft,20);
+ assert.equal(rough.rough,2);
+});
+test('combat movement debits authoritative AP, carries feet, and resets each new turn',()=>{
+ const {w,e,map}=gameSetup();
+ let state=gameSetup().state; // same pure snapshot
+ state=apply(e,state,'StartEncounter');
+ const moving=(x,y,ctx=alice)=>e.applyAction(state,{
+   id:'move'+(state.revision+1),type:'MoveToken',
+   actorId:'hero',x,y,expectedRevision:state.revision
+ },{...ctx,map});
+ let result=moving(5,5);
+ assert.equal(result.ok,true);
+ assert.equal(result.event.ft,10);
+ assert.equal(result.event.paid,1);
+ state=result.state;
+ assert.equal(state.actors.hero.apAvail,5);
+ assert.equal(state.actors.hero.move.left,0);
+ result=moving(6,5);
+ assert.equal(result.ok,true);
+ state=result.state;
+ assert.equal(state.actors.hero.apAvail,4);
+ assert.equal(state.actors.hero.move.left,5);
+ assert.equal(state.actors.hero.move.ft,15);
+ result=moving(7,5);
+ assert.equal(result.ok,true);
+ state=result.state;
+ assert.equal(result.event.paid,0,'Leftover feet should avoid new AP');
+ assert.equal(state.actors.hero.apAvail,4);
+ assert.equal(state.actors.hero.move.left,0);
+ const before=plain(state);
+ const other=e.applyAction(state,{id:'wrong',type:'MoveToken',actorId:'npc',
+   x:9,y:9,expectedRevision:state.revision},{...dm,map});
+ assert.equal(other.error,'NOT_CURRENT_TURN');
+ assert.deepEqual(plain(state),before);
+ state=apply(e,state,'EndTurn',{actorId:'hero'});
+ state=apply(e,state,'EndTurn',{actorId:'npc'});
+ assert.equal(state.actors.hero.apAvail,6);
+ assert.deepEqual(plain(state.actors.hero.move),{ft:0,left:0,surge:0});
+});
+test('Surge grants two free movement AP and Command AP is spent first',()=>{
+ const {e,map}=gameSetup();
+ let state=gameSetup().state;
+ state=apply(e,state,'UpdateActor',{actorId:'hero',changes:{speedFt:5,surgeMax:2}});
+ state=apply(e,state,'StartEncounter');
+ let result=e.applyAction(state,{
+   id:'surge1',type:'MoveToken',actorId:'hero',x:5,y:5,
+   expectedRevision:state.revision
+ },{...dm,map});
+ assert.equal(result.ok,true);state=result.state;
+ assert.equal(result.event.free,2);
+ assert.equal(result.event.paid,0);
+ assert.equal(state.actors.hero.move.surge,2);
+ assert.equal(state.actors.hero.apAvail,6);
+ state=apply(e,state,'GrantAP',{actorId:'hero',amount:2});
+ result=e.applyAction(state,{id:'surge2',type:'MoveToken',actorId:'hero',
+   x:6,y:6,expectedRevision:state.revision},{...dm,map});
+ assert.equal(result.ok,true);state=result.state;
+ assert.equal(result.event.paid,1);
+ assert.equal(state.actors.hero.apGiven.n,1);
+ assert.equal(state.actors.hero.apAvail,6);
+});
+test('ownership, map, dead actor, AP and stale revision protections reject moves',()=>{
+ const {e,m,map}=gameSetup();
+ let state=gameSetup().state;
+ const before=plain(state);
+ const action=(id,x,y,ctx=dm,rev=state.revision)=>e.applyAction(state,{
+   id,type:'MoveToken',actorId:'hero',x,y,expectedRevision:rev
+ },ctx);
+ assert.equal(action('before',4,4,{...alice,map}).error,'ENCOUNTER_NOT_ACTIVE');
+ state=apply(e,state,'StartEncounter');
+ assert.equal(action('other',4,4,{...bob,map}).error,'NOT_YOUR_ACTOR');
+ assert.equal(action('no-map',4,4,dm).error,'MAP_REQUIRED');
+ assert.equal(action('stale',4,4,{...alice,map},state.revision-1).error,'REVISION_CONFLICT');
+ assert.equal(action('bad-xy',8,8,{...alice,map}).error,'OCCUPIED_SQUARE');
+ assert.equal(action('invalid',2.5,4,{...alice,map}).error,'INVALID_POSITION');
+ let removed=apply(e,state,'ClearToken',{actorId:'hero'});
+ assert.equal(e.applyAction(removed,{id:'unplaced',type:'MoveToken',actorId:'hero',x:4,y:4,
+   expectedRevision:removed.revision},{...alice,map}).error,'TOKEN_NOT_PLACED');
+ state=apply(e,state,'UpdateActor',{actorId:'hero',changes:{speedFt:0}});
+ state=apply(e,state,'StartEncounter');
+});
+test('speed zero, insufficient AP, initiative and unconscious restrictions',()=>{
+ const {e,map}=gameSetup();
+ let state=gameSetup().state;
+ state=apply(e,state,'UpdateActor',{actorId:'hero',changes:{speedFt:0}});
+ state=apply(e,state,'StartEncounter');
+ let move={id:'no-speed',type:'MoveToken',actorId:'hero',x:4,y:3,
+   expectedRevision:state.revision};
+ assert.equal(e.applyAction(state,move,{...dm,map}).error,'NO_MOVEMENT');
+ // Spend all AP by existing action, then try moving.
+ let baseline=gameSetup().state;
+ baseline=apply(e,baseline,'StartEncounter');
+ baseline=apply(e,baseline,'SpendAP',{actorId:'hero',cost:6});
+ assert.equal(e.applyAction(baseline,{...move,id:'no-ap',expectedRevision:baseline.revision},
+   {...dm,map}).error,'INSUFFICIENT_AP');
+ baseline=apply(e,baseline,'SetHealth',{actorId:'hero',hp:0});
+ assert.equal(e.applyAction(baseline,{...move,id:'down',expectedRevision:baseline.revision},
+   {...dm,map}).error,'ACTOR_UNCONSCIOUS');
+});
+test('imported AGL, Movement overrides and ability effects use existing shared sheet rules',()=>{
+ const w=modules();
+ const state={id:'pc1',fields:{level:'1',charName:'Swift',hpCur:'10',apMax:'15'},
+   hist:{AGL:{1:22},VIT:{1:16}},over:{},items:[],equip:{},
+   rolls:{},lvGear:{},asi:{},abilities:[],abilityLoadouts:[],activeAbilityLoadoutId:''};
+ const p=w.WBDMCharacters.fromCharacter(state,'fallback').actor;
+ assert.equal(p.speedFt,25,'AGL 22 gives +4; 5*(1+4) ft/AP');
+ assert.equal(p.surgeMax,2,'AGL 21+ gives two free Surge AP');
+ assert.equal(p.apMax,15);
+ state.over.speed='40';
+ assert.equal(w.WBDMCharacters.fromCharacter(state,'fallback').actor.speedFt,40);
+ state.over.speed='0';
+ assert.equal(w.WBDMCharacters.fromCharacter(state,'fallback').actor.speedFt,0);
+});
+test('UI exposes separate free placement and preview-confirmed combat movement',()=>{
+ const html=read('dm.html'),js=read('js/dm-map.js'),ctl=read('js/dm.js');
+ for(const id of ['dmMapMode','dmMovePreview','dmMoveText','dmMoveConfirm',
+   'dmMoveCancel','dmMapPath'])assert.ok(html.includes('id="'+id+'"'),id);
+ assert.match(js,/movementRoute\(/);
+ assert.match(js,/movePlan\(/);
+ assert.match(js,/Confirm/gi);
+ assert.match(js,/options\.command\('MoveToken'/);
+ assert.match(ctl,/type === 'PlaceToken' \|\| type === 'MoveToken'/);
+});
