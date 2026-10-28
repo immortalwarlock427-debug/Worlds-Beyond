@@ -4159,7 +4159,7 @@
         const base = manual ? num(o) : num(AUTO.speed());
         // Manual overrides remain orange and editable. Automatic effect bonuses
         // are rendered teal, never stored as manual overrides.
-        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move')));
+        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move') || !!window.WBAbilities.effectBonus(state, 'stat', 'AGL')));
         el.title = manual
           ? 'Manually set base Movement. Effective movement: ' + window.WBAbilities.effectiveMovement(state, base) + ' ft/AP.'
           : bonus ? 'Base: ' + base + ' ft/AP. Abilities: ' + (bonus > 0 ? '+' : '') + bonus + ' ft/AP.' : '';
