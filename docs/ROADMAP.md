@@ -89,3 +89,9 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 - Replaced unreliable native map picker with three visible map selection buttons and added local movement error/status feedback.
 - Auto-select the current turn for MoveToken; disable AP movement once combat is finished.
 - Return finished combat to editable setup with the same players, NPCs, HP, initiative and tokens via **Reuse roster / Edit setup**, while resetting turn/AP/Surge/movement counters. New empty roster remains a separate destructive operation.
+
+## Local Player Encounter View (Draft 35)
+
+- Added same-browser `player.html` showing selected PC's Health, AP, Movement, Surge, map and current initiative actor. The page shares encounter state with the DM Room through local repository storage, with same-origin tab updates.
+- Player actions are limited to `MoveToken`, `SpendAP`, and `EndTurn`, validated by `WBEncounter`. DM-only damage, healing, foe editing, initiative and map selection are not present in the player UI; the player view omits other actors' HP/AR.
+- **Next milestone:** hosted session/account backend and secure per-player session membership; use authenticated server-side commands and redacted views before enabling join codes or genuine cross-device/cloud play. Keep local player seat selector explicitly non-authenticated; do not confuse it with multiplayer authorization.

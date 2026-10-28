@@ -81,3 +81,9 @@ Map selection uses **Blank Grid / Stone Hall / Barrow** buttons rather than a br
 ### Natural movement routes and visual traversal
 
 When multiple paths cost the same movement distance, the DM map now prefers the route with fewer unnecessary diagonal steps and turns, so an unobstructed straight-line move stays straight. **Confirm move** still commits the validated route, coordinates, and AP once, but the token is drawn separately and travels smoothly through each square (170 ms per tile). Other actions and refreshes read the already saved destination, and the visual effect can be canceled without refunding or duplicating AP. The motion is suppressed when the browser requests reduced animations.
+
+## Local Player Preview (Draft 35)
+
+Open **Player Preview** from the character sheet or DM Room. On the same browser as a local DM encounter, choose an imported player character, then watch the shared map/turn order and your selected character's Health/AP/Movement. During your turn, click a reachable square to preview movement and confirm it, spend AP, or end your turn. The DM Room (open in another tab on this same website) will see these changes after its browser storage event. Player actions are validated by `WBEncounter`; no DM-only damage/healing/setup controls are exposed.
+
+**Not online multiplayer:** The selector can switch between any local PC and does not authenticate ownership. Imported `ownerId:offline` is a testing marker, not real user identity. The player and DM tabs must share the same browser profile and site origin. Other devices have separate browser storage and will not receive changes. No join codes, cloud saves, secure permissions or real-time network sessions are implemented yet. Character sheet saves remain separate.
