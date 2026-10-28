@@ -529,17 +529,9 @@
       const mb = scoreAt(ms, n);
       const vit = vb == null ? null : vb + (lg.VIT || 0);
       const msv = mb == null ? null : mb + (lg[ms] || 0);
-      let die = null, dieMax = 0, gain = null;
+      const health = window.WBCombat.healthAtLevel(state, n, vit);
+      const die = health.die, dieMax = health.dieMax, gain = health.gain;
       if (vit != null) {
-        const half = Math.floor(vit / 2);
-        die = rowDie(vit);
-        dieMax = diceMax(die);
-        if (n === 1) {
-          gain = dieMax ? dieMax + half : null;
-        } else {
-          const roll = num(state.rolls[n]);
-          gain = isNaN(roll) ? null : roll + half;
-        }
         if (gain == null) missing.push(n); else hp += gain;
       }
       let mgain = null;
