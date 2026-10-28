@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1>Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 29</p>
+    <p class="meta">Homebrew rules · Draft 30</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -234,6 +234,12 @@
             </div>
             <span class="pool-src" id="mpRule"></span>
           </div>
+        </div>
+        <div class="custom-resources" id="resourceSection">
+          <div class="custom-resource-header"><h3>Custom Resources</h3><button type="button" class="btn strong" id="addResource">+ Add resource</button></div>
+          <p class="pool-src">Track Energy, Stamina, Heat or any other character-specific resource. Each has its own current value, maximum, and recovery settings.</p>
+          <label class="resource-mana-toggle"><input type="checkbox" id="showManaPool" checked> Show Mana / Holy Power</label>
+          <div id="resourceList" class="resource-list"></div>
         </div>
         <div class="rest">
           <button type="button" class="btn strong" id="longRest">Long rest</button>
@@ -702,6 +708,7 @@
 </div>
 
 <script src="js/maps.js"></script>
+<script src="js/resources.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
