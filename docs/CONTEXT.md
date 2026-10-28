@@ -36,6 +36,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - One ability may apply multiple additive temporary effects to Movement (ft/AP), Armor Rating, Evasion, any of the eight stat scores, and custom resource maximums.
 - Effects contribute to effective values while active; permanent base scores, gear, and resource maximums remain unchanged. Resource capacity bonuses do not refill current points. Editing active effects cancels their duration. Existing single Movement effects migrate to the multiple-effect format.
 
+## Navigation update (next PR)
+- Separate top-level destinations for Character Sheet and Battlemap. Character has five sticky sub-tabs: Overview (identity, vitals, defenses), Attributes (stats and advancement), Equipment (including forging), Abilities, and Status Effects. Sections are hidden rather than destroyed so existing controls, state, calculations and save format remain unchanged.
+- Deep links: #map stays Battlemap, #sheet and no hash default to Overview, #status still opens Status Effects, and #sheet/{overview|attributes|equipment|abilities|statuses} selects a character sub-tab. Switching out to Battlemap and back preserves the current character sub-tab within the session.
+- Export, Import and Clear remain in the shared top controls. Battlemap/game data remain separate from character saves.
+
 ## Status Effects view (next PR)
 - A third Sheet / Status Effects / Battlemap navigation tab uses #status and is part of the same website; it does not create a separate game state. The status view shows active ability effects, their numerical bonus details and remaining duration, and can end an ability's active effect early (without refunding AP/resources or removing its cooldown).
 - Players can also add manual status entries (Buff, Debuff, Condition or Other), with a source, notes, and optional turn timer. These are descriptive only and do not silently alter combat math. Timed entries expire when the player starts a turn; blank duration persists until removed. Manual statuses are retained across long rests until explicitly removed or expired. All entries save with the character and migrate from older character files as an empty list.
