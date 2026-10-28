@@ -219,7 +219,9 @@ test('the character sheet loads manager before app and hooks turn/rest/export', 
   assert.match(app, /resourceManager\.turnStart\(\)/);
   assert.match(app, /resourceManager\.longRest\(\)/);
   assert.match(app, /resources: state\.resources/);
-  assert.match(app, /version: 1, exported: new Date/);
+  const persistence = fs.readFileSync(path.join(__dirname, '..', 'js', 'persistence.js'), 'utf8');
+  assert.match(app, /WBPersistence\.exportCharacter\(state\)/);
+  assert.match(persistence, /version: CHARACTER_VERSION/);
 });
 
 
