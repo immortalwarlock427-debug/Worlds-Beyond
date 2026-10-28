@@ -48,6 +48,14 @@
     const initiativeBonus = Number.isFinite(initOverride) ? initOverride :
       rules.modifier(state, 'WIS', lvl, bonus('stat','WIS'), formBonus('WIS')) +
       rules.gearBonus(state, 'init');
+    const agility = rules.effectiveScore(state,'AGL',lvl,bonus('stat','AGL'),formBonus('AGL'));
+    const agilityMod = rules.modifier(state,'AGL',lvl,bonus('stat','AGL'),formBonus('AGL'));
+    const speedOverride = numeric(over.speed);
+    const baseSpeed = Number.isFinite(speedOverride) ? speedOverride :
+      Math.max(0,Math.max(5,5*(1+agilityMod))+rules.gearBonus(state,'move'));
+    const speedFt = bounded(abilities && Array.isArray(state.abilities) ?
+      abilities.effectiveMovement(state,baseSpeed) : baseSpeed,5,0,10000);
+    const surgeMax = agility != null && agility >= 21 ? 2 : 0;
     const apMax = rules.trackerMax(fields.apMax, 15);
     const apAvail = rules.trackerAvailable(state.apAvail, apMax);
     const trauma = bounded(state.trauma, 0, 0, 100000);
@@ -66,7 +74,7 @@
         down: hp > 0 ? null : (state.down && typeof state.down === 'object' ?
           { mercy: !!state.down.mercy, stable: !!state.down.stable } :
           { mercy: hp < 0, stable: false }),
-        apMax, apAvail, initiative: 0,
+        apMax, apAvail, speedFt, surgeMax, initiative: 0,
         initiativeBonus: bounded(initiativeBonus, 0, -10000, 10000)
       },
       initiativeBonus: bounded(initiativeBonus, 0, -10000, 10000),
