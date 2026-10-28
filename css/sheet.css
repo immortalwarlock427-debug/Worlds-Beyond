@@ -1119,3 +1119,9 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
 .ability-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 @media(max-width:560px) { .ability-editor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:380px) { .ability-editor-row { grid-template-columns:1fr; } }
+
+/* File actions live near the Sheet / Battlemap switch, not at the bottom of the sheet. */
+.sheet-actions { justify-content: flex-start; padding-top: 12px; border-top: 1px solid var(--rule); }
+.sheet-actions #saveStatus { flex: 1 1 180px; }
+.sheet-actions .foot-acts { min-width: 0; }
+@media (max-width: 540px) { .sheet-actions .foot-acts { width: 100%; } .sheet-actions .btn { padding: 7px 9px; } }
