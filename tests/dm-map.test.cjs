@@ -120,7 +120,8 @@ test('render and click board use selected actor and map coordinates without free
  const listeners={};
  const elements={};
  const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
-   'dmMapClear','dmMapStatus'];
+   'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
+   'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp'];
  for(const id of ids){
    elements['#'+id]={
      innerHTML:'',textContent:'',value:'',disabled:false,style:{},
@@ -128,7 +129,7 @@ test('render and click board use selected actor and map coordinates without free
      getBoundingClientRect(){return{left:100,top:100}}
    };
  }
- const ctx={window:{WB_MAPS:w.WB_MAPS,WBEncounterMap:w.WBEncounterMap},
+ const ctx={window:{WB_MAPS:w.WB_MAPS,WBEncounterMap:w.WBEncounterMap,WBCombat:w.WBCombat},
    document:{querySelector(key){if(!elements[key])throw Error(key);return elements[key]}}};
  vm.runInNewContext(read('js/dm-map.js'),ctx);
  let latestAction=null;
