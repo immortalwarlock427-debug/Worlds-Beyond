@@ -1370,11 +1370,12 @@
     const hits = [];
     let total = 0;
     // Against a target from the map, its Armor Rating comes off each hit separately (the off-hand after halving).
-    let hurt = 0;
+    let mainTotal = 0;
+    let offTotal = 0;
     if (mainHit) {
       const d = damageOf(mw, mainCrit);
       total += d.total;
-      if (foe) hurt += window.WBCombat.armorDamage(d.total, foe.ar);
+      mainTotal = d.total;
       parts.push('Main hand' + (mainCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total);
       hits.push(...d.hits);
     }
@@ -1382,10 +1383,11 @@
       const d = damageOf(ow, offCrit);
       const half = window.WBCombat.offhandDamage(d.total);
       total += half;
-      if (foe) hurt += window.WBCombat.armorDamage(half, foe.ar);
+      offTotal = d.total;
       parts.push('Off-hand' + (offCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total + ', halved to ' + half);
       hits.push(...d.hits);
     }
+    const hurt = foe ? window.WBCombat.dualArmorDamage(mainTotal, offTotal, foe.ar, mainHit, offHit) : 0;
     const uniq = hits.filter((h, i) => hits.indexOf(h) === i);
     showRoll({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
       foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
