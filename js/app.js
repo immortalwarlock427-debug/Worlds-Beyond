@@ -353,6 +353,10 @@
   state.portraits = state.portraits.filter((f) => f && typeof f.src === 'string' && /^data:image\//.test(f.src)).map((f, i) => ({
     id: typeof f.id === 'string' && f.id ? f.id : 'f' + (i + 1), src: f.src, name: typeof f.name === 'string' ? f.name.slice(0, 30) : ''
   }));
+  const portraitIds = new Set(state.portraits.map(f => f.id));
+  state.abilityLoadouts.forEach(form => {
+    if (form.portraitId && !portraitIds.has(form.portraitId)) form.portraitId = '';
+  });
   if (!state.portraits.some((f) => f.id === state.formId)) state.formId = state.portraits.length ? state.portraits[0].id : null;
   }
 
@@ -2868,6 +2872,10 @@
     if (!f) return;
     const i = state.portraits.indexOf(f);
     state.portraits.splice(i, 1);
+    // Do not keep links to deleted pictures on mechanical ability forms.
+    state.abilityLoadouts.forEach(loadout => {
+      if (loadout.portraitId === f.id) loadout.portraitId = '';
+    });
     const next = state.portraits[Math.max(0, i - 1)];
     state.formId = next ? next.id : null;
     showPortrait();
