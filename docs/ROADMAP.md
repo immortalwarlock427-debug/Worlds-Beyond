@@ -8,14 +8,15 @@
 
 ## Sheet
 - Custom resources: basic manager delivered in Draft 30; later connect resource costs to the universal ability builder, add reusable templates and per-form pools.
-- Replace the traditional spellbook goal with an ability builder supporting custom abilities, cooldowns, duration, cost, activation, and eventual sheet-targeted effects. Begin with tracking rather than full effect automation.
+- Ability Library v1: create, edit, duplicate, delete, favorite, categorize and search abilities; record optional AP/resource costs, cooldowns, durations, uses (blank = unlimited), descriptions and notes without automating activations. Next: activation, trackers, and sheet-targeted effects.
 - Spells: a list with level and tier, mana cost from the Magic System table, AP cost 11 − INT or FTH mod
   (minimum 6), damage, area and save (DC 12 + mod), concentration, and a Cast button.
 - Milestone buttons and trackers: Devastate and Singularity as toggles on attacks; pips for Indomitable, Miracle and
   the once-per-round ones; a New combat button.
 - Block scaling and two-handed damage, once decided.
 - A conditions tracker, after the Exhaustion revamp.
-- Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
+- Character export/import/clear moved to the top, accessible from Sheet and Battlemap. Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
+- Ability Library enhancements after v1: richer filters (type, resource, cost, cooldown, favorites), organization for large collections.
 
 ## Website
 

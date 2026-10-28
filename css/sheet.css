@@ -1091,3 +1091,37 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
 .resource-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:end; }
 .resource-refill { grid-column:1/-1; }
 @media(max-width:420px) { .resource-values { grid-template-columns:repeat(2,minmax(0,1fr)); } .resource-actions .btn { padding:6px 8px; } }
+
+/* Character-specific ability library. Form editing deliberately doesn't alter combat calculations yet. */
+.ability-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.ability-search { flex:2 1 220px; } .ability-category { flex:1 1 145px; }
+.ability-toolbar label:not(.ability-favorites), .ability-field { display:grid; gap:4px; min-width:0; }
+.ability-toolbar input:not([type=checkbox]), .ability-toolbar select, .ability-editor input, .ability-editor select, .ability-editor textarea { width:100%; min-width:0; border:1px solid var(--rule); border-radius:3px; padding:7px; background:var(--field); color:var(--ink); font:inherit; }
+.ability-favorites { display:flex; align-items:center; gap:6px; font-size:14px; padding-bottom:8px; white-space:nowrap; }
+.ability-favorites input { accent-color:var(--brass); }
+.ability-count { margin:12px 0 8px; font-size:13px; color:var(--muted); }
+.ability-list { display:grid; gap:10px; }
+.ability-empty { margin:0; padding:20px; border:1px dashed var(--rule); border-radius:4px; color:var(--muted); font-size:14px; }
+.ability-card { border:1px solid var(--rule); border-radius:4px; min-width:0; background:var(--sheet); }
+.ability-card[open] { border-color:var(--brass); }
+.ability-summary { padding:12px; display:flex; flex-wrap:wrap; align-items:center; gap:7px 12px; cursor:pointer; list-style:none; }
+.ability-summary::-webkit-details-marker { display:none; }
+.ability-summary:focus-visible { outline:2px solid var(--brass); outline-offset:2px; }
+.ability-summary-name { font-family:var(--font-display); font-size:18px; flex:1 1 145px; }
+.ability-summary-category { color:var(--muted); font-size:13px; }
+.ability-summary-badges { display:flex; flex-wrap:wrap; gap:5px; }
+.ability-tag { border:1px solid var(--rule); border-radius:20px; padding:2px 7px; font-size:12px; color:var(--muted); }
+.ability-summary-arrow { color:var(--brass); transition:transform .2s ease; }
+.ability-card[open] .ability-summary-arrow { transform:rotate(180deg); }
+.ability-editor { display:grid; gap:12px; padding:12px; border-top:1px solid var(--rule); }
+.ability-editor-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.ability-editor textarea { resize:vertical; min-height:70px; }
+.ability-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
+@media(max-width:560px) { .ability-editor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:380px) { .ability-editor-row { grid-template-columns:1fr; } }
+
+/* File actions live near the Sheet / Battlemap switch, not at the bottom of the sheet. */
+.sheet-actions { justify-content: flex-start; padding-top: 12px; border-top: 1px solid var(--rule); }
+.sheet-actions #saveStatus { flex: 1 1 180px; }
+.sheet-actions .foot-acts { min-width: 0; }
+@media (max-width: 540px) { .sheet-actions .foot-acts { width: 100%; } .sheet-actions .btn { padding: 7px 9px; } }
