@@ -152,7 +152,7 @@
     const dieMax = dice.reduce((sum, parts) => sum +
       (Number(parts[1]) || 1) * Number(parts[2]), 0);
     const roll = num(record(state.rolls)[n]);
-    const gain = n === 1 ? dieMax + Math.floor(vit / 2)
+    const gain = n === 1 ? (dieMax ? dieMax + Math.floor(vit / 2) : null)
       : isNaN(roll) ? null : roll + Math.floor(vit / 2);
     return { die, dieMax, gain };
   }
