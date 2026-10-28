@@ -21,9 +21,9 @@
 - Character export/import/clear moved to the top, accessible from Sheet and Battlemap. Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
 - Ability Library enhancements: type, category, resource-cost, AP-cost and readiness/cooldown filters, sort order, and compact list implemented. **Ability Forms v1 (current PR):** create named forms/loadouts, assign abilities to one or more, share abilities across all forms, and switch available skills without resetting trackers; separate from portrait forms. Phase 2: two-way link between ability forms and existing portraits (selecting either updates the other) plus reversible form-specific modifiers for STR/VIT/DEX/AGL/INT/WIS/CHA/FTH (current PR). Current PR: form-specific custom resource availability and regeneration, balances preserved when switching, optional built-in Mana visibility per form. Equipment profiles (next PR): per-form worn slots with shared inventory, one active gear set at a time, Base/Copy/Clear controls, no reset of item uses or long-rest history. Later: separate built-in Mana balances if needed, form transitions/AP costs, tags/groups, saved filter presets, batch actions.
 
-## Shared combat engine (current PR)
+## Shared combat engine and offline encounter commands
 - New `js/combat-core.js` extracts deterministic level/ASI stat math, modifiers, gear/Armor Rating, Action Point spending/refunds (Command first), and movement with Surge and leftover feet. The existing sheet now uses this same module.
-- Attack/damage/defense/Death's Mercy resolution is now shared in `WBCombat` (current PR), including dual wielding and resistance. Next: validated encounter actions and an offline DM view importing multiple characters. Cloud authentication, sync, and live multiplayer follow after shared rules and save migrations are stable.
+- Attack/damage/defense/Death's Mercy resolution is now shared in `WBCombat` (current PR), including dual wielding and resistance. Validated encounter action processor now covers initiative, turns, AP, damage/healing, revisions and duplicate rejection; next: offline DM view importing multiple characters. Cloud authentication, sync, and live multiplayer follow after shared rules and save migrations are stable.
 
 ## Website
 
@@ -57,3 +57,9 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 
 - **Current PR:** extend `WBCombat` for hit rolls, critical/extra damage, off-hand halving, per-hit armor, resistances, Overwhelming Force, defense reactions, saves, and Death Threshold/Mercy. The existing sheet delegates to those rules, preserving its UI and save shape.
 - **Next:** an offline multi-character DM encounter tracker with typed combat commands/revisions; later authenticated players and online real-time session authorization. No cloud infrastructure is part of this phase.
+
+## Encounter actions (new foundation)
+
+- `WBEncounter` defines the DM-owned encounter record and validates action IDs/revisions, actor ownership hints, turn order and numeric payloads. It reuses shared combat math for AP, armor, bleeding and Death's Mercy. An optional `game.encounter` field round-trips through `WBGameState` without changing old saves.
+- **Next feature:** first visible offline DM screen: import several exported character files into encounter snapshots; manage NPCs, initiative, health, AP and turns; use `WBEncounter.applyAction`. Later add a shared battlemap, trusted player movement, real authentication, cloud saves, multi-device conflicts and live play.
+- Dice polish idea: 2D/3D animated d20/dice result layer driven by deterministic roll result events, not by each client's independent animation RNG.
