@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-dm-room-v14">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-dm-map-v15">
 <link rel="stylesheet" href="css/dm.css?v=20261028-dm-room-v14">
 </head>
 <body>
@@ -17,7 +17,7 @@
       <p class="eyebrow">Encounter command</p>
       <h1>Worlds Beyond</h1>
     </div>
-    <p class="meta">Offline DM Room · Draft 32</p>
+    <p class="meta">Offline DM Room · Draft 33</p>
   </header>
   <nav class="dm-nav" aria-label="Main destinations">
     <a href="index.html#sheet">Character Sheet</a>
@@ -91,6 +91,32 @@
     <div id="dmActorList" class="dm-actors">
       <p class="dm-empty">No combatants yet. Import a character or create an NPC above.</p>
     </div>
+  </section>
+
+
+  <section class="dm-map-section" aria-labelledby="dmMapHeading">
+    <div class="dm-section-title">
+      <h3 id="dmMapHeading">Encounter battlemap</h3>
+      <p>Show everyone on one map. Place or reposition tokens manually as the DM; movement does not spend AP yet.</p>
+    </div>
+    <div class="dm-map-toolbar">
+      <label>Map
+        <select id="dmMapPick" aria-label="Encounter map"></select>
+      </label>
+      <label>Combatant to place
+        <select id="dmMapActor" aria-label="Select combatant to position"></select>
+      </label>
+      <button class="btn" type="button" id="dmMapClear">Remove selected token</button>
+    </div>
+    <p class="dm-help" id="dmMapHelp">Select a combatant, then click an open square to place their token. Select a token to switch combatants.</p>
+    <div class="dm-map-wrap" id="dmMapWrap">
+      <div class="dm-map-board" id="dmMapBoard" aria-label="DM encounter map, five-foot grid">
+        <div class="dm-map-grid" id="dmMapGrid" aria-hidden="true"></div>
+        <div class="dm-map-tokens" id="dmMapTokens"></div>
+      </div>
+    </div>
+    <p class="dm-map-status" role="status" aria-live="polite" id="dmMapStatus">No combatants placed yet.</p>
+    <p class="dm-help">The map selection is shared with the existing Battlemap. Token positions in this DM encounter are saved separately so they cannot overwrite a player's movement or AP. The DM sees the full terrain; fog and player movement rules will be integrated later.</p>
   </section>
 
   <footer class="dm-footer">
