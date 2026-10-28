@@ -23,9 +23,8 @@
     </svg>
   </header>
 
-  <nav class="views" id="viewNav" aria-label="Sheet or battlemap">
-    <button type="button" data-view="sheet" aria-pressed="true">Sheet</button>
-    <button type="button" data-view="status" aria-pressed="false">Status Effects</button>
+  <nav class="views main-views" id="viewNav" aria-label="Worlds Beyond destinations">
+    <button type="button" data-view="sheet" aria-pressed="true">Character Sheet</button>
     <button type="button" data-view="map" aria-pressed="false">Battlemap</button>
   </nav>
 
@@ -51,7 +50,15 @@
     </div>
   </div>
 
-  <section class="statussec" id="statusSec" aria-labelledby="statusHead">
+  <nav class="sheet-tabs" id="sheetTabs" aria-label="Character sheet sections">
+    <button type="button" data-sheet-tab="overview" aria-pressed="true">Overview</button>
+    <button type="button" data-sheet-tab="attributes" aria-pressed="false">Attributes</button>
+    <button type="button" data-sheet-tab="equipment" aria-pressed="false">Equipment</button>
+    <button type="button" data-sheet-tab="abilities" aria-pressed="false">Abilities</button>
+    <button type="button" data-sheet-tab="statuses" aria-pressed="false">Status Effects</button>
+  </nav>
+
+  <section class="statussec" id="statusSec" data-sheet-section="statuses" aria-labelledby="statusHead" hidden>
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="statusHead">Status Effects</h2>
@@ -168,7 +175,7 @@
     </div>
   </section>
 
-  <section class="top" aria-label="Character">
+  <section class="top" data-sheet-section="overview" aria-label="Character">
     <div class="identity">
       <div class="avatar">
         <span class="orbit" aria-hidden="true"></span>
@@ -217,7 +224,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="vitalsHead">
+  <section data-sheet-section="overview" aria-labelledby="vitalsHead">
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="vitalsHead">Vitals</h2>
@@ -414,7 +421,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="defHead">
+  <section data-sheet-section="overview" aria-labelledby="defHead">
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="defHead">Defenses</h2>
@@ -457,7 +464,7 @@
     <p class="defs-foot">Overwhelming Force (STR 28) means nothing, Armor Rating, Block and Parry included, can bring the damage below half. A successful Dodge still avoids it completely.</p>
   </section>
 
-  <section aria-labelledby="attrHead">
+  <section data-sheet-section="attributes" aria-labelledby="attrHead" hidden>
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="attrHead">Attributes</h2>
@@ -493,7 +500,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="equipHead">
+  <section data-sheet-section="equipment" aria-labelledby="equipHead" hidden>
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="equipHead">Equipment</h2>
@@ -674,7 +681,7 @@
     </div>
   </section>
 
-  <section class="ability-section" id="abilitySection" aria-labelledby="abilityHead">
+  <section class="ability-section" id="abilitySection" data-sheet-section="abilities" aria-labelledby="abilityHead" hidden>
     <div class="sec-head"><svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg><h2 id="abilityHead">Ability Library</h2></div>
     <p class="note">Create custom techniques, spells, traits, and passives. Use ability automatically spends configured AP and resources, and starts charge and cooldown tracking. Starting your turn advances cooldowns and durations. Configured effects on Movement, Armor, Evasion, stats and custom resource maximums apply automatically; other effects remain descriptive.</p>
     <div class="ability-toolbar">
@@ -688,7 +695,7 @@
     <div id="abilityList" class="ability-list"></div>
   </section>
 
-  <section aria-labelledby="advHead">
+  <section data-sheet-section="attributes" aria-labelledby="advHead" hidden>
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="advHead">Advancement</h2>
