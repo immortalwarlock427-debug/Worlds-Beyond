@@ -66,7 +66,8 @@
         down: hp > 0 ? null : (state.down && typeof state.down === 'object' ?
           { mercy: !!state.down.mercy, stable: !!state.down.stable } :
           { mercy: hp < 0, stable: false }),
-        apMax, apAvail, initiative: 0
+        apMax, apAvail, initiative: 0,
+        initiativeBonus: bounded(initiativeBonus, 0, -10000, 10000)
       },
       initiativeBonus: bounded(initiativeBonus, 0, -10000, 10000),
       level: lvl,
