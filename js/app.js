@@ -128,7 +128,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], statuses: []
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 

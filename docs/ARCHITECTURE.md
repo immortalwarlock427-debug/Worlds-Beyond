@@ -60,6 +60,9 @@ The browser keeps two things apart, because a character and a game have differen
   A hit meets or beats Evasion, and a natural 20 always hits and can't be dodged (Block and Parry still work). Armor Rating comes off each hit (for a two-weapon
   attack, each hand separately, the off-hand after halving).
 
+## Ability form loadouts
+- Character state keeps `abilityLoadouts` (stable ids and names), `activeAbilityLoadoutId`, and per-ability `loadoutIds` (empty means shared). Loadout switching doesn't reset trackers or change the underlying character stats and resources; ability availability validation gates activation. Portrait `formId` and `portraits` are intentionally independent.
+  
 ## Ability Library presentation
 - `js/abilities.js` keeps filters and compact mode in view state, not in serialized character data. The readiness filter calls the same `checkActivation` validation as the Use action but never charges AP or resources. Filters respect stable resource identifiers and respond to normal sheet refreshes.
 

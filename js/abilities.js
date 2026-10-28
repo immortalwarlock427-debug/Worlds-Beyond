@@ -19,6 +19,31 @@
   const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
   const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const MAX_EFFECTS = 12;
+  const formId = () => 'load' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+  const MAX_LOADOUTS = 30;
+  function loadoutVisible(state, ability) {
+    if (!Array.isArray(state.abilityLoadouts) || !state.abilityLoadouts.length) return true;
+    const ids = Array.isArray(ability.loadoutIds) ? ability.loadoutIds : [];
+    return ids.length === 0 || (ids.includes(state.activeAbilityLoadoutId));
+  }
+  function createLoadout(state, name) {
+    const text = clean(name,60).trim();
+    if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
+    const entry = { id: formId(), name: text };
+    state.abilityLoadouts.push(entry);
+    state.activeAbilityLoadoutId = entry.id;
+    return entry;
+  }
+  function removeLoadout(state, identifier) {
+    const before = (state.abilityLoadouts || []).length;
+    state.abilityLoadouts = (state.abilityLoadouts || []).filter(x => x.id !== identifier);
+    if (state.abilityLoadouts.length === before) return false;
+    for (const a of (state.abilities || [])) {
+      if (Array.isArray(a.loadoutIds)) a.loadoutIds = a.loadoutIds.filter(id => id !== identifier);
+    }
+    if (state.activeAbilityLoadoutId === identifier) state.activeAbilityLoadoutId = '';
+    return true;
+  }
   const signedNumber = (n) => {
     if (n == null || String(n).trim() === '') return 0;
     const value = Number(n);
@@ -94,16 +119,31 @@
       cooldownLeft: optionalNumber(value.cooldownLeft) || 0,
       durationLeft: optionalNumber(value.durationLeft) || 0,
       effects: normalizeEffects(value),
+      loadoutIds: Array.isArray(value.loadoutIds) ?
+        [...new Set(value.loadoutIds.filter(x => typeof x === 'string'))].slice(0,MAX_LOADOUTS) : [],
       favorite: value.favorite === true
     };
   }
 
   function normalizeState(state) {
     const ids = new Set();
+    state.abilityLoadouts = (Array.isArray(state.abilityLoadouts) ? state.abilityLoadouts : [])
+      .filter(x => x && typeof x === 'object' && !Array.isArray(x) && clean(x.name,60).trim())
+      .slice(0, MAX_LOADOUTS).map(x => {
+        let key = typeof x.id === 'string' && /^load[a-z0-9]{6,40}$/.test(x.id) ? x.id : formId();
+        if (ids.has(key)) key = formId();
+        ids.add(key);
+        return { id:key, name:clean(x.name,60).trim() };
+      });
+    const valid = new Set(state.abilityLoadouts.map(x => x.id));
+    state.activeAbilityLoadoutId = valid.has(state.activeAbilityLoadoutId) ?
+      state.activeAbilityLoadoutId : '';
+    ids.clear();
     state.abilities = (Array.isArray(state.abilities) ? state.abilities : [])
-      .map(normalizeAbility).filter(Boolean).map((ability) => {
+      .map(normalizeAbility).filter(Boolean).map(ability => {
         if (ids.has(ability.id)) ability.id = id();
         ids.add(ability.id);
+        ability.loadoutIds = ability.loadoutIds.filter(key => valid.has(key));
         return ability;
       });
   }
@@ -113,6 +153,7 @@
   function checkActivation(state, abilityId, controls) {
     const a = state.abilities.find((x) => x.id === abilityId);
     if (!a) return { ok: false, message: 'Ability not found.' };
+    if (!loadoutVisible(state, a)) return { ok: false, message: a.name + ' is unavailable in your current ability form.' };
     if (a.type === 'passive') return { ok: false, message: 'Passive abilities do not need activation.' };
     if (a.cooldownLeft > 0) return { ok: false, message: a.name + ' is cooling down for ' + a.cooldownLeft + ' more turn(s).' };
     if (a.uses !== '' && a.usesLeft <= 0) return { ok: false, message: a.name + ' has no uses left.' };
@@ -180,8 +221,10 @@
     const status = STATUS_MODES.includes(filters.status) ? filters.status : 'all';
     const apMode = AP_MODES.includes(filters.ap) ? filters.ap : 'all';
     const sorting = SORT_MODES.includes(filters.sort) ? filters.sort : 'favorites';
+    const showAll = filters.showAll === true;
     const apOf = a => a.apCost === '' ? 0 : Number(a.apCost) || 0;
     const matches = (state.abilities || []).filter(a => {
+      if (!showAll && !loadoutVisible(state, a)) return false;
       const searchOK = !searchText ||
         [a.name, a.category, a.type, a.description, a.notes].some(t => String(t || '').toLocaleLowerCase().includes(searchText));
       if (!searchOK || (filters.favorites && !a.favorite)) return false;
@@ -247,6 +290,12 @@
     const count = document.getElementById('abilityCount');
     const feedback = document.getElementById('abilityFeedback');
     const addButton = document.getElementById('abilityAdd');
+    const loadoutSelect = document.getElementById('abilityLoadoutSelect');
+    const loadoutInput = document.getElementById('abilityLoadoutName');
+    const loadoutAdd = document.getElementById('abilityLoadoutAdd');
+    const loadoutDelete = document.getElementById('abilityLoadoutDelete');
+    const showAllLoadouts = document.getElementById('abilityShowAll');
+    const loadoutFeedback = document.getElementById('abilityLoadoutFeedback');
     const byId = (abilityId) => getState().abilities.find((a) => a.id === abilityId);
     const open = new Set();
 
@@ -298,9 +347,34 @@
       '</div>';
     }
 
+    function memberships(ability) {
+      const forms = getState().abilityLoadouts || [];
+      if (!forms.length) return '';
+      const shared = !ability.loadoutIds || ability.loadoutIds.length === 0;
+      return '<fieldset class="ability-memberships"><legend>Available in forms</legend>' +
+        '<p class="ability-effect-hint">Shared abilities work in every form. Otherwise select one or more forms.</p>' +
+        '<label><input type="checkbox" data-loadout-shared ' + (shared ? 'checked' : '') + '> Shared across all forms</label>' +
+        '<div class="ability-membership-list">' + forms.map(form =>
+          '<label><input type="checkbox" data-loadout-member="' + esc(form.id) + '" ' +
+            (!shared && ability.loadoutIds.includes(form.id) ? 'checked ' : '') +
+            (shared ? 'disabled ' : '') + '> ' + esc(form.name) + '</label>').join('') + '</div></fieldset>';
+    }
+    function renderLoadouts() {
+      const state = getState();
+      const current = state.activeAbilityLoadoutId || '';
+      loadoutSelect.innerHTML = '<option value="">Base / shared abilities</option>' +
+        state.abilityLoadouts.map(x => '<option value="' + esc(x.id) + '"' +
+          (x.id === current ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('');
+      loadoutSelect.value = current;
+      loadoutDelete.disabled = !current;
+      loadoutAdd.disabled = state.abilityLoadouts.length >= MAX_LOADOUTS;
+    }
+
     function card(ability) {
       if (!Array.isArray(ability.effects)) ability.effects = normalizeEffects(ability);
+      const inactive = !loadoutVisible(getState(), ability);
       const badges = [ability.type.charAt(0).toUpperCase() + ability.type.slice(1)];
+      if (inactive) badges.push('Other form');
       if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
       if (ability.resourceId && ability.resourceCost !== '') {
         const s = getState();
@@ -323,7 +397,8 @@
           ((getState().resources || []).find((r) => r.id === e.resourceId) || { name: 'Missing resource' }).name + ' max';
         badges.push((e.value > 0 ? '+' : '') + e.value + ' ' + name + (ability.durationLeft ? ' active' : ''));
       });
-      return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') + '" data-ability-id="' + esc(ability.id) + '">' +
+      return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') +
+        (inactive ? ' ability-inactive' : '') + '" data-ability-id="' + esc(ability.id) + '">' +
         '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
         (open.has(ability.id) ? ' open' : '') + '>' +
         '<summary class="ability-summary">' +
@@ -343,6 +418,7 @@
                 type.charAt(0).toUpperCase() + type.slice(1) + '</option>').join('') +
             '</select></label>' +
           '</div>' +
+          memberships(ability) +
           '<label class="ability-field"><span class="foot-label">Description / effect</span>' +
             '<textarea data-ability-prop="description" rows="3" maxlength="12000" placeholder="Describe what this ability does.">' +
             esc(ability.description) + '</textarea></label>' +
@@ -377,7 +453,7 @@
           '<div class="ability-activate">' +
             (ability.type === 'passive'
               ? '<span class="ability-status">Passive · always available; no activation needed</span>'
-              : '<button type="button" class="btn strong" data-ability-action="use">Use ability</button>' +
+              : '<button type="button" class="btn strong" data-ability-action="use"' + (inactive ? ' disabled' : '') + '>Use ability</button>' +
                 '<span class="ability-status">' +
                   (ability.cooldownLeft ? 'Cooldown: ' + ability.cooldownLeft + ' turn(s)' :
                     ability.uses !== '' && ability.usesLeft <= 0 ? 'Out of uses' : 'Ready') +
@@ -395,7 +471,8 @@
           '</div>' +
         '</div></details>' +
         (ability.type === 'passive' ? '' :
-          '<button type="button" class="ability-quick-use" data-ability-action="use" aria-label="Use ' +
+          '<button type="button" class="ability-quick-use" data-ability-action="use"' +
+          (inactive ? ' disabled' : '') + ' aria-label="Use ' +
           esc(ability.name) + '" title="Use ' + esc(ability.name) + '">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg><span>Use</span></button>') +
         '</div>';
@@ -412,6 +489,7 @@
       const state = getState();
       const abilities = state.abilities;
       rememberOpen();
+      renderLoadouts();
       const selectedCategory = category.value || '';
       const categories = [...new Set(abilities.map(a => a.category))].sort((a,b) => a.localeCompare(b));
       category.innerHTML = '<option value="">All categories</option>' +
@@ -430,10 +508,11 @@
         search: search.value, category: category.value,
         favorites: favorites.checked, type: typeFilter.value,
         resource: resourceFilter.value, status: statusFilter.value,
-        ap: apFilter.value, sort: sortFilter.value
+        ap: apFilter.value, sort: sortFilter.value, showAll: showAllLoadouts.checked
       }, controls);
       list.classList.toggle('is-compact', compactToggle.checked);
-      count.textContent = matches.length + ' shown / ' + abilities.length + ' total';
+      const visibleCount = abilities.filter(a => loadoutVisible(state, a)).length;
+      count.textContent = matches.length + ' shown / ' + visibleCount + ' in current form · ' + abilities.length + ' total';
       list.innerHTML = matches.length ? matches.map(card).join('') :
         '<p class="ability-empty">' + (abilities.length ?
           'No abilities match these filters. Clear filters to see everything.' :
@@ -451,7 +530,9 @@
     }
 
     addButton.addEventListener('click', () => {
-      const ability = normalizeAbility({ id: id(), name: 'New ability', category: 'General' });
+      const active = getState().activeAbilityLoadoutId;
+      const ability = normalizeAbility({ id: id(), name: 'New ability', category: 'General',
+        loadoutIds: active ? [active] : [] });
       getState().abilities.push(ability);
       resetFilters();
       open.add(ability.id);
@@ -466,6 +547,44 @@
     [category, favorites, typeFilter, resourceFilter, statusFilter, apFilter, sortFilter,
       compactToggle].forEach(el => el.addEventListener('change', render));
     clearFilters.addEventListener('click', () => { resetFilters(); render(); });
+    showAllLoadouts.addEventListener('change', render);
+    loadoutSelect.addEventListener('change', () => {
+      getState().activeAbilityLoadoutId = loadoutSelect.value;
+      resetFilters();
+      render();
+      save();
+      loadoutFeedback.textContent = loadoutSelect.value ?
+        'Active form: ' + (getState().abilityLoadouts.find(x => x.id === loadoutSelect.value) || {name:''}).name :
+        'Base form: shared abilities only.';
+      if (controls.refresh) controls.refresh();
+    });
+    function addForm() {
+      const form = createLoadout(getState(), loadoutInput.value);
+      if (!form) {
+        loadoutFeedback.textContent = 'Enter a form name (maximum ' + MAX_LOADOUTS + ' forms).';
+        return;
+      }
+      loadoutInput.value = '';
+      loadoutFeedback.textContent = 'Created ' + form.name + '. Assign abilities using each ability editor.';
+      resetFilters();
+      render();
+      save();
+    }
+    loadoutAdd.addEventListener('click', addForm);
+    loadoutInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addForm(); }
+    });
+    loadoutDelete.addEventListener('click', () => {
+      const state = getState();
+      const form = state.abilityLoadouts.find(x => x.id === state.activeAbilityLoadoutId);
+      if (!form || !window.confirm('Delete ' + form.name +
+        '? Abilities assigned only to this form will become shared. Their costs and cooldowns remain unchanged.')) return;
+      removeLoadout(state, form.id);
+      resetFilters();
+      loadoutFeedback.textContent = 'Deleted ' + form.name + '.';
+      render();
+      save();
+    });
 
     function updateInput(input) {
       const cardElement = input.closest('[data-ability-id]');
@@ -522,6 +641,24 @@
       if (input) updateInput(input);
     });
     list.addEventListener('change', (event) => {
+      const member = event.target.closest('[data-loadout-member], [data-loadout-shared]');
+      if (member) {
+        const cardElement = member.closest('[data-ability-id]');
+        const ability = cardElement && byId(cardElement.dataset.abilityId);
+        if (!ability) return;
+        if (member.hasAttribute('data-loadout-shared')) {
+          ability.loadoutIds = member.checked ? [] :
+            [getState().activeAbilityLoadoutId || getState().abilityLoadouts[0].id];
+        } else {
+          const key = member.dataset.loadoutMember;
+          const selected = new Set(ability.loadoutIds);
+          if (member.checked) selected.add(key); else selected.delete(key);
+          ability.loadoutIds = Array.from(selected);
+        }
+        render();
+        save();
+        return;
+      }
       const effectInput = event.target.closest('[data-effect-prop]');
       if (effectInput) {
         updateEffect(effectInput);
@@ -554,6 +691,7 @@
           id: id(), name: 'Copy of ' + ability.name, favorite: false,
           usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0,
           capacityCurrent: 0,
+          loadoutIds: [...ability.loadoutIds],
           effects: ability.effects.map((e) => Object.assign({}, e, { id: effectId() }))
         }));
         getState().abilities.push(copy);
@@ -610,7 +748,8 @@
   }
 
   window.WBAbilities = {
-    normalizeState, init, activate, checkActivation, filterAbilities, advanceTurn, resetForRest,
+    normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
+    createLoadout, removeLoadout, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();
