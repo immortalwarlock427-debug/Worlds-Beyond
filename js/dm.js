@@ -33,7 +33,13 @@
     NOT_CURRENT_TURN: 'Only the current combatant can spend AP or end their turn.',
     OUT_OF_BOUNDS: 'That square is outside the selected map.',
     BLOCKED_SQUARE: 'That square is blocked by terrain.',
-    OCCUPIED_SQUARE: 'Another combatant occupies that square.'
+    OCCUPIED_SQUARE: 'Another combatant occupies that square.',
+    TOKEN_NOT_PLACED: 'Place this combatant on the map before using combat movement.',
+    MAP_REQUIRED: 'A valid encounter map is required for movement.',
+    ALREADY_THERE: 'That combatant is already on the destination square.',
+    NO_PATH: 'There is no walkable route to that square.',
+    NO_MOVEMENT: 'This combatant has no movement left.',
+    ACTOR_UNCONSCIOUS: 'A downed combatant cannot use combat movement.'
   };
   function message(text, isError = false) {
     const el = $('#dmFeedback');
@@ -80,7 +86,7 @@
     try {
       game = latestGame();
       if (!noConflict(game)) return false;
-      const mapContext = type === 'PlaceToken'
+      const mapContext = type === 'PlaceToken' || type === 'MoveToken'
         ? { ...context, map: window.WBEncounterMap.mapModel(game,window.WB_MAPS) }
         : context;
       const result = core.applyAction(encounter, {
@@ -130,7 +136,12 @@
       actor.hp + ' / ' + actor.maxHp + '</b></span>' +
       '<span>AR <b>' + actor.ar + '</b></span>' +
       '<span>AP <b>' + (actor.apAvail + (actor.apGiven ? actor.apGiven.n : 0)) +
-      ' / ' + actor.apMax + '</b></span></div></header>';
+      ' / ' + actor.apMax + '</b></span>' +
+      '<span>Movement <b>' + actor.speedFt + ' ft/AP</b></span>' +
+      (actor.surgeMax ? '<span>Surge <b>' +
+        (actor.surgeMax - actor.move.surge) + ' / ' + actor.surgeMax + '</b></span>' : '') +
+      (active ? '<span>Moved <b>' + actor.move.ft + ' ft</b></span>' : '') +
+      '</div></header>';
     let body = '';
     if (editing) {
       body = '<form class="dm-actor-setup" data-dm-action="edit" data-actor="' + quote(actor.id) + '">' +
@@ -139,6 +150,8 @@
         '<label>Max HP<input type="number" name="maxHp" min="1" max="1000000" value="' + actor.maxHp + '" required></label>' +
         '<label>AR<input type="number" name="ar" min="0" max="1000000" value="' + actor.ar + '" required></label>' +
         '<label>AP max<input type="number" name="apMax" min="0" max="40" value="' + actor.apMax + '" required></label>' +
+        '<label>Movement ft/AP<input type="number" name="speedFt" min="0" max="10000" value="' + actor.speedFt + '" required></label>' +
+        '<label>Surge free AP<input type="number" name="surgeMax" min="0" max="2" value="' + actor.surgeMax + '" required></label>' +
         '<label>Death threshold<input type="number" name="deathThreshold" min="0" max="1000000" value="' +
           (actor.deathThreshold == null ? '' : actor.deathThreshold) + '"></label>' +
         '<label>Initiative total<input type="number" name="initiative" min="-10000" max="10000" value="' +
@@ -243,6 +256,7 @@
       hp: num(fd.get('maxHp')), maxHp: num(fd.get('maxHp')),
       ar: num(fd.get('ar')), apMax: num(fd.get('apMax')), apAvail: num(fd.get('apMax')),
       initiative: num(fd.get('initiative')),
+      speedFt:num(fd.get('speedFt')), surgeMax:num(fd.get('surgeMax')),
       deathThreshold: num(fd.get('deathThreshold'))
     };
     if (command('AddActor', { actor })) ev.currentTarget.reset();
@@ -259,6 +273,7 @@
         name:String(fd.get('name') || '').trim(),
         hp:num(fd.get('hp')), maxHp:num(fd.get('maxHp')),
         ar:num(fd.get('ar')), apMax:num(fd.get('apMax')),
+        speedFt:num(fd.get('speedFt')), surgeMax:num(fd.get('surgeMax')),
         deathThreshold:num(fd.get('deathThreshold')),
         initiative:num(fd.get('initiative'))
       } });
