@@ -21,6 +21,38 @@
   const MAX_EFFECTS = 12;
   const formId = () => 'load' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
   const MAX_LOADOUTS = 30;
+  // Form-specific score adjustments are derived like gear bonuses. They never
+  // become purchased stat points or alter stored base scores.
+  const formAdjustment = value => {
+    const n = Number(value);
+    return Number.isFinite(n) ? Math.max(-28, Math.min(28, Math.round(n))) : 0;
+  };
+  function formStatBonus(state, stat) {
+    if (!STATS.includes(stat)) return 0;
+    const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
+    return form && form.statBonuses ? formAdjustment(form.statBonuses[stat]) : 0;
+  }
+  function selectLoadout(state, identifier) {
+    if (identifier && !(state.abilityLoadouts || []).some(x => x.id === identifier)) return false;
+    state.activeAbilityLoadoutId = identifier || '';
+    const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
+    const portrait = form && (state.portraits || []).find(x => x.id === form.portraitId);
+    if (portrait) state.formId = portrait.id;
+    return true;
+  }
+  function configureLoadout(state, identifier, property, value) {
+    const form = (state.abilityLoadouts || []).find(x => x.id === identifier);
+    if (!form) return false;
+    if (property === 'portraitId') {
+      const portrait = (state.portraits || []).find(x => x.id === value);
+      form.portraitId = portrait ? portrait.id : '';
+      if (form.id === state.activeAbilityLoadoutId && portrait) state.formId = portrait.id;
+      return true;
+    }
+    if (!STATS.includes(property)) return false;
+    form.statBonuses[property] = formAdjustment(value);
+    return true;
+  }
   function loadoutVisible(state, ability) {
     if (!Array.isArray(state.abilityLoadouts) || !state.abilityLoadouts.length) return true;
     const ids = Array.isArray(ability.loadoutIds) ? ability.loadoutIds : [];
@@ -29,7 +61,7 @@
   function createLoadout(state, name) {
     const text = clean(name,60).trim();
     if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
-    const entry = { id: formId(), name: text };
+    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {} };
     state.abilityLoadouts.push(entry);
     state.activeAbilityLoadoutId = entry.id;
     return entry;
@@ -152,7 +184,14 @@
         let key = typeof x.id === 'string' && /^load[a-z0-9]{6,40}$/.test(x.id) ? x.id : formId();
         if (ids.has(key)) key = formId();
         ids.add(key);
-        return { id:key, name:clean(x.name,60).trim() };
+        const bonuses = x.statBonuses && typeof x.statBonuses === 'object' &&
+          !Array.isArray(x.statBonuses) ? x.statBonuses : {};
+        const statBonuses = {};
+        STATS.forEach(k => { const amount = formAdjustment(bonuses[k]);
+          if (amount) statBonuses[k] = amount;
+        });
+        return { id:key, name:clean(x.name,60).trim(),
+          portraitId: clean(x.portraitId,100), statBonuses };
       });
     const valid = new Set(state.abilityLoadouts.map(x => x.id));
     state.activeAbilityLoadoutId = valid.has(state.activeAbilityLoadoutId) ?
@@ -315,6 +354,7 @@
     const loadoutDelete = document.getElementById('abilityLoadoutDelete');
     const showAllLoadouts = document.getElementById('abilityShowAll');
     const loadoutFeedback = document.getElementById('abilityLoadoutFeedback');
+    const loadoutConfig = document.getElementById('abilityLoadoutConfig');
     const byId = (abilityId) => getState().abilities.find((a) => a.id === abilityId);
     const open = new Set();
 
@@ -378,6 +418,32 @@
             (!shared && ability.loadoutIds.includes(form.id) ? 'checked ' : '') +
             '> ' + esc(form.name) + '</label>').join('') + '</div></fieldset>';
     }
+    function renderLoadoutConfig() {
+      const state = getState();
+      const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
+      if (!form) {
+        loadoutConfig.innerHTML = '<p class="ability-effect-hint">Choose a named form to customize its appearance and stat modifiers. Base uses your normal character.</p>';
+        return;
+      }
+      const oldDetails = loadoutConfig.querySelector('details');
+      const expanded = oldDetails && oldDetails.open;
+      const options = '<option value="">No linked portrait</option>' +
+        (state.portraits || []).map((p,i) =>
+          '<option value="' + esc(p.id) + '"' + (p.id === form.portraitId ? ' selected' : '') + '>' +
+          esc(p.name || 'Portrait ' + (i+1)) + '</option>').join('');
+      loadoutConfig.innerHTML = '<details class="loadout-mechanics"' + (expanded ? ' open' : '') + '>' +
+        '<summary>Appearance &amp; stat adjustments for ' + esc(form.name) + '</summary>' +
+        '<div class="loadout-mechanics-content">' +
+          '<label class="ability-field"><span class="foot-label">Linked portrait</span>' +
+            '<select data-loadout-portrait>' + options + '</select></label>' +
+          '<p class="ability-effect-hint">Link an existing portrait from Overview. Selecting this ability form also switches to that portrait. No link leaves your current portrait unchanged.</p>' +
+          '<p class="ability-effect-hint">Temporary form score adjustments (not permanent stat points). Bonuses and penalties apply while this form is selected.</p>' +
+          '<div class="loadout-stat-grid">' + STATS.map(k =>
+            '<label class="ability-field"><span class="foot-label">' + k + '</span>' +
+            '<input type="number" min="-28" max="28" step="1" data-loadout-stat="' + k +
+            '" value="' + (form.statBonuses[k] || 0) + '"></label>').join('') + '</div>' +
+          '</div></details>';
+    }
     function renderLoadouts() {
       const state = getState();
       const current = state.activeAbilityLoadoutId || '';
@@ -387,6 +453,7 @@
       loadoutSelect.value = current;
       loadoutDelete.disabled = !current;
       loadoutAdd.disabled = state.abilityLoadouts.length >= MAX_LOADOUTS;
+      renderLoadoutConfig();
     }
 
     function card(ability) {
@@ -567,8 +634,19 @@
       compactToggle].forEach(el => el.addEventListener('change', render));
     clearFilters.addEventListener('click', () => { resetFilters(); render(); });
     showAllLoadouts.addEventListener('change', render);
+    loadoutConfig.addEventListener('change', e => {
+      const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat]');
+      if (!el) return;
+      const state = getState();
+      const identifier = state.activeAbilityLoadoutId;
+      const property = el.hasAttribute('data-loadout-portrait') ? 'portraitId' : el.dataset.loadoutStat;
+      if (!configureLoadout(state, identifier, property, el.value)) return;
+      if (controls.refresh) controls.refresh();
+      render();
+      save();
+    });
     loadoutSelect.addEventListener('change', () => {
-      getState().activeAbilityLoadoutId = loadoutSelect.value;
+      selectLoadout(getState(), loadoutSelect.value);
       resetFilters();
       render();
       save();
@@ -764,7 +842,8 @@
 
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
-    createLoadout, removeLoadout, setLoadoutMembership, advanceTurn, resetForRest,
+    createLoadout, removeLoadout, setLoadoutMembership,
+    formStatBonus, selectLoadout, configureLoadout, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();
