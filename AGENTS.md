@@ -19,7 +19,35 @@ rules in.
 - Keep the character and the game apart (see the two saves in `docs/ARCHITECTURE.md`).
 - No build step: test by serving the folder (`python3 -m http.server`) and opening it in a browser, at phone width
   too. `python3 tools/build_single.py` makes the one-file version for the Claude artifact.
-- Bump "Draft N" in `index.html` with each round of changes, and keep the "What the site does" section of
-  `docs/CONTEXT.md` up to date.
+- Bump "Draft N" with each round of changes (it's in `index.html` and the "What the site does" heading of
+  `docs/CONTEXT.md`), and keep that section up to date. Do the bump as the last step before merging, to one more than
+  `main`'s current number, since two branches bumping it early always conflict.
 - Commit with the GitHub no-reply email (`immortalwarlock427-debug@users.noreply.github.com`); GitHub rejects pushes
   that would publish a private email.
+
+## Two assistants, one repository
+
+Claude and Codex both work on this repository, sometimes at the same time. These rules keep them from overwriting
+each other and make it easy to see who changed what, and why.
+
+- **Never work straight on `main`.** Make your own branch from the latest `main` (`git fetch`, then branch off
+  `origin/main`), named after yourself and the task: `claude/short-task-name` or `codex/short-task-name`. One task
+  per branch, merged soon: branches that sit around drift and conflict more.
+- **Check what else is in flight** before starting: the other open branches and pull requests. If one is changing
+  the same files or the same rule, tell me.
+- **Say who you are and why.** Start every commit subject and pull request title with your name (`Claude: ` or
+  `Codex: `), and put the reason in the commit body and pull request description, not only what changed.
+- **Finish with a pull request.** Update the branch from `main`, fix any conflicts, test again, then merge it into
+  `main`, unless I've asked to look at it first. If you can't open a pull request, push the branch and tell me its
+  name.
+- **When there's a conflict,** keep what both sides meant, not just your side. If the two changes really contradict
+  (two different values for the same rule, say), stop and ask me which is right. Note in the merge commit or pull
+  request which files conflicted and how you settled each one.
+- **Never destroy the other assistant's work:** no force-pushing `main`, no deleting branches you didn't make, and
+  no reverting, resetting or stashing changes you didn't make. Uncommitted changes you didn't make are probably the
+  other assistant's work in progress: leave them alone and tell me.
+- **If you're working on my computer,** use your own copy of the repository (a `git worktree` or separate clone),
+  not a folder the other assistant might be using. Branches don't protect a shared folder: switching branches there
+  switches them for both of you.
+- **Publish the Claude artifact only from `main`,** after merging, so it never shows unmerged work or flips between
+  two branches.
