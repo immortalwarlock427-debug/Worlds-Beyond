@@ -95,3 +95,9 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 - Added same-browser `player.html` showing selected PC's Health, AP, Movement, Surge, map and current initiative actor. The page shares encounter state with the DM Room through local repository storage, with same-origin tab updates.
 - Player actions are limited to `MoveToken`, `SpendAP`, and `EndTurn`, validated by `WBEncounter`. DM-only damage, healing, foe editing, initiative and map selection are not present in the player UI; the player view omits other actors' HP/AR.
 - **Next milestone:** hosted session/account backend and secure per-player session membership; use authenticated server-side commands and redacted views before enabling join codes or genuine cross-device/cloud play. Keep local player seat selector explicitly non-authenticated; do not confuse it with multiplayer authorization.
+
+## Phase 2 milestone: cloud character accounts (Draft 36)
+
+- Opt-in `cloud.html` with private account-based manual character saves using Supabase. Upload the current browser character, list cloud copies, restore a remote copy with an undo backup, download a local JSON export, or delete a cloud copy. Existing character and battlemap data are untouched until explicitly restored.
+- Database migration grants only authenticated users, requires RLS for own characters, and uses revision-conditional updates to detect stale browser saves. Public project config is entered by the user; no Supabase backend is deployed by the PR itself.
+- **Next:** connect a Supabase project and verify two-account RLS and cross-device character restore; then add authenticated DM game/session records, join codes and trusted combat RPC with live subscriptions. Do not expose current DM-owned encounter JSON to players.
