@@ -34,7 +34,8 @@
       initiative: value.initiative === undefined ? 0 : value.initiative,
       initiativeBonus: value.initiativeBonus == null ? null : value.initiativeBonus,
       x: value.x === undefined ? null : value.x,
-      y: value.y === undefined ? null : value.y
+      y: value.y === undefined ? null : value.y,
+      mapId: value.mapId == null ? null : value.mapId
     };
     if (!integer(fields.maxHp, 1, 1000000) ||
         !integer(fields.hp, -1000000, 1000000) ||
@@ -45,6 +46,7 @@
         !integer(fields.apAvail, 0, fields.apMax) ||
         !integer(fields.initiative, -10000, 10000) ||
         !(fields.initiativeBonus === null || integer(fields.initiativeBonus, -10000, 10000)) ||
+        !(fields.mapId === null || (validId(fields.mapId) && fields.mapId.length <= 40)) ||
         !((fields.x === null && fields.y === null) ||
           (integer(fields.x, 0, 999) && integer(fields.y, 0, 999))) ||
         !(fields.apGiven === null || integer(fields.apGiven.n, 0, 40)) ||
@@ -135,7 +137,7 @@
     const canAct = actor && (dm || (actor.kind === 'pc' && actor.ownerId === context.userId));
     let event = { type: action.type, actorId: action.actorId || null };
     if (['AddActor', 'RemoveActor', 'SetInitiative', 'StartEncounter',
-      'FinishEncounter', 'ApplyDamage', 'Heal', 'SetHealth', 'SetStable', 'UpdateActor', 'PlaceToken', 'GrantAP'].includes(action.type) && !dm)
+      'FinishEncounter', 'ApplyDamage', 'Heal', 'SetHealth', 'SetStable', 'UpdateActor', 'PlaceToken', 'ClearToken', 'GrantAP'].includes(action.type) && !dm)
       return fail('DM_ONLY');
     switch (action.type) {
       case 'AddActor': {
@@ -292,10 +294,21 @@
             integer(context.map.rows, 1, 1000) &&
             (action.x >= context.map.cols || action.y >= context.map.rows))
           return fail('OUT_OF_BOUNDS');
+        if (isRecord(context.map) && validId(context.map.id) &&
+            context.map.id.length <= 40) actor.mapId = context.map.id;
         actor.x = action.x;
         actor.y = action.y;
         event.x = actor.x;
         event.y = actor.y;
+        break;
+      }
+      case 'ClearToken': {
+        if (!actor) return fail('ACTOR_NOT_FOUND');
+        actor.x = null;
+        actor.y = null;
+        actor.mapId = null;
+        event.x = null;
+        event.y = null;
         break;
       }
       case 'FinishEncounter': {
