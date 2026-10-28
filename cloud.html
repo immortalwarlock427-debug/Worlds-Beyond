@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cloud Character Saves · Worlds Beyond</title>
+<link rel="stylesheet" href="css/sheet.css?v=20261028-cloud-v20">
+<link rel="stylesheet" href="css/dm.css?v=20261028-cloud-v20">
+<link rel="stylesheet" href="css/cloud.css?v=20261028-cloud-v20">
+</head>
+<body>
+<main class="sheet dm-sheet cloud-sheet">
+  <header class="masthead">
+    <div><p class="eyebrow">Optional cloud account</p><h1>Worlds Beyond</h1></div>
+    <p class="meta">Cloud Character Saves · Draft 36</p>
+  </header>
+  <nav class="dm-nav" aria-label="Main destinations">
+    <a href="index.html#sheet">Character Sheet</a>
+    <a href="dm.html">DM Room</a>
+    <a href="player.html">Player Preview</a>
+    <a href="cloud.html" aria-current="page">Cloud Saves</a>
+  </nav>
+  <div class="dm-banner">
+    <div><strong>Cloud saves are optional</strong>
+      <p>Your existing character sheet and JSON exports keep working without an account. This page stores private character copies only; encounters and multiplayer sessions are not yet cloud-connected.</p>
+    </div>
+    <span class="dm-local">Setup required</span>
+  </div>
+  <p id="cloudFeedback" role="status" class="dm-feedback" aria-live="polite">Cloud connection not configured.</p>
+  <section class="cloud-panel" aria-labelledby="cloudSetupHeading">
+    <div class="dm-section-title">
+      <h2 id="cloudSetupHeading">Connect Supabase</h2>
+      <p>Requires a project with the Worlds Beyond database migration installed.</p>
+    </div>
+    <form id="cloudConfigForm" class="cloud-form">
+      <label>Supabase project URL
+        <input name="url" type="url" placeholder="https://your-project.supabase.co" required>
+      </label>
+      <label>Publishable / anon key
+        <input name="key" type="text" autocomplete="off" placeholder="sb_publishable_..." required>
+      </label>
+      <button class="btn strong" type="submit">Connect project</button>
+    </form>
+    <p class="dm-help">These are public browser configuration values, saved on this device. <strong>Never enter a service_role key or sb_secret_ key.</strong> Accounts and private characters are protected by Supabase Auth and database row-level security, not by hiding controls in this page.</p>
+  </section>
+  <section id="cloudAuthSection" class="cloud-panel" aria-labelledby="cloudAuthHeading" hidden>
+    <div class="dm-section-title">
+      <h2 id="cloudAuthHeading">Your account</h2>
+      <p id="cloudAuthStatus">Not signed in</p>
+    </div>
+    <form id="cloudAuthForm" class="cloud-form">
+      <label>Email
+        <input name="email" type="email" autocomplete="email" required>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" minlength="6" required>
+      </label>
+      <button id="cloudSignIn" class="btn strong" type="submit">Sign in</button>
+      <button id="cloudSignUp" class="btn" type="button">Create account</button>
+      <button id="cloudSignOut" class="btn" type="button" hidden>Sign out</button>
+    </form>
+    <p class="dm-help">New accounts may require email verification, depending on your Supabase Auth settings. This is a separate cloud account, not a DM session or game join code.</p>
+  </section>
+  <section id="cloudCharacterSection" class="cloud-panel" aria-labelledby="cloudCharsHeading" hidden>
+    <div class="dm-section-title">
+      <h2 id="cloudCharsHeading">My private cloud characters</h2>
+      <button id="cloudReload" class="btn" type="button">Refresh cloud list</button>
+    </div>
+    <div class="cloud-local-summary" id="cloudLocalSummary">Checking your locally saved character…</div>
+    <div class="cloud-actions">
+      <button id="cloudSaveLocal" class="btn strong" type="button">Save local character to cloud</button>
+      <button id="cloudDownloadBackup" class="btn" type="button">Download local backup</button>
+      <button id="cloudUndoRestore" class="btn" type="button" hidden>Undo last restore</button>
+    </div>
+    <p class="dm-help">Cloud saves are **manual** for now. Saving an existing character checks its cloud revision first; a conflict will not overwrite changes made on another device. Restoring a cloud copy replaces this browser's local character, never a game or encounter. Export a backup before restoring.</p>
+    <div id="cloudCharacterList" class="cloud-list">
+      <p class="dm-empty">Sign in to see your private characters.</p>
+    </div>
+  </section>
+  <footer class="dm-footer">
+    <p>Cloud character copies and local browser saves are separate. No automatic background sync, online encounters, shared character access, or multiplayer permissions exist yet. Database setup is required before cloud actions can succeed.</p>
+  </footer>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/persistence.js?v=20261028-cloud-v20"></script>
+<script src="js/cloud-characters.js?v=20261028-cloud-v20"></script>
+<script src="js/cloud.js?v=20261028-cloud-v20"></script>
+</body>
+</html>
