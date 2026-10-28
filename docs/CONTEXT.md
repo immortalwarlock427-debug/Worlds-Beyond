@@ -36,6 +36,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - One ability may apply multiple additive temporary effects to Movement (ft/AP), Armor Rating, Evasion, any of the eight stat scores, and custom resource maximums.
 - Effects contribute to effective values while active; permanent base scores, gear, and resource maximums remain unchanged. Resource capacity bonuses do not refill current points. Editing active effects cancels their duration. Existing single Movement effects migrate to the multiple-effect format.
 
+## Status Effects view (next PR)
+- A third Sheet / Status Effects / Battlemap navigation tab uses #status and is part of the same website; it does not create a separate game state. The status view shows active ability effects, their numerical bonus details and remaining duration, and can end an ability's active effect early (without refunding AP/resources or removing its cooldown).
+- Players can also add manual status entries (Buff, Debuff, Condition or Other), with a source, notes, and optional turn timer. These are descriptive only and do not silently alter combat math. Timed entries expire when the player starts a turn; blank duration persists until removed. Manual statuses are retained across long rests until explicitly removed or expired. All entries save with the character and migrate from older character files as an empty list.
+- Future integration: automatic conditions from the defense/health system, treatment and recovery rules, richer effect sources and filters.
+
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
