@@ -30,6 +30,7 @@ battlemap are a static site on GitHub Pages, with the character and the game sav
 - **Character format:** the sheet's exported `.json` file, so characters move between the sheet and the site.
 
 ### In this order
+
 1. **A DM screen** that loads exported character files, with no networking. This is when `js/app.js` gets split
    into modules (rules, character, game, map, sheet view, map view), so both screens share the same rules code.
 2. **A combat tracker** on it: initiative, Health, targets, then the battlemap with every character's token.
