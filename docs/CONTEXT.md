@@ -51,6 +51,12 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - The Usable now filter invokes the same validation as activation, including current AP, resources, cooldowns, remaining uses, and capacity; it does not spend anything. Filters do not mutate or delete stored abilities and reset to all when creating or duplicating one. UI presentation preferences are not part of exported character data.
 - CSS and JS assets share a cache-busting release token in index.html, following docs/ARCHITECTURE.md, to prevent the live GitHub Pages site mixing old cached files.
   
+## Ability Forms / Loadouts v1 (proposed PR)
+- Named ability forms are independent from portrait-image forms. A player can create forms (e.g. seven character classes), assign an ability to any combination of forms, or leave it shared for all. Default old abilities are shared. Base mode shows shared abilities only once forms exist; with no forms the current ability library is unchanged.
+- Switching the active ability form only changes which abilities can be activated; it does not change AP, resources, equipment, stats, portrait, or active effects. **Cooldowns, charges, held-creation counts, and timed effect durations carry between forms** and continue to decrement normally, avoiding reset exploits.
+- A Show all option exposes other-form abilities for editing but does not permit their activation. Deleting a form removes its references; if it was the only assigned form, the ability becomes shared. Ability loadouts and active selection are saved/exported with character JSON, never the game save.
+- Future: real transformations with separate resource sets and optional gear/stat profiles must explicitly define how active effects behave.
+  
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
