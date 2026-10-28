@@ -69,6 +69,12 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - Existing built-in Mana/Holy Power is one shared balance, not copied per form. Each form can choose to follow the global Mana visibility toggle, force Mana visible, or hide/disable it. Costs are validated against the effective visibility before spending AP, including the Ability Library's Usable Now filter. Future: separate Mana balances or entirely independent per-form resources, if needed.
 - All state is saved in the character JSON; game/map storage remains separate.
   
+## Form-specific worn equipment (next PR)
+- The Equipment tab shows the active form's worn-slot profile (Base or a named ability form). All forms share one inventory and item identities, but each form can save distinct worn slots and hence different armor, weapons, gear bonuses and attack options. Switching forms or linked portraits swaps worn slots without touching AP, cooldowns, resource balances, item charges, long-rest settled history or ability effects.
+- New forms start wearing the current gear, then can diverge. The Equipment tab offers Copy Base and Unequip All for this form; both retain the shared inventory. Deleting an item removes it from every profile. Deleting the active form restores Base gear. Legacy characters migrate existing equipment safely; character export/import preserves all profiles.
+- This stage does not copy gear into separate inventories, enforce transformation AP costs, or reset gear progression on every switch.
+- The cloud/DM/multiplayer migration plan lives in `docs/CLOUD_MULTIPLAYER_PLAN.md`: reusable rules modules, versioned state migrations, account-owned characters, DM-owned sessions, backend permissions, local-first sync and later online sessions.
+
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
