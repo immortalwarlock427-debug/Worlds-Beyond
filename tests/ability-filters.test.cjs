@@ -46,7 +46,7 @@ function setup() {
 const names = items => Array.from(items, item=>item.name);
 test('filters by type, category, resource, favorites and AP bands without touching character data',()=>{
   const {api,state,controls}=setup();
-  const find=options=>names(api.filterAbilities(state,options,controls));
+  const find=options=>names(api.filterAbilities(state,{sort:'name',...options},controls));
   const old=JSON.stringify(state);
   assert.deepEqual(find({type:'passive'}),['Blessing']);
   assert.deepEqual(find({type:'reaction'}),['No charges']);
@@ -63,7 +63,7 @@ test('filters by type, category, resource, favorites and AP bands without touchi
 });
 test('Usable now is cost-aware without consuming AP, mana or custom resources',()=>{
   const {api,state,controls,setAp,setMana,spent}=setup();
-  const f=()=>names(api.filterAbilities(state,{status:'usable'},controls));
+  const f=()=>names(api.filterAbilities(state,{status:'usable',sort:'name'},controls));
   assert.deepEqual(f(),['Holy Strike','Overdrive','Stance']);
   assert.equal(state.resources[0].current,60);
   assert.equal(spent(),0);
