@@ -1162,3 +1162,10 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
 /* Automatic temporary bonuses are teal; explicit manual overrides stay orange. */
 input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .rsrc.ability-bonus-label { color: var(--verdigris); }
+
+/* Multiple editable sheet-targeted ability effects. */
+.ability-effects { display:grid; gap:10px; padding:10px; border:1px solid var(--rule); border-radius:4px; }
+.ability-effects-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+.ability-effect-row { display:flex; align-items:end; gap:8px; flex-wrap:wrap; border-top:1px dashed var(--rule); padding-top:8px; }
+.ability-effect-row .ability-field { flex:1 1 140px; }
+.resource-effect-bonus { color:var(--verdigris); font-size:12px; font-weight:700; }

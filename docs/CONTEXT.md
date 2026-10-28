@@ -32,6 +32,10 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - The sheet should follow the rules, but everything should still be resettable or changeable in case someone messes up.
 - When rules change, update Notion, the site and this file to match.
 
+## Ability effect expansion (proposed next PR)
+- One ability may apply multiple additive temporary effects to Movement (ft/AP), Armor Rating, Evasion, any of the eight stat scores, and custom resource maximums.
+- Effects contribute to effective values while active; permanent base scores, gear, and resource maximums remain unchanged. Resource capacity bonuses do not refill current points. Editing active effects cancels their duration. Existing single Movement effects migrate to the multiple-effect format.
+
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,

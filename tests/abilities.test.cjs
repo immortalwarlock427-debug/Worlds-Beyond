@@ -283,9 +283,9 @@ test('effect values and targets persist safely through character import', () => 
   const state = { abilities: [{ name: 'Speed', effectTarget: 'movement', effectValue: 15, durationLeft: 3 },
     { name: 'Bad target', effectTarget: 'eval', effectValue: 999999 }] };
   api.normalizeState(state);
-  assert.equal(state.abilities[0].effectValue, 15);
-  assert.equal(state.abilities[1].effectTarget, 'none');
-  assert.equal(state.abilities[1].effectValue, 99999);
+  assert.equal(state.abilities[0].effects[0].value, 15);
+  assert.equal(state.abilities[1].effects[0].target, 'none');
+  assert.equal(state.abilities[1].effects[0].value, 99999);
   const recovered = JSON.parse(JSON.stringify(state));
   api.normalizeState(recovered);
   assert.equal(api.movementBonus(recovered), 15);
@@ -310,8 +310,61 @@ test('movement display and derived speed do not double-count an active bonus', (
   const app = read('js/app.js');
   const css = read('css/sheet.css');
   assert.match(app, /const speedNow = \(\) => window\.WBAbilities\.effectiveMovement\(state, speedBase\(\)\)/);
-  assert.match(app, /el\.classList\.toggle\('ability-adjusted', !manual && \(!!bonus \|\| !!gear\('move'\)\)\)/);
+  // Check the behavior hooks rather than matching the entire implementation expression.
+  // The style now also covers Movement derived from temporary AGL score effects.
+  assert.match(app, /el\.classList\.toggle\('ability-adjusted', !manual/);
+  assert.match(app, /!!gear\('move'\)/);
+  assert.match(app, /effectBonus\(state, 'stat', 'AGL'\)/);
   assert.match(app, /dataset\.editingBase/);
   assert.match(css, /input\[data-auto\]\.ability-adjusted:not\(\.manual\)/);
   assert.match(css, /var\(--verdigris\)/);
+});
+
+test('multiple effects stack on Armor, Evasion, stats and custom max', () => {
+  const { api } = harness();
+  const state = { resources: [{id:'resabcdefg',max:100,current:60}], abilities: [
+    { name:'Overdrive', durationLeft:3, effects:[
+      { target:'movement',value:15 }, { target:'armor',value:2 },
+      { target:'evasion',value:3 }, { target:'stat',stat:'STR',value:4 },
+      { target:'resource-max',resourceId:'resabcdefg',value:20 }
+    ] },
+    { name:'Barrier', durationLeft:2, effects:[{target:'armor',value:5}] }
+  ]};
+  api.normalizeState(state);
+  assert.equal(api.effectBonus(state,'armor'),7);
+  assert.equal(api.effectBonus(state,'evasion'),3);
+  assert.equal(api.effectBonus(state,'stat','STR'),4);
+  assert.equal(api.effectBonus(state,'stat','DEX'),0);
+  assert.equal(api.effectiveMovement(state,15),30);
+  assert.equal(api.resourceMax(state,state.resources[0]),120);
+  assert.equal(state.resources[0].max,100);
+  assert.equal(state.resources[0].current,60);
+  api.advanceTurn(state);api.advanceTurn(state);
+  assert.equal(api.effectBonus(state,'armor'),2);
+  api.advanceTurn(state);
+  assert.equal(api.effectBonus(state,'armor'),0);
+  assert.equal(api.resourceMax(state,state.resources[0]),100);
+});
+test('old single movement effects are migrated without double-counting', () => {
+  const { api } = harness();
+  const state = { abilities:[{name:'Old Haste',effectTarget:'movement',effectValue:15,durationLeft:2}]};
+  api.normalizeState(state);
+  assert.equal(state.abilities[0].effects.length,1);
+  assert.equal(api.movementBonus(state),15);
+  api.normalizeState(state);
+  assert.equal(state.abilities[0].effects.length,1);
+  assert.equal(api.movementBonus(state),15);
+});
+test('effectful activations require duration and valid resources before any AP spending', () => {
+  const { api } = harness();
+  const state = { resources:[], abilities:[{id:'abilabcdefg',name:'Shield',duration:'',apCost:5,
+    effects:[{target:'armor',value:2},{target:'resource-max',resourceId:'missing',value:20}]}]};
+  api.normalizeState(state);
+  let ap=15;
+  const c={getAp:()=>ap,spendAp:n=>{ap-=n}};
+  assert.equal(api.activate(state,'abilabcdefg',c).ok,false);
+  assert.equal(ap,15);
+  state.abilities[0].duration=3;
+  assert.equal(api.activate(state,'abilabcdefg',c).ok,false);
+  assert.equal(ap,15);
 });
