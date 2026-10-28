@@ -53,5 +53,5 @@ The browser keeps two things apart, because a character and a game have differen
   within that distance that it can reach in a straight line. `void` rows mark magical darkness.
 - **Enemies:** standing enemies block movement through and onto their square; downed ones can be walked past but
   not stood on. Attacks need the target in range (5 ft unless the weapon's Range says otherwise) and a clear line.
-  A hit meets or beats Evasion, and a natural 20 always hits. Armor Rating comes off each hit (for a two-weapon
+  A hit meets or beats Evasion, and a natural 20 always hits and can't be dodged (Block and Parry still work). Armor Rating comes off each hit (for a two-weapon
   attack, each hand separately, the off-hand after halving).

@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1>Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 28</p>
+    <p class="meta">Homebrew rules · Draft 29</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -367,6 +367,7 @@
       <div class="field"><label for="incDmg">Damage</label><input id="incDmg" type="number" inputmode="numeric" placeholder="25" autocomplete="off"></div>
       <div class="field"><label for="incType">Damage type</label><input id="incType" type="text" list="dmgTypes" placeholder="Any" autocomplete="off" spellcheck="false"></div>
       <label class="chk" for="incArea"><input type="checkbox" id="incArea"><span>Area attack</span></label>
+      <label class="chk" for="incNat" id="incNatLab"><input type="checkbox" id="incNat"><span>Natural 20</span></label>
       <label class="chk" for="incOF"><input type="checkbox" id="incOF"><span>Overwhelming Force</span></label>
       <label class="chk" for="incNoAr"><input type="checkbox" id="incNoAr"><span>Armor doesn't apply</span></label>
       <label class="chk" for="incAlly" id="incAllyLab" hidden><input type="checkbox" id="incAlly"><span>Protecting an ally</span></label>
@@ -384,12 +385,13 @@
       </div>
       <div class="def ready" id="defDodge">
         <div class="def-top"><span class="def-name">Dodge</span><span class="def-kind">Reaction · avoids the hit</span></div>
-        <p>Roll d20 + AGL mod against their attack roll. Beat it and you take no damage. Tie or fall short and you take all of it. Against an area attack like a fireball, your Dodge is the save: meet the DC and you take half. Mind control and other effects can’t be dodged. If a Dodge fails, you can still Block with another reaction.</p>
+        <p>Roll d20 + AGL mod against their attack roll. Beat it and you take no damage. Tie or fall short and you take all of it. Against an area attack like a fireball, your Dodge is the save: meet the DC and you take half. Mind control and other effects can’t be dodged, and neither can an attack that rolled a natural 20. If a Dodge fails, you can still Block with another reaction.</p>
         <div class="def-roll"><span class="def-val"><span class="def-num" id="dodgeNum">+0</span><span class="gear" id="dodgeGear" hidden></span></span><button type="button" class="btn strong" data-def="dodge">Dodge</button></div>
+        <p class="def-rel" id="dodgeRel" hidden>A natural 20 can’t be dodged. Block or Parry it instead.</p>
       </div>
       <div class="def" id="defParry">
         <div class="def-top"><span class="def-name">Parry</span><span class="def-kind">Reaction · negates the hit</span></div>
-        <p>Needs DEX 21 and a weapon or shield in hand. Once each round, step in front of a physical attack you can see, aimed at you or anyone you could reach with 1 AP of movement. Roll d20 + DEX mod. Beat their attack roll and you negate its damage and any non-magical effects.</p>
+        <p>Needs DEX 21 and a weapon or shield in hand. Once each round, step in front of a physical attack you can see, aimed at you or anyone you could reach with 1 AP of movement. Roll d20 + DEX mod. Beat their attack roll and you negate its damage and any non-magical effects. This works against a natural 20 too.</p>
         <div class="def-roll"><span class="def-val"><span class="def-num" id="parryNum">+0</span><span class="gear" id="parryGear" hidden></span></span><button type="button" class="btn strong" id="parryBtn" data-def="parry">Parry</button></div>
         <p class="def-rel" id="parryRel"></p>
       </div>

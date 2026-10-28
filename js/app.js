@@ -1008,7 +1008,10 @@
     const d = num($('#incDmg').value);
     const dt = $('#incType').value.trim();
     const ally = canGuard() && $('#incAlly').checked;
-    return { vs: isNaN(a) ? null : a, dmg: isNaN(d) ? null : Math.max(0, Math.round(d)), area: $('#incArea').checked, of: $('#incOF').checked, dt, ally, noAr: $('#incNoAr').checked, res: !ally && resists(dt) };
+    const area = $('#incArea').checked;
+    // An attack that rolled a natural 20 always hits and can't be dodged, but it can still be blocked or parried.
+    const nat = !area && $('#incNat').checked;
+    return { vs: isNaN(a) ? null : a, dmg: isNaN(d) ? null : Math.max(0, Math.round(d)), area, nat, of: $('#incOF').checked, dt, ally, noAr: $('#incNoAr').checked, res: !ally && resists(dt) };
   }
   // Damage for an ally is entered after their own Armor Rating, so yours never comes off it.
   const arFor = (inc) => (inc.ally || inc.noAr ? 0 : armorNow());
@@ -1020,7 +1023,7 @@
   function setGear(sel, v) { const el = $(sel); el.hidden = !v; el.textContent = v ? sgn(v) + ' gear' : ''; }
   function clearIncoming() {
     ['#incAtk', '#incDmg', '#incType'].forEach((sel) => { $(sel).value = ''; });
-    ['#incArea', '#incOF', '#incNoAr', '#incAlly'].forEach((sel) => { $(sel).checked = false; });
+    ['#incArea', '#incNat', '#incOF', '#incNoAr', '#incAlly'].forEach((sel) => { $(sel).checked = false; });
     renderDefense();
   }
   function renderDefense() {
@@ -1059,9 +1062,11 @@
       ? 'Put on arm guards or hold a weapon or shield. Bare skin and clothes can’t block.'
       : !blockOk ? 'Blocking for an ally takes a shield.'
       : 'Your shield’s Block die is ' + blockDie() + '. You can also block for anyone within ' + (num($('#speed').value) || 5) + ' ft (1 AP of movement).';
+    $('#incNatLab').hidden = inc.area;
     const dodgeBtn = $('#defDodge [data-def]');
-    dodgeBtn.disabled = inc.ally;
-    $('#defDodge').classList.toggle('ready', !inc.ally);
+    dodgeBtn.disabled = inc.ally || inc.nat;
+    $('#defDodge').classList.toggle('ready', !inc.ally && !inc.nat);
+    $('#dodgeRel').hidden = !inc.nat;
     $('#dodgeNum').textContent = fmt(mod('AGL') + defBonus('dodge'));
     const dex = score('DEX');
     const ready = reached('DEX', 21);
@@ -1104,7 +1109,7 @@
     const inc = incoming();
     if (type === 'parry' && state.parryUsed) return;
     if (type === 'block' && (!canBlock() || (inc.ally && !shieldInHand()))) return;
-    if (type === 'dodge' && inc.ally) return;
+    if (type === 'dodge' && (inc.ally || inc.nat)) return;
     if (reactTracker.avail() < 1) {
       showRoll({ kind: 'notice', title: name, math: 'No reactions left. They come back at the start of your turn.' });
       return;
@@ -1294,7 +1299,7 @@
     if (foe && r.kind === 'attack' && r.total != null) {
       // A natural 20 always hits.
       r.hit = r.d20 === 20 || r.total >= foe.ev;
-      notes.unshift((r.hit ? 'Hits ' : 'Misses ') + foe.name + ' (Evasion ' + foe.ev + ')');
+      notes.unshift(r.d20 === 20 ? 'Hits ' + foe.name + ': a natural 20 can’t be dodged, only blocked or parried' : (r.hit ? 'Hits ' : 'Misses ') + foe.name + ' (Evasion ' + foe.ev + ')');
     }
     if (foe && r.kind === 'dual') {
       r.mainHit = r.dual.a === 20 || r.dual.ta >= foe.ev;
