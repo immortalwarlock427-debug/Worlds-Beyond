@@ -662,7 +662,23 @@
   }
   const manaPool = $('#manaPool');
   const resourceManager = window.WBResources.init(() => state, save);
-  const abilityLibrary = window.WBAbilities.init(() => state, save);
+  const abilityLibrary = window.WBAbilities.init(() => state, save, {
+    getAp: () => apHave(),
+    spendAp: (cost) => spendAp(cost),
+    getMana: () => {
+      const current = $('#mpCur').value;
+      const maximum = Number($('#mpMax').value);
+      if (!Number.isFinite(maximum) || maximum <= 0) return null;
+      return current === '' ? maximum : Math.max(0, Number(current) || 0);
+    },
+    spendMana: (cost) => {
+      const current = $('#mpCur').value;
+      const maximum = Math.max(0, Number($('#mpMax').value) || 0);
+      state.fields.mpCur = String(Math.max(0, (current === '' ? maximum : Number(current) || 0) - cost));
+      $('#mpCur').value = state.fields.mpCur;
+    },
+    refresh: () => refreshAll()
+  });
   function updateManaKind() {
     const holy = kind() === 'holy';
     const label = holy ? 'Holy Power' : 'Mana';
@@ -951,6 +967,7 @@
     renderMap();
     save();
     resourceManager.turnStart();
+    abilityLibrary.turnStart();
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
     if (h != null && h <= 0 && !(state.down && state.down.stable) && !isDead()) applyDamage(4, { bleed: true });
@@ -973,9 +990,10 @@
   $('#longRest').addEventListener('click', () => {
     restUndo = {
       hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
+      other: JSON.stringify({ abilities: state.abilities, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
     };
     resourceManager.longRest();
+    abilityLibrary.longRest();
     const hpMax = $('#hpMax').value;
     const mpMax = $('#mpMax').value;
     if (hpMax !== '') state.fields.hpCur = hpMax;
