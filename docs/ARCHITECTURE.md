@@ -2,7 +2,7 @@
 
 ## Files
 
-- `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link).
+- `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link). Character Export, Import, and Clear actions are in the top toolbar and work from either view.
 - `css/sheet.css` holds every style. Colors are tokens on `:root` with a dark theme.
 - `js/maps.js` defines `window.WB_MAPS`, the maps that come with the site. Add a map there; the app needs no change.
 - `js/abilities.js` owns the player-built Ability Library (search, categories, favorites, metadata); it stores data on the character, not the game, and does not change combat math.
