@@ -139,7 +139,7 @@ test('UI and character state store ability loadouts separately from portrait for
   }
   assert.match(app,/abilityLoadouts: \[\], activeAbilityLoadoutId: ''/);
   assert.match(css,/\.ability-loadouts/);
-  assert.match(h, /\?v=20261028-loadouts-v4/);
+  assert.match(h, /css\/sheet\.css\?v=[a-z0-9-]+/); // Asset version can change between releases.
 });
 
 
