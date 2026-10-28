@@ -77,3 +77,7 @@ Imported player Movement is calculated from the current exported sheet; NPC move
 ### DM Room usability fixes (PR #25)
 
 Map selection uses **Blank Grid / Stone Hall / Barrow** buttons rather than a browser-native dropdown, which rendered blank in some Opera/dark themes. During active combat, Combat movement (AP) automatically selects the current initiative actor and provides errors beside the map. Combat movement is disabled after finishing a fight: choose **Reuse roster / Edit setup** to keep imported combatants, HP, initiative and encounter token positions, refresh AP/movement counters, and return to setup to add/edit actors before starting the next combat. **New empty roster** is the deliberately destructive alternative; it never changes player character files.
+
+### Natural movement routes and visual traversal
+
+When multiple paths cost the same movement distance, the DM map now prefers the route with fewer unnecessary diagonal steps and turns, so an unobstructed straight-line move stays straight. **Confirm move** still commits the validated route, coordinates, and AP once, but the token is drawn separately and travels smoothly through each square (170 ms per tile). Other actions and refreshes read the already saved destination, and the visual effect can be canceled without refunding or duplicating AP. The motion is suppressed when the browser requests reduced animations.
