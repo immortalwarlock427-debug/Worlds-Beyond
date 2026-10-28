@@ -70,3 +70,10 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 - Setup roster edits name, HP/max HP, AR, AP max, Death Threshold and initiative total; combat view tracks current actor/round, AP spending, raw-damage-per-hit, healing, HP corrections, and stabilization.
 - Data stays in optional `game.encounter`, imported player sheets remain unchanged, and the underlying command engine verifies revisions before every mutation. Sheet Health history logic is reused through `WBCombat`.
 - **Next:** improve DM encounter history/export, connect shared battlemap tokens and player movement with validated path/AP, then begin secure cloud authentication, character syncing and real-time sessions. Animated dice can be added to presentation later while the roll result remains separate from the animation.
+
+## Offline shared encounter battlemap (Draft 33)
+
+- DM Room now shows the same bundled Stone Hall, Barrow and blank grid definitions as the character Battlemap, with a scrollable, mobile-friendly five-foot grid and all placed encounter actors (player and NPC) shown as distinct tokens.
+- Choose which combatant to place; click a free square to position/reposition, click a token to select, or remove placement. Commands route through `WBEncounter.PlaceToken` / `ClearToken` using map-bound actor positions, revisioned saves, and shared terrain/occupancy validation.
+- Map selection writes the normal DM-owned `game.map` value. Encounter token positions remain separate from the character's `game.tokens` movement record and existing `game.foes` until a single authoritative movement/foe reconciliation protocol is designed. Switching maps hides tokens assigned to other maps rather than teleporting them.
+- **Next:** introduce actor movement path/AP validation, connect encounter actors to the player-facing battlemap safely, and support game history/export before authenticated sessions and cloud sync. DM manual placement intentionally costs no AP. Fog/lighting, multiplayer permissions, and real-time sync are not yet integrated.
