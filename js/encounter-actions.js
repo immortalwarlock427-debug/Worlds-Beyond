@@ -296,6 +296,13 @@
           return fail('OUT_OF_BOUNDS');
         if (isRecord(context.map) && validId(context.map.id) &&
             context.map.id.length <= 40) actor.mapId = context.map.id;
+        // Manual DM placement still checks occupied or blocked squares against
+        // the shared map model; player pathfinding/AP is a separate protocol.
+        if (window.WBEncounterMap && isRecord(context.map) && context.map.def) {
+          const placement = window.WBEncounterMap.checkPlacement(
+            state, context.map, action.actorId, action.x, action.y);
+          if (!placement.ok) return fail(placement.error);
+        }
         actor.x = action.x;
         actor.y = action.y;
         event.x = actor.x;
