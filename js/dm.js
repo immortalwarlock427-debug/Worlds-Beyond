@@ -11,6 +11,7 @@
     ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[ch]);
   let encounter = core.createEncounter('local-encounter');
   let serial = 0;
+  let dmMap = null;
 
   const errors = {
     REVISION_CONFLICT: 'The encounter changed in another tab. Latest data has been loaded; review it and try again.',
@@ -29,7 +30,10 @@
     INVALID_AP_AMOUNT: 'Enter an AP grant between 1 and 40.',
     AP_CAP: 'Given AP would exceed the allowed maximum.',
     INVALID_INITIATIVE: 'Enter a whole-number initiative total.',
-    NOT_CURRENT_TURN: 'Only the current combatant can spend AP or end their turn.'
+    NOT_CURRENT_TURN: 'Only the current combatant can spend AP or end their turn.',
+    OUT_OF_BOUNDS: 'That square is outside the selected map.',
+    BLOCKED_SQUARE: 'That square is blocked by terrain.',
+    OCCUPIED_SQUARE: 'Another combatant occupies that square.'
   };
   function message(text, isError = false) {
     const el = $('#dmFeedback');
@@ -76,9 +80,12 @@
     try {
       game = latestGame();
       if (!noConflict(game)) return false;
+      const mapContext = type === 'PlaceToken'
+        ? { ...context, map: window.WBEncounterMap.mapModel(game,window.WB_MAPS) }
+        : context;
       const result = core.applyAction(encounter, {
         id: newId('action'), type, expectedRevision: encounter.revision, ...detail
-      }, context);
+      }, mapContext);
       if (!result.ok) {
         if (!quiet) message(errors[result.error] || 'Action rejected: ' + result.error, true);
         return false;
@@ -191,6 +198,7 @@
     $('#rosterHint').textContent = setup ?
       'Enter initiative totals and save each row. Highest acts first; ties keep the previous order.' :
       active ? 'The highlighted combatant is taking their turn.' : 'Completed roster';
+    if (dmMap) dmMap.render();
   }
   $('#dmImport').addEventListener('click', async () => {
     if (encounter.phase !== 'setup') return;
@@ -312,6 +320,32 @@
         message('The game changed in another tab; refreshed to its latest local encounter.');
       }
     }
+  });
+  function selectBattlemap(id) {
+    if (!Object.prototype.hasOwnProperty.call(window.WB_MAPS,id)) return false;
+    try {
+      const game = latestGame();
+      if (!noConflict(game)) return false;
+      const def = window.WB_MAPS[id];
+      const old = game.map || {};
+      const next = { ...game, map: {
+        ...old, id, rev:def.rev || null,
+        cols:def.cols || old.cols || 20, rows:def.rows || old.rows || 15
+      } };
+      repository.save(next);
+      render();
+      message('Selected ' + def.name + '. Combatant placements on other maps are preserved.');
+      saveMessage('Battlemap selection saved on this device');
+      return true;
+    } catch (error) {
+      message('Could not save the selected map. Browser storage might be unavailable.',true);
+      saveMessage('Map change not saved',true);
+      return false;
+    }
+  }
+  dmMap = window.WBDMMap.init({
+    getGame:latestGame, getEncounter:() => encounter,
+    command, selectMap:selectBattlemap, message
   });
   const loaded = syncWithStorage();
   render();
