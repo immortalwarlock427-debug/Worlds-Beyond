@@ -106,7 +106,9 @@
         message(type.replace(/([A-Z])/g, ' $1').trim() +
           (affected ? ': ' + affected.name : '') + ' · Saved locally.');
       }
-      return true;
+      // Movement animation consumes the validated path from the accepted
+      // encounter event; other DM callers keep the existing boolean API.
+      return type === 'MoveToken' ? result : true;
     } catch (err) {
       message('Could not save. Check browser storage and available space.', true);
       saveMessage('Not saved — storage error', true);
