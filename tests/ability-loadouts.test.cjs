@@ -454,5 +454,5 @@ test('new form-resource controls use the saved character rather than game state'
     assert.match(html,new RegExp('id="'+id+'"'));
   assert.match(abilities,/data-loadout-mana-mode/);
   assert.match(css,/\.resource-memberships/);
-  assert.match(html,/form-resources-v8/);
+  assert.match(html,/css\/sheet\.css\?v=[a-z0-9-]+/); // Release token changes when assets change.
 });
