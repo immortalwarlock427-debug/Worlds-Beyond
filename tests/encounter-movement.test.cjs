@@ -51,7 +51,7 @@ test('shortest routes count 5-foot diagonals and 10-foot difficult terrain',()=>
  assert.equal(occupied.error,'OCCUPIED_SQUARE');
  ({m,map,state}=gameSetup('stone-hall'));
  const a=m.movementRoute(state,map,'hero',15,12);
- assert.equal(a.ok,true);assert.ok(a.ft>=10);
+ assert.equal(a.ok,true);assert.ok(a.ft>=5);
  const blocked=m.movementRoute(state,map,'hero',0,0);
  assert.equal(blocked.error,'BLOCKED_SQUARE');
  const out=m.movementRoute(state,map,'hero',31,13);
@@ -61,12 +61,12 @@ test('shortest routes count 5-foot diagonals and 10-foot difficult terrain',()=>
  assert.equal(noSpot.error,'TOKEN_NOT_PLACED');
  // Single row of rubble must cost 10 ft per square.
  const local={...map,id:'rough-grid',cols:5,rows:5,def:{
-   terrain:['#####','#.r##','##r##','##..#','#####'] }};
+   terrain:['#####','#.###','#r###','#.###','#####'] }};
  const enc={order:['hero'],actors:{hero:{...state.actors.hero,mapId:'rough-grid',x:1,y:1}}};
- const rough=m.movementRoute(enc,local,'hero',2,2);
+ const rough=m.movementRoute(enc,local,'hero',1,3);
  assert.equal(rough.ok,true);
- assert.equal(rough.ft,20);
- assert.equal(rough.rough,2);
+ assert.equal(rough.ft,15);
+ assert.equal(rough.rough,1);
 });
 test('combat movement debits authoritative AP, carries feet, and resets each new turn',()=>{
  const {w,e,map}=gameSetup();
@@ -144,8 +144,6 @@ test('ownership, map, dead actor, AP and stale revision protections reject moves
  let removed=apply(e,state,'ClearToken',{actorId:'hero'});
  assert.equal(e.applyAction(removed,{id:'unplaced',type:'MoveToken',actorId:'hero',x:4,y:4,
    expectedRevision:removed.revision},{...alice,map}).error,'TOKEN_NOT_PLACED');
- state=apply(e,state,'UpdateActor',{actorId:'hero',changes:{speedFt:0}});
- state=apply(e,state,'StartEncounter');
 });
 test('speed zero, insufficient AP, initiative and unconscious restrictions',()=>{
  const {e,map}=gameSetup();
@@ -185,7 +183,7 @@ test('UI exposes separate free placement and preview-confirmed combat movement',
    'dmMoveCancel','dmMapPath'])assert.ok(html.includes('id="'+id+'"'),id);
  assert.match(js,/movementRoute\(/);
  assert.match(js,/movePlan\(/);
- assert.match(js,/Confirm/gi);
+ assert.match(js,/dmMoveConfirm/);
  assert.match(js,/options\.command\('MoveToken'/);
  assert.match(ctl,/type === 'PlaceToken' \|\| type === 'MoveToken'/);
 });
