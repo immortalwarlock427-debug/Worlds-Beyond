@@ -6,6 +6,7 @@
 - `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link). Character Export, Import, and Clear actions are in the top toolbar and work from either view.
 - `css/sheet.css` holds every style. Colors are tokens on `:root` with a dark theme.
 - `js/persistence.js` owns the browser-independent character JSON file contract and injectable local/in-memory **CharacterRepository** / **GameRepository** adapters. Local storage keeps the same two keys. The app uses the repositories instead of calling localStorage directly. Future cloud adapters should preserve this data ownership boundary.
+- `js/combat-core.js` is a DOM-free deterministic math module (`window.WBCombat`): level history and ASI scores, effective scores and modifier overrides, worn gear/Armor Rating, AP and Command spending/refunds, and movement planning with Surge. The character sheet calls these pure functions; they also work in Node/vm and can power an offline DM view. Temporary ability and form bonuses come from `WBAbilities` as explicit numeric inputs to effective score/modifier functions; this avoids modifying base progression or duplicating those features.
 - `js/game-state.js` owns a pure normalizer and blank factory for DM-owned game/session state (map, tokens, fog, foes, view), shared by the existing battlemap and a future offline DM screen.
 - `js/maps.js` defines `window.WB_MAPS`, the maps that come with the site. Add a map there; the app needs no change.
 - `js/status.js` owns the character-level status screen and manual condition timers. The status UI summarizes existing `js/abilities.js` effects without copying the effective stats into another save.
@@ -94,3 +95,7 @@ GitHub Pages may serve updated HTML while a visitor's browser still has older CS
 ## Next architectural boundary
 
 The app currently uses a mutable `state` in `js/app.js` and separate browser keys for the character and game. To support cloud saves and DM multiplayer safely, extract rule actions from DOM handlers and use local/cloud repository adapters rather than replacing localStorage with direct remote writes. See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md) for identity, ownership, offline sync, permissions and migration priorities.
+
+## Shared combat-engine migration
+
+The first combat-core PR replaces existing calculations in `js/app.js` with pure `WBCombat` functions without changing current save formats. The rules module is deterministic and receives state, current AP/movement, or explicit modifiers as parameters; it never reads the DOM, browser storage, network or dice randomness. Source-of-truth stat and gear data live in the character record, not the DM game record. For new DM features, reuse these functions and `WBAbilities` rather than introducing new formulas. Next extraction should handle attack/damage and defenses; then construct encounter actions validated against an authoritative game state. Cloud/server enforcement is a separate future phase.
