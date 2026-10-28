@@ -1211,3 +1211,6 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
  .views { display:flex; flex-wrap:nowrap; width:100%; max-width:100%; }
  .views button { flex:1 1 0; min-width:0; padding:9px 5px; font-size:12px; letter-spacing:0; white-space:nowrap; }
 }
+
+.status-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.status-actions .status-summary { flex:1 1 180px; }
