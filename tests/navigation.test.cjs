@@ -121,3 +121,15 @@ test('sticky navigation and hidden sections maintain map separation', () => {
   assert.match(app,/if \(!onSheet\) \{ mapTarget = null; renderMap\(true\); centerToken\(\); \}/);
   assert.match(app,/if \(onSheet && activeSheetTab === 'statuses'\) statusManager\.render\(\)/);
 });
+
+test('published styles and scripts use the same cache-busting release version', () => {
+  const html = read('index.html');
+  const expected = ['css/sheet.css','js/maps.js','js/resources.js','js/abilities.js','js/status.js','js/app.js'];
+  const versions = [];
+  for (const asset of expected) {
+    const match = html.match(new RegExp('(?:src|href)="' + asset.replace(/\./g, '\\.') + '\\?v=([\\w-]+)"'));
+    assert.ok(match, asset + ' should be versioned to avoid stale cached scripts/styles');
+    versions.push(match[1]);
+  }
+  assert.equal(new Set(versions).size, 1, 'All assets should share the same release version');
+});
