@@ -32,6 +32,7 @@
         n: value.apGiven.n, fresh: !!value.apGiven.fresh
       },
       initiative: value.initiative === undefined ? 0 : value.initiative,
+      initiativeBonus: value.initiativeBonus == null ? null : value.initiativeBonus,
       x: value.x === undefined ? null : value.x,
       y: value.y === undefined ? null : value.y
     };
@@ -43,6 +44,7 @@
         !integer(fields.apMax, 0, 40) ||
         !integer(fields.apAvail, 0, fields.apMax) ||
         !integer(fields.initiative, -10000, 10000) ||
+        !(fields.initiativeBonus === null || integer(fields.initiativeBonus, -10000, 10000)) ||
         !((fields.x === null && fields.y === null) ||
           (integer(fields.x, 0, 999) && integer(fields.y, 0, 999))) ||
         !(fields.apGiven === null || integer(fields.apGiven.n, 0, 40)) ||
@@ -133,7 +135,7 @@
     const canAct = actor && (dm || (actor.kind === 'pc' && actor.ownerId === context.userId));
     let event = { type: action.type, actorId: action.actorId || null };
     if (['AddActor', 'RemoveActor', 'SetInitiative', 'StartEncounter',
-      'FinishEncounter', 'ApplyDamage', 'Heal', 'SetHealth', 'PlaceToken', 'GrantAP'].includes(action.type) && !dm)
+      'FinishEncounter', 'ApplyDamage', 'Heal', 'SetHealth', 'SetStable', 'UpdateActor', 'PlaceToken', 'GrantAP'].includes(action.type) && !dm)
       return fail('DM_ONLY');
     switch (action.type) {
       case 'AddActor': {
@@ -153,6 +155,23 @@
         delete state.actors[action.actorId];
         state.order = state.order.filter(id => id !== action.actorId);
         state.turnIndex = 0;
+        break;
+      }
+      case 'UpdateActor': {
+        if (state.phase !== 'setup') return fail('ENCOUNTER_NOT_IN_SETUP');
+        if (!actor) return fail('ACTOR_NOT_FOUND');
+        if (!isRecord(action.changes) || !Object.keys(action.changes).length ||
+            Object.keys(action.changes).some(key =>
+              !['name','hp','maxHp','ar','apMax','initiative','deathThreshold'].includes(key)))
+          return fail('INVALID_ACTOR');
+        const updated = actorFrom({
+          ...actor, ...action.changes,
+          apAvail: action.changes.apMax === undefined ? actor.apAvail : action.changes.apMax
+        });
+        if (!updated) return fail('INVALID_ACTOR');
+        state.actors[action.actorId] = updated;
+        sortOrder(state);
+        event.actorId = updated.id;
         break;
       }
       case 'SetInitiative': {
@@ -252,6 +271,15 @@
         actor.hp = action.hp;
         actor.down = actor.hp > 0 ? null : { mercy: actor.hp < 0, stable: false };
         event.hp = actor.hp;
+        break;
+      }
+      case 'SetStable': {
+        if (!actor) return fail('ACTOR_NOT_FOUND');
+        if (typeof action.stable !== 'boolean') return fail('INVALID_STABILITY');
+        if (actor.hp > 0) return fail('ACTOR_NOT_DOWN');
+        actor.down = actor.down || { mercy: actor.hp < 0, stable: false };
+        actor.down.stable = action.stable;
+        event.stable = action.stable;
         break;
       }
       case 'PlaceToken': {

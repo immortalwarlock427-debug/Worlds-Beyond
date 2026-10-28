@@ -210,7 +210,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 31)
+## What the site does (Draft 32)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
@@ -380,3 +380,10 @@ See [ROADMAP.md](ROADMAP.md).
 - `js/encounter-actions.js` exposes `WBEncounter` for a future multi-character DM screen. Commands for adding actors, initiative, turn order, Action Point spending, DM-applied damage/healing, manual placement and ending an encounter are validated against a revisioned snapshot; duplicate action IDs are recognized. All mutations return a new encounter rather than modifying the caller's object.
 - Shared formulas continue to live in `WBCombat`. Turn starts restore AP and apply existing 4-Health bleeding; resistance before Armor Rating and first-hit Death's Mercy are preserved. Healing from 0 or below above 0 adds a Trauma.
 - The optional encounter lives in the separate game save, not the character export. No DM screen, player movement authority, account/cloud sync, secure role enforcement or random-dice verification exists yet. A dice icon or animated dice overlay is future UI polish; the roll must be computed independently of its animation.
+
+## Offline DM Room UI (Draft 32)
+
+- New `dm.html` is linked from the Character Sheet. It imports multiple v1 character exports into **snapshots** and adds manual enemies/NPCs; setup values and actual rolled initiative totals can be reviewed and corrected before starting.
+- It shows current actor and round, initiative order, Health, Armor Rating, AP, and per-actor controls for raw damage, healing, manual HP edits and stabilization. Next turn refreshes AP and applies 4 bleeding damage at 0 or less if not stabilized. All operations use `WBEncounter` with shared `WBCombat` formulas and revision/ID validation.
+- `WBCombat.healthAtLevel` is now used for the sheet's `computeLog` and DM import. Max HP includes historical VIT, per-level rolls, chosen hit die and gear; incomplete advancement produces a DM-review warning. Imported characters retain no live sync to their originals, and the player-character save is never changed by DM actions.
+- Only the optional DM-owned `game.encounter` is saved, and the original map/tokens/fog/foes remain intact. The room does **not** provide online multiplayer, authenticated permissions, joined player movement, automatic initiative rolls, attack/dice animation, or cross-device cloud saves. Keep a single tab for active local edits until transactional cloud saving exists.

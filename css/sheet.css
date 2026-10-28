@@ -1357,3 +1357,8 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .equipment-profile-actions {display:flex;gap:9px;flex-wrap:wrap;}
 .equipment-profile-actions .btn:disabled {opacity:.5;cursor:not-allowed;}
 @media(max-width:540px){.equipment-profile-actions{width:100%;}.equipment-profile-actions .btn{flex:1 1 160px;}}
+
+/* Entry point to the optional offline DM workspace (distinct from the sheet tabs). */
+.dm-launch { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:-18px; }
+.dm-launch a { text-decoration:none; }
+.dm-launch span { color:var(--muted); font-size:14px; }

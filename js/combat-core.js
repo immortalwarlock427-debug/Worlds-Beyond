@@ -126,6 +126,52 @@
     const before=m || {ft:0,left:0,surge:0};
     return {ft:before.ft+ft,left:plan.leftAfter,surge:before.surge+plan.free};
   }
+
+  // Advancement Health uses the historical VIT score for each level,
+  // not the currently equipped gear. Both the sheet and DM import use this.
+  function hitDieFor(vit) {
+    if (vit >= 46) return '2d12+1d8';
+    if (vit >= 43) return '2d12+1d6';
+    if (vit >= 40) return '2d12+1d4';
+    if (vit >= 37) return '2d12';
+    if (vit >= 34) return '1d12+1d10';
+    if (vit >= 31) return '1d12+1d8';
+    if (vit >= 28) return '1d12+1d6';
+    if (vit >= 25) return '1d12+1d4';
+    if (vit >= 22) return '1d12';
+    if (vit >= 19) return '1d10';
+    if (vit >= 16) return '1d8';
+    if (vit >= 12) return '1d6';
+    return '1d4';
+  }
+  function healthAtLevel(state, n, vit) {
+    if (vit == null) return { die: null, dieMax: 0, gain: null };
+    const override = record(state.over).hitDie;
+    const die = isSet(override) ? String(override) : hitDieFor(vit);
+    const dice = [...die.matchAll(/(\d*)\s*d\s*(\d+)/gi)];
+    const dieMax = dice.reduce((sum, parts) => sum +
+      (Number(parts[1]) || 1) * Number(parts[2]), 0);
+    const roll = num(record(state.rolls)[n]);
+    const gain = n === 1 ? (dieMax ? dieMax + Math.floor(vit / 2) : null)
+      : isNaN(roll) ? null : roll + Math.floor(vit / 2);
+    return { die, dieMax, gain };
+  }
+  function characterMaxHealth(state) {
+    const n = level(state);
+    if (scoreAt(state,'VIT',1) == null) return { max: null, missing: [1] };
+    let sum = 0;
+    const missing = [];
+    for (let i = 1; i <= n; i++) {
+      const base = scoreAt(state,'VIT',i);
+      const gear = record(record(state.lvGear)[i]);
+      const vit = base == null ? null : base + (Number(gear.VIT) || 0);
+      const result = healthAtLevel(state,i,vit);
+      if (result.gain == null) missing.push(i);
+      else sum += result.gain;
+    }
+    return { max: sum + gearBonus(state,'hp'), missing };
+  }
+
   // Attack / damage resolution. Dice are rolled by an adapter and passed in;
   // the same outcomes can be checked by the sheet, a DM room or the server.
   function attackHits(total, evasion, naturalDie) {
@@ -215,6 +261,7 @@
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
     autoMod,modifier,attackApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
+    hitDieFor,healthAtLevel,characterMaxHealth,
     attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,
     armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
     defenseResult,deathThreshold,diesAt,damageHealth
