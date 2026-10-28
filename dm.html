@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-dm-map-v15">
-<link rel="stylesheet" href="css/dm.css?v=20261028-dm-map-v15">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-movement-polish-v18">
+<link rel="stylesheet" href="css/dm.css?v=20261028-movement-polish-v18">
 </head>
 <body>
 <main class="sheet dm-sheet">
@@ -17,7 +17,7 @@
       <p class="eyebrow">Encounter command</p>
       <h1>Worlds Beyond</h1>
     </div>
-    <p class="meta">Offline DM Room · Draft 33</p>
+    <p class="meta">Offline DM Room · Draft 34</p>
   </header>
   <nav class="dm-nav" aria-label="Main destinations">
     <a href="index.html#sheet">Character Sheet</a>
@@ -38,7 +38,7 @@
       <h2>Encounter</h2>
       <p class="dm-sub" id="encounterSummary">Loading your saved encounter…</p>
     </div>
-    <button class="btn" id="newEncounter" type="button">New encounter</button>
+    <button class="btn" id="newEncounter" type="button">New empty roster</button>
   </div>
   <p class="dm-feedback" id="dmFeedback" role="status" aria-live="polite">Preparing the DM room…</p>
 
@@ -62,6 +62,8 @@
           <label>Max HP<input name="maxHp" type="number" min="1" max="1000000" value="20" required></label>
           <label>Armor Rating<input name="ar" type="number" min="0" max="1000000" value="0" required></label>
           <label>AP / turn<input name="apMax" type="number" min="0" max="40" value="15" required></label>
+          <label>Movement (ft/AP)<input name="speedFt" type="number" min="0" max="10000" value="5" required></label>
+          <label>Surge free AP<input name="surgeMax" type="number" min="0" max="2" value="0" required></label>
           <label>Initiative total<input name="initiative" type="number" min="-10000" max="10000" value="0" required></label>
           <label>Death Threshold<input name="deathThreshold" type="number" min="0" max="1000000" placeholder="Optional"></label>
         </div>
@@ -79,6 +81,7 @@
     <div class="dm-turn-actions">
       <button id="startEncounter" type="button" class="btn strong">Start encounter</button>
       <button id="nextTurn" type="button" class="btn strong" hidden>Next turn</button>
+      <button id="reuseRoster" type="button" class="btn strong" hidden>Reuse roster / Edit setup</button>
       <button id="finishEncounter" type="button" class="btn" hidden>Finish combat</button>
     </div>
   </section>
@@ -97,22 +100,38 @@
   <section class="dm-map-section" aria-labelledby="dmMapHeading">
     <div class="dm-section-title">
       <h3 id="dmMapHeading">Encounter battlemap</h3>
-      <p>Show everyone on one map. Place or reposition tokens manually as the DM; movement does not spend AP yet.</p>
+      <p>Show everyone on one map. Place or reposition tokens manually or preview legal combat movement that spends AP and Surge.</p>
     </div>
     <div class="dm-map-toolbar">
-      <label>Map
-        <select id="dmMapPick" aria-label="Encounter map"></select>
-      </label>
+      <div class="dm-map-chooser">
+        <span class="dm-field-label">Map</span>
+        <div id="dmMapChoices" class="dm-map-choices" role="group" aria-label="Select battlemap"></div>
+      </div>
+      <select id="dmMapPick" aria-label="Legacy map selector" hidden></select>
       <label>Combatant to place
         <select id="dmMapActor" aria-label="Select combatant to position"></select>
       </label>
+      <label>Map interaction
+        <select id="dmMapMode" aria-label="Map interaction mode">
+          <option value="place">DM placement (free)</option>
+          <option value="move">Combat movement (AP)</option>
+        </select>
+      </label>
       <button class="btn" type="button" id="dmMapClear">Remove selected token</button>
     </div>
-    <p class="dm-help" id="dmMapHelp">Select a combatant, then click an open square to place their token. Select a token to switch combatants.</p>
+    <p class="dm-help" id="dmMapHelp">In setup, freely place tokens. During combat, select the current combatant, choose Combat movement, then click a destination to preview its cost.</p>
+    <p class="dm-map-notice" id="dmMapNotice" role="status" aria-live="polite"></p>
+    <div class="dm-move-preview" id="dmMovePreview" hidden>
+      <p id="dmMoveText" role="status" aria-live="polite"></p>
+      <button class="btn strong" type="button" id="dmMoveConfirm">Confirm move</button>
+      <button class="btn" type="button" id="dmMoveCancel">Cancel</button>
+    </div>
     <div class="dm-map-wrap" id="dmMapWrap">
       <div class="dm-map-board" id="dmMapBoard" aria-label="DM encounter map, five-foot grid">
         <div class="dm-map-grid" id="dmMapGrid" aria-hidden="true"></div>
+        <div class="dm-map-path" id="dmMapPath" aria-hidden="true"></div>
         <div class="dm-map-tokens" id="dmMapTokens"></div>
+        <div class="dm-map-animation" id="dmMapAnimation" aria-hidden="true"></div>
       </div>
     </div>
     <p class="dm-map-status" role="status" aria-live="polite" id="dmMapStatus">No combatants placed yet.</p>
@@ -121,18 +140,18 @@
 
   <footer class="dm-footer">
     <span id="dmSaveStatus" role="status">Encounter saves on this device.</span>
-    <p>Damage inputs are already-rolled damage before resistance and Armor Rating. Each hit is applied separately. Turn starts handle AP resets and bleeding automatically. Open the Battlemap separately; player token movement is not connected to this encounter yet.</p>
+    <p>Damage inputs are already-rolled damage before resistance and Armor Rating. Each hit is applied separately. Turn starts handle AP resets and bleeding automatically. This DM view uses validated movement within the encounter. The character-sheet Battlemap and online multiplayer are not synchronized yet.</p>
   </footer>
 </main>
-<script src="js/persistence.js?v=20261028-dm-map-v15"></script>
-<script src="js/combat-core.js?v=20261028-dm-map-v15"></script>
-<script src="js/encounter-actions.js?v=20261028-dm-map-v15"></script>
-<script src="js/game-state.js?v=20261028-dm-map-v15"></script>
-<script src="js/abilities.js?v=20261028-dm-map-v15"></script>
-<script src="js/dm-characters.js?v=20261028-dm-map-v15"></script>
-<script src="js/maps.js?v=20261028-dm-map-v15"></script>
-<script src="js/encounter-map.js?v=20261028-dm-map-v15"></script>
-<script src="js/dm-map.js?v=20261028-dm-map-v15"></script>
-<script src="js/dm.js?v=20261028-dm-map-v15"></script>
+<script src="js/persistence.js?v=20261028-movement-polish-v18"></script>
+<script src="js/combat-core.js?v=20261028-movement-polish-v18"></script>
+<script src="js/encounter-actions.js?v=20261028-movement-polish-v18"></script>
+<script src="js/game-state.js?v=20261028-movement-polish-v18"></script>
+<script src="js/abilities.js?v=20261028-movement-polish-v18"></script>
+<script src="js/dm-characters.js?v=20261028-movement-polish-v18"></script>
+<script src="js/maps.js?v=20261028-movement-polish-v18"></script>
+<script src="js/encounter-map.js?v=20261028-movement-polish-v18"></script>
+<script src="js/dm-map.js?v=20261028-movement-polish-v18"></script>
+<script src="js/dm.js?v=20261028-movement-polish-v18"></script>
 </body>
 </html>

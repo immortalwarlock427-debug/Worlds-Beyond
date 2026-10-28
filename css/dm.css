@@ -156,3 +156,56 @@
   .dm-map-toolbar label { min-width: 130px; }
   .dm-map-toolbar button { width: 100%; }
 }
+
+/* Confirmable AP movement, with client-only visual path feedback. */
+.dm-move-preview {
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:1px solid var(--brass);border-radius:4px;
+  background:var(--brass-soft);padding:10px 14px;
+}
+.dm-move-preview p { flex:1 1 250px;margin:0;color:var(--ink); }
+.dm-map-path {position:absolute;inset:0;z-index:2;pointer-events:none;}
+.dm-path-cell {
+  position:absolute;width:36px;height:36px;
+  background:rgba(95,196,177,.33);
+  outline:1px solid rgba(123,227,201,.8);
+  outline-offset:-2px;
+}
+.dm-path-cell.destination { background:rgba(242,196,107,.55);outline:2px solid #f2c46b; }
+.dm-map-tokens {z-index:3;}
+@media(max-width:550px){.dm-move-preview button{flex:1;}}
+
+
+/* Reliable map selection buttons (some browser themes obscure native select menus). */
+.dm-map-chooser { display:flex; flex-direction:column; gap:5px; flex:2 1 350px; min-width:230px; }
+.dm-map-choices { display:flex; flex-wrap:wrap; gap:6px; }
+.dm-map-choice {
+  border:1px solid var(--rule); background:var(--field); color:var(--ink);
+  border-radius:3px; padding:9px 13px; min-height:40px;
+  cursor:pointer; font:700 13px var(--font-label); letter-spacing:.03em;
+}
+.dm-map-choice:hover { border-color:var(--brass); color:var(--brass); }
+.dm-map-choice.active {
+  border-color:var(--brass); color:var(--brass);
+  background:var(--brass-soft); box-shadow:inset 0 -2px 0 var(--brass);
+}
+.dm-map-choice:focus-visible { outline:2px solid var(--brass); outline-offset:2px; }
+.dm-map-notice { margin:0; color:var(--verdigris); font-size:14px; font-weight:700; }
+.dm-map-notice.error { color:var(--blood); }
+.dm-map-notice:empty { display:none; }
+.dm-map-toolbar select:disabled { opacity:.55; cursor:not-allowed; }
+@media(max-width:550px) {
+  .dm-map-chooser { flex:1 1 100%; }
+  .dm-map-choice { flex:1 0 auto; }
+}
+
+
+/* Visual-only confirmed movement. Authoritative coordinates/AP are saved
+   immediately; the overlay travels through each validated route cell. */
+.dm-map-animation {
+  position:absolute;inset:0;z-index:4;pointer-events:none;
+}
+.dm-map-animation .dm-map-token {
+  pointer-events:none;cursor:default;
+  will-change:transform;
+}

@@ -130,8 +130,8 @@ test('DM-only mutations, strict input validation, map placement and lifecycle', 
   let r = command(e, state, 'PlaceToken', { actorId: 'hero', x: 8, y: 3 },
     { ...dm, map: { cols: 20, rows: 20 } }); state = r.state;
   assert.equal(state.actors.hero.x, 8);
-  assert.equal(command(e, state, 'MoveToken', { actorId: 'hero', x: 9, y: 4 }).error, 'UNKNOWN_ACTION',
-    'Player movement must not bypass path/AP validation');
+  assert.equal(command(e, state, 'MoveToken', { actorId: 'hero', x: 9, y: 4 }).error, 'ENCOUNTER_NOT_ACTIVE',
+    'Validated movement is only available during an active encounter');
   r = command(e, state, 'StartEncounter'); state = r.state;
   assert.equal(command(e, state, 'RemoveActor', { actorId: 'hero' }).error, 'ENCOUNTER_NOT_IN_SETUP');
   r = command(e, state, 'FinishEncounter'); state = r.state;

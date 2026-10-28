@@ -21,6 +21,7 @@
     INSUFFICIENT_AP: 'Not enough AP for this action.',
     ENCOUNTER_NOT_IN_SETUP: 'Finish this encounter or create a new one before adding or editing combatants.',
     ENCOUNTER_NOT_ACTIVE: 'Start combat before taking that action.',
+    ENCOUNTER_NOT_FINISHED: 'Finish combat before returning to roster setup.',
     CANNOT_START: 'Add at least one combatant before starting.',
     ACTOR_NOT_DOWN: 'Only a character at zero or lower Health can be stabilized.',
     INVALID_DAMAGE: 'Enter a valid nonnegative, whole-number damage amount.',
@@ -33,7 +34,13 @@
     NOT_CURRENT_TURN: 'Only the current combatant can spend AP or end their turn.',
     OUT_OF_BOUNDS: 'That square is outside the selected map.',
     BLOCKED_SQUARE: 'That square is blocked by terrain.',
-    OCCUPIED_SQUARE: 'Another combatant occupies that square.'
+    OCCUPIED_SQUARE: 'Another combatant occupies that square.',
+    TOKEN_NOT_PLACED: 'Place this combatant on the map before using combat movement.',
+    MAP_REQUIRED: 'A valid encounter map is required for movement.',
+    ALREADY_THERE: 'That combatant is already on the destination square.',
+    NO_PATH: 'There is no walkable route to that square.',
+    NO_MOVEMENT: 'This combatant has no movement left.',
+    ACTOR_UNCONSCIOUS: 'A downed combatant cannot use combat movement.'
   };
   function message(text, isError = false) {
     const el = $('#dmFeedback');
@@ -80,7 +87,7 @@
     try {
       game = latestGame();
       if (!noConflict(game)) return false;
-      const mapContext = type === 'PlaceToken'
+      const mapContext = type === 'PlaceToken' || type === 'MoveToken'
         ? { ...context, map: window.WBEncounterMap.mapModel(game,window.WB_MAPS) }
         : context;
       const result = core.applyAction(encounter, {
@@ -99,7 +106,9 @@
         message(type.replace(/([A-Z])/g, ' $1').trim() +
           (affected ? ': ' + affected.name : '') + ' · Saved locally.');
       }
-      return true;
+      // Movement animation consumes the validated path from the accepted
+      // encounter event; other DM callers keep the existing boolean API.
+      return type === 'MoveToken' ? result : true;
     } catch (err) {
       message('Could not save. Check browser storage and available space.', true);
       saveMessage('Not saved — storage error', true);
@@ -130,7 +139,12 @@
       actor.hp + ' / ' + actor.maxHp + '</b></span>' +
       '<span>AR <b>' + actor.ar + '</b></span>' +
       '<span>AP <b>' + (actor.apAvail + (actor.apGiven ? actor.apGiven.n : 0)) +
-      ' / ' + actor.apMax + '</b></span></div></header>';
+      ' / ' + actor.apMax + '</b></span>' +
+      '<span>Movement <b>' + actor.speedFt + ' ft/AP</b></span>' +
+      (actor.surgeMax ? '<span>Surge <b>' +
+        (actor.surgeMax - actor.move.surge) + ' / ' + actor.surgeMax + '</b></span>' : '') +
+      (active ? '<span>Moved <b>' + actor.move.ft + ' ft</b></span>' : '') +
+      '</div></header>';
     let body = '';
     if (editing) {
       body = '<form class="dm-actor-setup" data-dm-action="edit" data-actor="' + quote(actor.id) + '">' +
@@ -139,6 +153,8 @@
         '<label>Max HP<input type="number" name="maxHp" min="1" max="1000000" value="' + actor.maxHp + '" required></label>' +
         '<label>AR<input type="number" name="ar" min="0" max="1000000" value="' + actor.ar + '" required></label>' +
         '<label>AP max<input type="number" name="apMax" min="0" max="40" value="' + actor.apMax + '" required></label>' +
+        '<label>Movement ft/AP<input type="number" name="speedFt" min="0" max="10000" value="' + actor.speedFt + '" required></label>' +
+        '<label>Surge free AP<input type="number" name="surgeMax" min="0" max="2" value="' + actor.surgeMax + '" required></label>' +
         '<label>Death threshold<input type="number" name="deathThreshold" min="0" max="1000000" value="' +
           (actor.deathThreshold == null ? '' : actor.deathThreshold) + '"></label>' +
         '<label>Initiative total<input type="number" name="initiative" min="-10000" max="10000" value="' +
@@ -180,6 +196,7 @@
     $('#startEncounter').hidden = !setup;
     $('#startEncounter').disabled = !encounter.order.length;
     $('#nextTurn').hidden = !active;
+    $('#reuseRoster').hidden = encounter.phase !== 'finished';
     $('#finishEncounter').hidden = !active;
     $('#encounterSummary').textContent = encounter.order.length + ' combatant' +
       (encounter.order.length === 1 ? '' : 's') + ' · Revision ' + encounter.revision +
@@ -243,6 +260,7 @@
       hp: num(fd.get('maxHp')), maxHp: num(fd.get('maxHp')),
       ar: num(fd.get('ar')), apMax: num(fd.get('apMax')), apAvail: num(fd.get('apMax')),
       initiative: num(fd.get('initiative')),
+      speedFt:num(fd.get('speedFt')), surgeMax:num(fd.get('surgeMax')),
       deathThreshold: num(fd.get('deathThreshold'))
     };
     if (command('AddActor', { actor })) ev.currentTarget.reset();
@@ -259,6 +277,7 @@
         name:String(fd.get('name') || '').trim(),
         hp:num(fd.get('hp')), maxHp:num(fd.get('maxHp')),
         ar:num(fd.get('ar')), apMax:num(fd.get('apMax')),
+        speedFt:num(fd.get('speedFt')), surgeMax:num(fd.get('surgeMax')),
         deathThreshold:num(fd.get('deathThreshold')),
         initiative:num(fd.get('initiative'))
       } });
@@ -288,6 +307,12 @@
     }
   });
   $('#startEncounter').addEventListener('click', () => command('StartEncounter'));
+  $('#reuseRoster').addEventListener('click', () => {
+    if (!encounter.order.length) return;
+    // Reopen setup without resetting any imported character snapshots.
+    if (command('ReopenSetup')) message(
+      'Roster reopened. Characters and token positions are preserved. AP and movement are reset. Edit Health, initiative, or add combatants before starting another fight.');
+  });
   $('#nextTurn').addEventListener('click', () => {
     const actorId = encounter.order[encounter.turnIndex];
     if (actorId) command('EndTurn', { actorId });
@@ -297,7 +322,7 @@
       command('FinishEncounter');
   });
   $('#newEncounter').addEventListener('click', () => {
-    if (!window.confirm('Replace the saved encounter with a blank one? Your player files and battlemap will not be changed.'))
+    if (!window.confirm('Clear the entire encounter roster and begin empty? Use Reuse roster after finishing a combat to keep imported characters. Your player files and battlemap will not be changed.'))
       return;
     try {
       const game = latestGame();

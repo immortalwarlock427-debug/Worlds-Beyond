@@ -67,3 +67,17 @@ Open `dm.html` or select **Open DM Room** on the character sheet. This is a same
 The DM Room now contains a scrollable map with the same built-in artwork as the sheet Battlemap, or an empty grid. Choose a map and combatant, then click a square to place the token. Click a token to select it; choose **Remove selected token** to unplace. Player and NPC tokens are color-coded and the current actor is outlined in combat. Walls, occupied squares and out-of-bounds placements are rejected. Placements are saved with the local encounter and tagged by map ID; map switches do not teleport actors.
 
 The map selector updates the shared game map, but token placements are DM-only encounter snapshots. They do not change player AP, movement, or the legacy battlemap foe set. Until secure movement synchronization exists, use the DM Room for tactical tracking and the existing character Battlemap for each character's own movement. No fog-of-war or online multiplayer yet.
+
+## AP-based movement in the DM Room (Draft 34)
+
+After positioning characters and starting combat, the DM can select **Combat movement (AP)**. Choose the current actor, click an empty destination, review the highlighted shortest route (5 ft per normal square or 10 ft entering rubble, shallow water or bones), and press **Confirm move**. The shared combat engine pays leftover distance first, then free Surge movement if available, then Command/personal AP; the character's position and movement counters save with the encounter. You may change to **DM placement (free)** for setup or administrative corrections, which never consumes AP.
+
+Imported player Movement is calculated from the current exported sheet; NPC movement and Surge are editable in Setup. The DM Room is still a local snapshot and does not push position, health or AP changes to players' character sheets or their separate Battlemap. This is not online multiplayer. No real-time account security or cloud transaction authority has shipped.
+
+### DM Room usability fixes (PR #25)
+
+Map selection uses **Blank Grid / Stone Hall / Barrow** buttons rather than a browser-native dropdown, which rendered blank in some Opera/dark themes. During active combat, Combat movement (AP) automatically selects the current initiative actor and provides errors beside the map. Combat movement is disabled after finishing a fight: choose **Reuse roster / Edit setup** to keep imported combatants, HP, initiative and encounter token positions, refresh AP/movement counters, and return to setup to add/edit actors before starting the next combat. **New empty roster** is the deliberately destructive alternative; it never changes player character files.
+
+### Natural movement routes and visual traversal
+
+When multiple paths cost the same movement distance, the DM map now prefers the route with fewer unnecessary diagonal steps and turns, so an unobstructed straight-line move stays straight. **Confirm move** still commits the validated route, coordinates, and AP once, but the token is drawn separately and travels smoothly through each square (170 ms per tile). Other actions and refreshes read the already saved destination, and the visual effect can be canceled without refunding or duplicating AP. The motion is suppressed when the browser requests reduced animations.

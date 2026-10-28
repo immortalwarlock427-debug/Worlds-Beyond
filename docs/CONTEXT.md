@@ -210,7 +210,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 33)
+## What the site does (Draft 34)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
@@ -393,3 +393,23 @@ See [ROADMAP.md](ROADMAP.md).
 - The local DM screen displays the same Stone Hall, Barrow, and blank five-foot-grid map sources as the character Battlemap. The DM can select any encounter PC/NPC, click a free map square to place/reposition the token, click tokens to select them, and clear their placement.
 - Token placement is revisioned through `WBEncounter.PlaceToken` / `ClearToken`, checked against map bounds, impassable cells and other encounter actor positions by pure `WBEncounterMap`. Each actor stores optional `mapId` so changing maps doesn't teleport placed tokens.
 - The shared game map selection is saved in `game.map`. DM encounter positions are still **separate** from the player movement and legacy foes, and manual DM placement costs **no AP**. There is no player pathfinding/AP validation in the DM room, no shared player-map token movement, no cloud syncing, and no access permissions yet.
+
+## Validated encounter movement (Draft 34)
+
+- In the offline DM Room, **Combat movement (AP)** is distinct from **DM placement (free)**. During an active encounter, select the current actor and an open destination, inspect the route preview with distance/difficult terrain/AP and Surge, then Confirm move. Free placement remains explicitly available for manual corrections.
+- `WBEncounterMap.movementRoute` computes shortest routes across eight adjacent 5-ft squares, charging 10 ft for rubble, water and bones, and rejecting walls, blocked corners, occupied cells and inaccessible destinations. Route costs are recomputed in the validated `WBEncounter.MoveToken` command; never accept a browser-supplied cost.
+- `WBCombat.movePlan`, `movementAfter` and `spendAp` handle leftover feet, Command AP priority, and free Surge AP (2/turn when effective AGL reaches 21). Turn starts reset the encounter's movement tracker; move commands require the actor's own turn and a placed token on the correct map.
+- Character imports snapshot Movement ft/AP from effective AGL, gear, form/ability bonuses and manual override. NPC movement is editable in setup. Movement does not synchronize back to player character sheets or `game.tokens`. No cloud account or true player-authorized multiplayer yet.
+
+## PR #25 preview fixes (movement UX and roster continuity)
+
+- Fixed the native Map dropdown that looked blank or only showed a popup border on some browsers by replacing it with explicit map-choice buttons; same saved map semantics.
+- Combat movement now selects the current initiative combatant automatically; another actor cannot be moved using AP outside their own turn. Inactive/finished encounters disable Combat movement and explain how to reopen setup. Movement/path errors also appear beside the map, instead of only in the far-away top feedback banner.
+- Added DM-only `ReopenSetup` command and **Reuse roster / Edit setup** button after Finish combat. It preserves imported actors, health, map positions and initiative; refreshes AP/Surge/leftover movement and returns to setup where new NPCs/players and value edits are allowed. **New empty roster** still clears everything after confirmation.
+- Added browser-interaction and encounter regression tests for map switching, turn auto-selection, movement confirmation, roster reuse and restarting. Existing character saves and game tokens are untouched.
+
+### PR #25 movement polish: straight routes and visible token travel
+
+- Fixed equally short paths that zigzagged via unnecessary diagonals. `WBEncounterMap.movementRoute` now ranks routes lexicographically: movement feet first, then fewer diagonal steps, fewer turns, and less drift from the direct line. Direction-aware Dijkstra states preserve correct turn-minimization. Straight horizontal and vertical routes remain straight on open grids.
+- After Confirm move, `WBEncounter.MoveToken` still validates and commits destination/AP immediately. `js/dm-map.js` uses the accepted command's `event.path` to animate a separate temporary token along each square (170 ms/step), hiding the committed destination token until the animation finishes. Interruptions, map changes, or refreshes reveal the final saved position. Reduced-motion preferences are respected; a timed fallback covers browsers without Web Animations.
+- Regression coverage now checks exact straight routes, each animation keyframe, and that AP is deducted once before the animation ends. No sheet saves or legacy map tokens are changed.
