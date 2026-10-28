@@ -14,6 +14,7 @@ on:
       - 'tests/abilities.test.cjs'
       - 'tests/status.test.cjs'
       - 'tests/navigation.test.cjs'
+      - 'tests/ability-filters.test.cjs'
       - '.github/workflows/resource-manager-tests.yml'
 jobs:
   resources:
@@ -30,4 +31,4 @@ jobs:
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs
