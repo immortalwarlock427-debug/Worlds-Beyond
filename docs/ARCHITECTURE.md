@@ -61,7 +61,7 @@ The browser keeps two things apart, because a character and a game have differen
   attack, each hand separately, the off-hand after halving).
 
 ## Mechanical form score and portrait links
-- Each `abilityLoadouts[]` entry may carry `portraitId` and a `statBonuses` object keyed by the eight homebrew stats. `WBAbilities.formStatBonus(state, stat)` is a derived component of `score(stat)` only; do not mutate level-history stats or slot gear. `selectLoadout` switches the selected portrait only if linked; missing portrait references are removed by character normalization.
+- Each `abilityLoadouts[]` entry may carry `portraitId` and a `statBonuses` object keyed by the eight homebrew stats. `WBAbilities.formStatBonus(state, stat)` is a derived component of `score(stat)` only; do not mutate level-history stats or slot gear. `selectLoadout` switches the selected portrait only if linked, while `selectPortrait` switches the active mechanical form from a selected Overview portrait (or to Base when unlinked). Both use stored ids, and Overview portrait selection calls `refreshAll()` so available abilities and derived values update. Missing portrait references are removed by character normalization.
   
 ## Ability form loadouts
 - Character state keeps `abilityLoadouts` (stable ids and names), `activeAbilityLoadoutId`, and per-ability `loadoutIds` (empty means shared). Loadout switching doesn't reset trackers or change the underlying character stats and resources; ability availability validation gates activation. Portrait `formId` and `portraits` are intentionally independent.
