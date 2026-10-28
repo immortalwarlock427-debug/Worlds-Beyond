@@ -817,7 +817,10 @@
   // ---------- Movement ----------
   // Each AP moves you your Movement in feet. Feet left over from an AP you've started stay yours for the rest of the turn.
   // Surge (AGL 21) gives 2 AP of movement for free each turn, used before your own AP.
-  const speedNow = () => { const v = num($('#speed').value); return isNaN(v) ? 0 : Math.max(0, Math.floor(v)); };
+  // Effective speed is derived from the base/manual movement field and active ability
+  // effects; do not write the temporary effect into a field or gear totals.
+  const speedNow = () => { const v = num($('#speed').value); return isNaN(v) ? 0 :
+    Math.max(0, Math.floor(v + window.WBAbilities.movementBonus(state))); };
   const surgeOn = () => reached('AGL', 21);
   const moveNow = () => state.move || { ft: 0, left: 0, surge: 0 };
   const surgeLeft = () => (surgeOn() ? Math.max(0, 2 - moveNow().surge) : 0);
@@ -968,6 +971,7 @@
     save();
     resourceManager.turnStart();
     abilityLibrary.turnStart();
+    refreshAll(); // Update movement and the battlemap after timed effects expire.
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
     if (h != null && h <= 0 && !(state.down && state.down.stable) && !isDead()) applyDamage(4, { bleed: true });
@@ -4162,7 +4166,9 @@
     $('#evSrc').textContent = '10 + AGL mod' + gearNote('ev');
     $('#armorSrc').textContent = (adamantine() ? 'Half VIT (Adamantine Body)' : 'VIT mod') + ' + worn armor';
     $('#initSrc').textContent = 'WIS mod' + gearNote('init');
-    $('#moveSrc').textContent = '5 ft + 5 per AGL mod' + gearNote('move');
+    const effectSpeed = window.WBAbilities.movementBonus(state);
+    $('#moveSrc').textContent = '5 ft + 5 per AGL mod' + gearNote('move') +
+      (effectSpeed ? ' · ' + (effectSpeed > 0 ? '+' : '') + effectSpeed + ' ft/AP from abilities' : '');
     $('#dvSrc').textContent = 'How far you see in the dark' + (gear('sight') ? ', ' + sgn(gear('sight')) + ' ft from gear (' + darkvisionFt() + ' ft)' : '');
     $('#lightSrc').textContent = gear('light') ? 'Your gear sheds ' + gear('light') + ' ft; the larger counts' : 'A torch, lantern or spell';
     $('#hpCur').placeholder = $('#hpMax').value || '—';
