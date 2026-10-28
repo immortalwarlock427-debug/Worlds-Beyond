@@ -32,6 +32,7 @@
         n: value.apGiven.n, fresh: !!value.apGiven.fresh
       },
       initiative: value.initiative === undefined ? 0 : value.initiative,
+      initiativeBonus: value.initiativeBonus == null ? null : value.initiativeBonus,
       x: value.x === undefined ? null : value.x,
       y: value.y === undefined ? null : value.y
     };
@@ -43,6 +44,7 @@
         !integer(fields.apMax, 0, 40) ||
         !integer(fields.apAvail, 0, fields.apMax) ||
         !integer(fields.initiative, -10000, 10000) ||
+        !(fields.initiativeBonus === null || integer(fields.initiativeBonus, -10000, 10000)) ||
         !((fields.x === null && fields.y === null) ||
           (integer(fields.x, 0, 999) && integer(fields.y, 0, 999))) ||
         !(fields.apGiven === null || integer(fields.apGiven.n, 0, 40)) ||
