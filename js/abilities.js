@@ -27,6 +27,18 @@
     const n = Number(value);
     return Number.isFinite(n) ? Math.max(-28, Math.min(28, Math.round(n))) : 0;
   };
+  // Keep availability logic in sync with WBResources. Isolated ability tests do
+  // not load the resource UI, so these checks must also work independently.
+  function resourceAvailable(state, resource) {
+    if (!state.abilityLoadouts || !state.abilityLoadouts.length) return true;
+    const ids = Array.isArray(resource.loadoutIds) ? resource.loadoutIds : [];
+    return !ids.length || ids.includes(state.activeAbilityLoadoutId);
+  }
+  function formManaAvailable(state) {
+    const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
+    return form && form.manaMode === 'show' ? true :
+      form && form.manaMode === 'hide' ? false : state.showMana !== false;
+  }
   function formStatBonus(state, stat) {
     if (!STATS.includes(stat)) return 0;
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
@@ -54,6 +66,10 @@
   function configureLoadout(state, identifier, property, value) {
     const form = (state.abilityLoadouts || []).find(x => x.id === identifier);
     if (!form) return false;
+    if (property === 'manaMode') {
+      form.manaMode = ['inherit', 'show', 'hide'].includes(value) ? value : 'inherit';
+      return true;
+    }
     if (property === 'portraitId') {
       const portrait = (state.portraits || []).find(x => x.id === value);
       form.portraitId = portrait ? portrait.id : '';
@@ -72,7 +88,7 @@
   function createLoadout(state, name) {
     const text = clean(name,60).trim();
     if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
-    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {} };
+    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, manaMode: 'inherit' };
     state.abilityLoadouts.push(entry);
     state.activeAbilityLoadoutId = entry.id;
     return entry;
@@ -102,6 +118,9 @@
     if (state.abilityLoadouts.length === before) return false;
     for (const a of (state.abilities || [])) {
       if (Array.isArray(a.loadoutIds)) a.loadoutIds = a.loadoutIds.filter(id => id !== identifier);
+    }
+    for (const r of (state.resources || [])) {
+      if (Array.isArray(r.loadoutIds)) r.loadoutIds = r.loadoutIds.filter(id => id !== identifier);
     }
     if (state.activeAbilityLoadoutId === identifier) state.activeAbilityLoadoutId = '';
     return true;
@@ -202,11 +221,16 @@
           if (amount) statBonuses[k] = amount;
         });
         return { id:key, name:clean(x.name,60).trim(),
-          portraitId: clean(x.portraitId,100), statBonuses };
+          portraitId: clean(x.portraitId,100), statBonuses,
+          manaMode: ['show', 'hide'].includes(x.manaMode) ? x.manaMode : 'inherit' };
       });
     const valid = new Set(state.abilityLoadouts.map(x => x.id));
     state.activeAbilityLoadoutId = valid.has(state.activeAbilityLoadoutId) ?
       state.activeAbilityLoadoutId : '';
+    (state.resources || []).forEach(resource => {
+      if (Array.isArray(resource.loadoutIds)) resource.loadoutIds =
+        [...new Set(resource.loadoutIds.filter(key => valid.has(key)))];
+    });
     ids.clear();
     state.abilities = (Array.isArray(state.abilities) ? state.abilities : [])
       .map(normalizeAbility).filter(Boolean).map(ability => {
@@ -246,7 +270,7 @@
     if (cost > 0) {
       if (!a.resourceId) return { ok: false, message: 'Choose a resource for ' + a.name + ' before activating it.' };
       if (a.resourceId === 'base-mana') {
-        if (!controls.getMana || !controls.spendMana || state.showMana === false) {
+        if (!controls.getMana || !controls.spendMana || !formManaAvailable(state)) {
           return { ok: false, message: 'Mana / Holy Power is unavailable for this character.' };
         }
         const mana = controls.getMana();
@@ -255,6 +279,7 @@
       } else {
         resource = (state.resources || []).find((r) => r.id === a.resourceId);
         if (!resource) return { ok: false, message: 'Selected resource no longer exists for ' + a.name + '.' };
+        if (!resourceAvailable(state, resource)) return { ok: false, message: resource.name + ' is unavailable in this form.' };
         if (resource.current < cost) return { ok: false, message: 'Not enough ' + resource.name + ' to use ' + a.name + '.' };
       }
     }
@@ -448,6 +473,13 @@
           '<label class="ability-field"><span class="foot-label">Linked portrait</span>' +
             '<select data-loadout-portrait>' + options + '</select></label>' +
           '<p class="ability-effect-hint">Link an existing portrait from Overview. Changing the ability form switches its portrait, and selecting a portrait in Overview switches to its linked ability form. An unlinked portrait selects Base/shared abilities.</p>' +
+          '<label class="ability-field"><span class="foot-label">Mana / Holy Power in this form</span>' +
+            '<select data-loadout-mana-mode>' +
+              '<option value="inherit"' + (form.manaMode === 'inherit' ? ' selected' : '') + '>Use global Mana setting</option>' +
+              '<option value="show"' + (form.manaMode === 'show' ? ' selected' : '') + '>Show and allow Mana</option>' +
+              '<option value="hide"' + (form.manaMode === 'hide' ? ' selected' : '') + '>Hide and disable Mana</option>' +
+            '</select></label>' +
+          '<p class="ability-effect-hint">Custom resources are assigned individually on Overview. Hidden pools keep their balances; this setting only controls the built-in Mana/Holy Power pool.</p>' +
           '<p class="ability-effect-hint">Temporary form score adjustments (not permanent stat points). Bonuses and penalties apply while this form is selected.</p>' +
           '<div class="loadout-stat-grid">' + STATS.map(k =>
             '<label class="ability-field"><span class="foot-label">' + k + '</span>' +
@@ -646,11 +678,12 @@
     clearFilters.addEventListener('click', () => { resetFilters(); render(); });
     showAllLoadouts.addEventListener('change', render);
     loadoutConfig.addEventListener('change', e => {
-      const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat]');
+      const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat], [data-loadout-mana-mode]');
       if (!el) return;
       const state = getState();
       const identifier = state.activeAbilityLoadoutId;
-      const property = el.hasAttribute('data-loadout-portrait') ? 'portraitId' : el.dataset.loadoutStat;
+      const property = el.hasAttribute('data-loadout-portrait') ? 'portraitId' :
+        el.hasAttribute('data-loadout-mana-mode') ? 'manaMode' : el.dataset.loadoutStat;
       if (!configureLoadout(state, identifier, property, el.value)) return;
       if (controls.refresh) controls.refresh();
       render();
@@ -854,7 +887,8 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, selectLoadout, selectPortrait, configureLoadout, advanceTurn, resetForRest,
+    formStatBonus, selectLoadout, selectPortrait, configureLoadout,
+    resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();

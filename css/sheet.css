@@ -1335,3 +1335,16 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 }
 .loadout-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
 @media(max-width:520px) { .loadout-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+/* Form-specific custom resources, with balances preserved across form switches. */
+.resource-view-options {display:flex;align-items:center;gap:9px 15px;flex-wrap:wrap;justify-content:space-between;margin:7px 0;}
+.resource-view-options label {display:inline-flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;}
+.resource-form-summary {font-size:12px;color:var(--verdigris);}
+.resource-memberships {border:1px solid var(--rule);border-radius:4px;padding:8px 10px;min-width:0;display:grid;gap:7px;}
+.resource-memberships legend {padding:0 4px;color:var(--brass);font-size:12px;font-weight:700;}
+.resource-memberships label {display:inline-flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;}
+.resource-memberships input[type="checkbox"],.resource-view-options input[type="checkbox"] {appearance:auto;width:16px;height:16px;min-width:16px;margin:0;accent-color:var(--brass);}
+.resource-membership-list {display:flex;align-items:center;gap:8px 16px;flex-wrap:wrap;}
+.custom-resource.resource-inactive {opacity:.75;}
+.resource-inactive-note {color:var(--brass);font-size:12px;font-weight:700;margin:0;}
+.custom-resource.resource-inactive .resource-actions button:disabled {cursor:not-allowed;opacity:.45;}

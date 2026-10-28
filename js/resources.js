@@ -15,6 +15,33 @@
   }[ch]));
   const id = () => 'res' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 
+  // Empty membership means shared. A form-specific resource keeps its own current
+  // balance and regeneration settings when a different form is selected.
+  function resourceVisible(state, resource) {
+    if (!Array.isArray(state.abilityLoadouts) || !state.abilityLoadouts.length) return true;
+    const ids = Array.isArray(resource.loadoutIds) ? resource.loadoutIds : [];
+    return ids.length === 0 || ids.includes(state.activeAbilityLoadoutId);
+  }
+  function manaVisible(state) {
+    const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
+    const mode = form && form.manaMode;
+    return mode === 'show' ? true : mode === 'hide' ? false : state.showMana !== false;
+  }
+  function setMembership(state, resource, mode, identifier, checked) {
+    const forms = state.abilityLoadouts || [];
+    if (!resource || !forms.length) return false;
+    if (mode === 'shared') {
+      resource.loadoutIds = checked ? [] :
+        [forms.some(f => f.id === state.activeAbilityLoadoutId) ? state.activeAbilityLoadoutId : forms[0].id];
+      return true;
+    }
+    if (mode !== 'member' || !forms.some(f => f.id === identifier)) return false;
+    const selected = new Set(resource.loadoutIds || []);
+    if (checked) selected.add(identifier); else selected.delete(identifier);
+    resource.loadoutIds = [...selected];
+    return true; // Clearing the final form means shared again.
+  }
+
   function normalizeResource(r) {
     if (!r || typeof r !== 'object') return null;
     const max = Math.max(1, value(r.max, 100));
@@ -27,7 +54,8 @@
       display: r.display === 'percent' ? 'percent' : 'number',
       regen: value(r.regen, 0),
       refillOnRest: r.refillOnRest !== false,
-      color: COLORS.includes(r.color) ? r.color : 'teal'
+      color: COLORS.includes(r.color) ? r.color : 'teal',
+      loadoutIds: Array.isArray(r.loadoutIds) ? [...new Set(r.loadoutIds.filter(x => typeof x === 'string'))].slice(0,30) : []
     };
   }
 
@@ -48,25 +76,47 @@
     const list = document.getElementById('resourceList');
     const showMana = document.getElementById('showManaPool');
     const mana = document.getElementById('manaPool');
+    const showAll = document.getElementById('resourceShowAll');
+    const summary = document.getElementById('resourceSummary');
     const byId = (resourceId) => getState().resources.find((r) => r.id === resourceId);
     const effectiveMax = (r) => window.WBAbilities && window.WBAbilities.resourceMax ? window.WBAbilities.resourceMax(getState(), r) : r.max;
 
     function render() {
       const state = getState();
       showMana.checked = state.showMana;
-      mana.hidden = !state.showMana;
+      mana.hidden = !manaVisible(state);
+      const visible = state.resources.filter(r => resourceVisible(state, r));
+      const shown = showAll && showAll.checked ? state.resources : visible;
+      if (summary) summary.textContent = visible.length + ' available in this form · ' +
+        state.resources.length + ' total' + (showAll && showAll.checked ? ' · showing all for editing' : '');
       if (!state.resources.length) {
         list.innerHTML = '<p class="resource-empty">No additional resources. Add Energy, Stamina, Heat, or anything your character uses.</p>';
         return;
       }
-      list.innerHTML = state.resources.map((r) => {
+      if (!shown.length) {
+        list.innerHTML = '<p class="resource-empty">No custom resources are available in this form. Switch forms or select “Show resources from other forms” to organize them. Your resource balances are preserved.</p>';
+        return;
+      }
+      list.innerHTML = shown.map((r) => {
+        const active = resourceVisible(state, r);
+        const forms = state.abilityLoadouts || [];
+        const shared = !r.loadoutIds || !r.loadoutIds.length;
+        const membership = forms.length ?
+          '<fieldset class="resource-memberships"><legend>Available in forms</legend>' +
+          '<label><input type="checkbox" data-resource-shared' + (shared ? ' checked' : '') +
+          '> Shared across all forms</label>' +
+          '<div class="resource-membership-list">' + forms.map(form =>
+            '<label><input type="checkbox" data-resource-member="' + escape(form.id) + '"' +
+            (!shared && r.loadoutIds.includes(form.id) ? ' checked' : '') + '> ' + escape(form.name) + '</label>').join('') +
+          '</div></fieldset>' : '';
         const maxNow = effectiveMax(r);
         // When a temporary maximum expires, excess points cannot remain above
         // the restored cap. Raising the cap never grants free points.
         if (r.current > maxNow) r.current = maxNow;
         const percent = Math.min(100, Math.round(100 * r.current / maxNow));
         const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + maxNow;
-        return '<div class="custom-resource" data-resource-id="' + escape(r.id) + '">' +
+        return '<div class="custom-resource' + (active ? '' : ' resource-inactive') + '" data-resource-id="' + escape(r.id) + '">' +
+          (active ? '' : '<p class="resource-inactive-note">Other form · balance preserved; actions disabled</p>') +
           '<div class="resource-top">' +
             '<label class="resource-name"><span class="foot-label">Name</span>' +
               '<input aria-label="Resource name" maxlength="48" data-resource-prop="name" value="' + escape(r.name) + '"></label>' +
@@ -84,12 +134,13 @@
             '</select></label>' +
           '</div>' +
           (maxNow !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + maxNow + ' (' + (maxNow > r.max ? '+' : '') + (maxNow - r.max) + ' from abilities)</span>' : '') +
+          membership +
           '<div class="resource-actions">' +
             '<label class="resource-adjust"><span class="foot-label">Amount</span>' +
               '<input type="number" min="1" max="' + LIMIT + '" value="' + r.amount + '" data-resource-amount aria-label="Amount to spend or restore"></label>' +
-            '<button type="button" class="btn" data-resource-action="spend">Spend</button>' +
-            '<button type="button" class="btn" data-resource-action="restore">Restore</button>' +
-            '<button type="button" class="btn" data-resource-action="refill">Fill</button>' +
+            '<button type="button" class="btn" data-resource-action="spend"' + (active ? '' : ' disabled') + '>Spend</button>' +
+            '<button type="button" class="btn" data-resource-action="restore"' + (active ? '' : ' disabled') + '>Restore</button>' +
+            '<button type="button" class="btn" data-resource-action="refill"' + (active ? '' : ' disabled') + '>Fill</button>' +
           '</div>' +
           '<div class="resource-options">' +
             '<label><span class="foot-label">Restore each turn</span><input type="number" min="0" max="' + LIMIT + '" value="' + r.regen + '" data-resource-prop="regen"></label>' +
@@ -104,12 +155,15 @@
 
     document.getElementById('addResource').addEventListener('click', () => {
       const state = getState();
-      state.resources.push(normalizeResource({ id: id(), name: 'Resource', max: 100, current: 100 }));
+      state.resources.push(normalizeResource({ id: id(), name: 'Resource', max: 100, current: 100,
+        loadoutIds: state.activeAbilityLoadoutId ? [state.activeAbilityLoadoutId] : [] }));
       render();
       save();
       const names = list.querySelectorAll('[data-resource-prop="name"]');
       if (names.length) { const last = names[names.length - 1]; last.focus(); last.select(); }
     });
+
+    if (showAll) showAll.addEventListener('change', render);
 
     showMana.addEventListener('change', () => {
       getState().showMana = showMana.checked;
@@ -119,6 +173,19 @@
 
     list.addEventListener('change', (e) => {
       // Remember this amount independently for each pool, including after re-renders and reloads.
+      const membership = e.target.closest('[data-resource-shared], [data-resource-member]');
+      if (membership) {
+        const card = membership.closest('[data-resource-id]');
+        const resource = card && byId(card.dataset.resourceId);
+        if (!resource) return;
+        if (membership.hasAttribute('data-resource-shared'))
+          setMembership(getState(), resource, 'shared', '', membership.checked);
+        else
+          setMembership(getState(), resource, 'member', membership.dataset.resourceMember, membership.checked);
+        render();
+        save();
+        return;
+      }
       const amountInput = e.target.closest('[data-resource-amount]');
       if (amountInput) {
         const card = amountInput.closest('[data-resource-id]');
@@ -155,10 +222,11 @@
       const r = card && byId(card.dataset.resourceId);
       if (!r) return;
       const action = button.dataset.resourceAction;
+      if (action !== 'remove' && !resourceVisible(getState(), r)) return; // no actions on hidden-form pools
       if (action === 'remove') {
         if (!window.confirm('Remove ' + r.name + '? This cannot be undone unless you import a saved character.')) return;
         getState().resources = getState().resources.filter((x) => x.id !== r.id);
-      } else if (action === 'refill') r.current = r.max;
+      } else if (action === 'refill') r.current = effectiveMax(r);
       else {
         const field = card.querySelector('[data-resource-amount]');
         // Save the amount before the card is rebuilt; never revert to the default 5.
@@ -173,7 +241,7 @@
     function turnStart() {
       let changed = false;
       getState().resources.forEach((r) => {
-        if (r.regen && r.current < effectiveMax(r)) {
+        if (resourceVisible(getState(), r) && r.regen && r.current < effectiveMax(r)) {
           r.current = Math.min(effectiveMax(r), r.current + r.regen);
           changed = true;
         }
@@ -189,5 +257,5 @@
     return { render, turnStart, longRest };
   }
 
-  window.WBResources = { normalizeState, init };
+  window.WBResources = { normalizeState, init, resourceVisible, manaVisible, setMembership };
 })();

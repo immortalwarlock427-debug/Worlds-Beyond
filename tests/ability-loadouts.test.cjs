@@ -365,3 +365,94 @@ test('Overview portrait switches call the ability manager and refresh derived sh
   assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id\)/);
   assert.match(abilities,/selectPortrait, configureLoadout/);
 });
+
+
+test('form-specific resource costs block ability activation without spending AP', () => {
+  const {api,state,controls,getAp}=harness();
+  const human=api.createLoadout(state,'Human');
+  const monster=api.createLoadout(state,'Monster');
+  state.resources=[{id:'resabcdefg',name:'Energy',max:100,current:60,loadoutIds:[monster.id]}];
+  const a=ability('abilabcdefg','Overdrive',[]); // shared ability with form-specific cost
+  state.abilities=[a];
+  state.activeAbilityLoadoutId=human.id;
+  const beforeAp=getAp();
+  assert.equal(api.resourceAvailable(state,state.resources[0]),false);
+  assert.equal(api.checkActivation(state,a.id,controls).ok,false);
+  assert.match(api.activate(state,a.id,controls).message,/unavailable in this form/i);
+  assert.equal(getAp(),beforeAp);
+  assert.equal(state.resources[0].current,60);
+  assert.equal(a.cooldownLeft,0);
+  assert.equal(a.usesLeft,2);
+  state.activeAbilityLoadoutId=monster.id;
+  assert.equal(api.resourceAvailable(state,state.resources[0]),true);
+  assert.equal(api.activate(state,a.id,controls).ok,true);
+  assert.equal(getAp(),beforeAp-5);
+  assert.equal(state.resources[0].current,50);
+  state.activeAbilityLoadoutId=human.id;
+  assert.equal(state.resources[0].current,50,'Returning to Human does not refill Energy');
+});
+
+test('Mana policies per form block and enable ability costs without changing built-in Mana', () => {
+  const {api,state}=harness();
+  const human=api.createLoadout(state,'Human');
+  const monster=api.createLoadout(state,'Monster');
+  state.abilities=[{id:'abilabcdefg',name:'Magic Missile',type:'active',apCost:5,
+    resourceId:'base-mana',resourceCost:20,uses:''}];
+  api.normalizeState(state);
+  let ap=15,mana=50;
+  const controls={getAp:()=>ap,spendAp:n=>{ap-=n},getMana:()=>mana,spendMana:n=>{mana-=n}};
+  api.configureLoadout(state,monster.id,'manaMode','hide');
+  assert.equal(api.formManaAvailable(state),false);
+  assert.equal(api.activate(state,'abilabcdefg',controls).ok,false);
+  assert.equal(ap,15);assert.equal(mana,50);
+  api.configureLoadout(state,monster.id,'manaMode','show');
+  state.showMana=false;
+  assert.equal(api.formManaAvailable(state),true);
+  assert.equal(api.activate(state,'abilabcdefg',controls).ok,true);
+  assert.equal(ap,10);assert.equal(mana,30);
+  api.selectLoadout(state,human.id);
+  assert.equal(api.formManaAvailable(state),false,'Human inherits the global toggle');
+  assert.equal(mana,30);
+  api.configureLoadout(state,human.id,'manaMode','invalid');
+  assert.equal(state.abilityLoadouts[0].manaMode,'inherit');
+});
+
+test('deleting a form removes resource memberships but preserves amounts', () => {
+  const {api,state}=harness();
+  const a=api.createLoadout(state,'First');
+  const b=api.createLoadout(state,'Second');
+  state.resources=[
+    {id:'resabcdefg',name:'Energy',max:100,current:27,loadoutIds:[a.id]},
+    {id:'reshijklmn',name:'Shield',max:50,current:13,loadoutIds:[a.id,b.id]}
+  ];
+  assert.equal(api.removeLoadout(state,a.id),true);
+  assert.deepEqual(Array.from(state.resources[0].loadoutIds),[]);
+  assert.deepEqual(Array.from(state.resources[1].loadoutIds),[b.id]);
+  assert.equal(state.resources[0].current,27);
+  assert.equal(state.resources[1].current,13);
+});
+
+test('form mana settings persist; resource assignments filter invalid form ids on import', () => {
+  const {api,state}=harness();
+  const monster=api.createLoadout(state,'Monster');
+  api.configureLoadout(state,monster.id,'manaMode','hide');
+  state.resources=[{id:'resabcdefg',name:'Energy',max:100,current:44,
+    loadoutIds:[monster.id,'invalid']}];
+  const saved=JSON.parse(JSON.stringify(state));
+  api.normalizeState(saved);
+  assert.equal(saved.abilityLoadouts[0].manaMode,'hide');
+  assert.equal(saved.resources[0].current,44);
+  assert.deepEqual(Array.from(saved.resources[0].loadoutIds),[monster.id]);
+  saved.abilityLoadouts=[{id:'loadabcdefg',name:'Legacy'}];
+  api.normalizeState(saved);
+  assert.equal(saved.abilityLoadouts[0].manaMode,'inherit');
+});
+
+test('new form-resource controls use the saved character rather than game state', () => {
+  const html=read('index.html'),css=read('css/sheet.css'),abilities=read('js/abilities.js');
+  for (const id of ['resourceShowAll','resourceSummary'])
+    assert.match(html,new RegExp('id="'+id+'"'));
+  assert.match(abilities,/data-loadout-mana-mode/);
+  assert.match(css,/\.resource-memberships/);
+  assert.match(html,/form-resources-v8/);
+});

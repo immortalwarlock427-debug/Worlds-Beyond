@@ -63,6 +63,12 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - Switching to a different form replaces the previous form's modifiers instead of stacking. Switching to Base removes all form-specific modifiers. Ability cooldowns, duration effects, capacity and resource balances still carry across form changes.
 - Mechanical settings are in a collapsible editor in the Abilities tab so routine switching stays compact. No AP cost or cooldown for switching in phase two, and this is not yet a full resource/gear transformation system.
   
+## Form-specific resources (next PR)
+- Each custom resource now stores optional `loadoutIds`; empty means shared across forms. The resource manager on Overview assigns resources to one or more ability forms. A player can show pools from other forms for editing, but those are unavailable for Spend/Restore/Fill or ability activation until their form is active. Hidden pools keep their current balance, capacity, regeneration setting and name. Switching forms never refills or resets them.
+- Resources regenerate at start of turn **only while their form is available**, avoiding hidden-pool free regeneration during another form. Long rest refills all opted-in custom resources, including inactive pools. Deleting a form removes its resource assignment; a pool with no remaining assignments becomes shared. Legacy resources are shared by default.
+- Existing built-in Mana/Holy Power is one shared balance, not copied per form. Each form can choose to follow the global Mana visibility toggle, force Mana visible, or hide/disable it. Costs are validated against the effective visibility before spending AP, including the Ability Library's Usable Now filter. Future: separate Mana balances or entirely independent per-form resources, if needed.
+- All state is saved in the character JSON; game/map storage remains separate.
+  
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,

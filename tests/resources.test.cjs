@@ -221,3 +221,120 @@ test('the character sheet loads manager before app and hooks turn/rest/export', 
   assert.match(app, /resources: state\.resources/);
   assert.match(app, /version: 1, exported: new Date/);
 });
+
+
+test('form-specific resource memberships preserve balances when switching', () => {
+  const {api,state,manager,getElementById:el}=setup();
+  state.abilityLoadouts=[
+    {id:'loadabcdefg',name:'Human'},
+    {id:'loadhijklmn',name:'Monstrous'}
+  ];
+  state.activeAbilityLoadoutId='loadabcdefg';
+  state.resources=[
+    {id:'resabcdefg',name:'Mana Crystals',max:50,current:32,regen:3,amount:5,display:'number',color:'blue',refillOnRest:true,loadoutIds:['loadabcdefg']},
+    {id:'reshijklmn',name:'Energy',max:100,current:40,regen:5,amount:5,display:'number',color:'teal',refillOnRest:true,loadoutIds:['loadhijklmn']},
+    {id:'resmnopqrs',name:'Stamina',max:20,current:14,regen:1,amount:5,display:'number',color:'brass',refillOnRest:true,loadoutIds:[]}
+  ];
+  el('resourceShowAll').checked=false;
+  manager.render();
+  assert.match(el('resourceList').innerHTML,/Mana Crystals/);
+  assert.match(el('resourceList').innerHTML,/Stamina/);
+  assert.doesNotMatch(el('resourceList').innerHTML,/data-resource-id="reshijklmn"/);
+  const energy=state.resources[1],crystals=state.resources[0];
+  assert.equal(api.resourceVisible(state,energy),false);
+  manager.turnStart();
+  assert.equal(crystals.current,35);
+  assert.equal(energy.current,40,'Hidden Energy must not regenerate');
+  state.activeAbilityLoadoutId='loadhijklmn';
+  manager.render();
+  assert.match(el('resourceList').innerHTML,/data-resource-id="reshijklmn"/);
+  assert.doesNotMatch(el('resourceList').innerHTML,/data-resource-id="resabcdefg"/);
+  manager.turnStart();
+  assert.equal(energy.current,45);
+  assert.equal(crystals.current,35,'Human balance must remain unchanged while Monstrous');
+  state.activeAbilityLoadoutId='loadabcdefg';
+  manager.render();
+  assert.match(el('resourceList').innerHTML,/35 \/ 50/);
+  assert.equal(energy.current,45);
+  manager.longRest();
+  assert.equal(energy.current,100,'Long rest refills opted-in pools even in other forms');
+  assert.equal(crystals.current,50);
+});
+
+test('resource form checkboxes allow selecting forms directly from Shared', () => {
+  const {api,state,manager,getElementById:el}=setup();
+  state.abilityLoadouts=[
+    {id:'loadabcdefg',name:'Human'},
+    {id:'loadhijklmn',name:'Monstrous'}
+  ];
+  state.activeAbilityLoadoutId='loadabcdefg';
+  const resource={id:'resabcdefg',name:'Energy',max:100,current:25,regen:0,amount:5,
+    display:'number',color:'teal',refillOnRest:false,loadoutIds:[]};
+  state.resources=[resource];
+  assert.equal(api.setMembership(state,resource,'member','loadhijklmn',true),true);
+  assert.deepEqual(Array.from(resource.loadoutIds),['loadhijklmn']);
+  assert.equal(api.setMembership(state,resource,'member','loadabcdefg',true),true);
+  assert.deepEqual(Array.from(resource.loadoutIds),['loadhijklmn','loadabcdefg']);
+  assert.equal(api.setMembership(state,resource,'member','loadhijklmn',false),true);
+  assert.deepEqual(Array.from(resource.loadoutIds),['loadabcdefg']);
+  assert.equal(api.setMembership(state,resource,'member','loadabcdefg',false),true);
+  assert.deepEqual(Array.from(resource.loadoutIds),[],'Unchecking last form restores Shared');
+  assert.equal(api.setMembership(state,resource,'member','unknown',true),false);
+  assert.equal(resource.current,25);
+  el('resourceShowAll').checked=true;
+  manager.render();
+  assert.match(el('resourceList').innerHTML,/data-resource-member="loadhijklmn"/);
+  assert.match(el('resourceList').innerHTML,/Shared across all forms/);
+});
+
+test('show all allows organizing hidden resources but disables Spend, Restore and Fill', () => {
+  const {state,manager,getElementById:el}=setup();
+  state.abilityLoadouts=[{id:'loadabcdefg',name:'Human'},{id:'loadhijklmn',name:'Monster'}];
+  state.activeAbilityLoadoutId='loadabcdefg';
+  state.resources=[{id:'resabcdefg',name:'Energy',max:100,current:40,regen:0,
+    amount:5,display:'number',color:'red',refillOnRest:false,loadoutIds:['loadhijklmn']}];
+  el('resourceShowAll').checked=true;
+  manager.render();
+  const markup=el('resourceList').innerHTML;
+  assert.match(markup,/resource-inactive/);
+  assert.match(markup,/data-resource-action="spend" disabled/);
+  assert.match(markup,/data-resource-action="restore" disabled/);
+  assert.match(markup,/data-resource-action="refill" disabled/);
+  fireAction(el,'resabcdefg','spend',20);
+  fireAction(el,'resabcdefg','restore',50);
+  fireAction(el,'resabcdefg','refill');
+  assert.equal(state.resources[0].current,40,'Disabled action cannot be forced by stale event');
+});
+
+test('built-in Mana visibility can be overridden per form without changing global setting', () => {
+  const {api,state,manager,getElementById:el}=setup();
+  state.showMana=true;
+  state.abilityLoadouts=[{id:'loadabcdefg',name:'Human',manaMode:'inherit'},
+    {id:'loadhijklmn',name:'Monstrous',manaMode:'hide'}];
+  state.activeAbilityLoadoutId='loadhijklmn';
+  manager.render();
+  assert.equal(el('manaPool').hidden,true);
+  assert.equal(state.showMana,true);
+  state.abilityLoadouts[1].manaMode='show';
+  state.showMana=false;
+  manager.render();
+  assert.equal(el('manaPool').hidden,false);
+  assert.equal(el('showManaPool').checked,false);
+  state.activeAbilityLoadoutId='loadabcdefg';
+  manager.render();
+  assert.equal(el('manaPool').hidden,true);
+  state.activeAbilityLoadoutId='';
+  assert.equal(api.manaVisible(state),false);
+});
+
+test('resource membership survives normalization; old saves default to shared', () => {
+  const {api}=setup();
+  const state={abilityLoadouts:[{id:'loadabcdefg',name:'Human'}],activeAbilityLoadoutId:'loadabcdefg',
+    resources:[{id:'resabcdefg',name:'Mana',max:80,current:33,loadoutIds:['loadabcdefg','loadabcdefg']},
+    {id:'reshijklmn',name:'Old',max:50,current:20}]};
+  api.normalizeState(state);
+  assert.deepEqual(Array.from(state.resources[0].loadoutIds),['loadabcdefg']);
+  assert.deepEqual(Array.from(state.resources[1].loadoutIds),[]);
+  assert.equal(state.resources[0].current,33);
+  assert.equal(state.resources[1].current,20);
+});
