@@ -86,7 +86,7 @@ test('search and favorite filtering are independent of saved data', () => {
 test('HTML loads abilities before app, saved in character rather than game', () => {
   const html = read('index.html');
   const app = read('js/app.js');
-  assert.ok(html.indexOf('src="js/abilities.js"') < html.indexOf('src="js/app.js"'));
+  assert.ok(html.indexOf('src="js/abilities.js') < html.indexOf('src="js/app.js'));
   assert.match(html, /id="abilitySection"/);
   assert.match(app, /abilities: \[\]/);
   assert.match(app, /WBAbilities\.normalizeState\(state\)/);
