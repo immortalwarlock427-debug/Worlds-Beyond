@@ -77,3 +77,9 @@ The character sheet now calls the repository interfaces for startup load, deboun
 ## Combat resolution phase two
 
 The character sheet delegates natural-20 hit checks, dual-wield hit/damage resolution, crit totals, resistance/Armor Rating/Overwhelming Force ordering, block/dodge/parry and saves, and Death Threshold/Mercy math to `WBCombat`. Rolls are supplied to pure functions; browser/DM rendering only formats the results. This provides **shared calculations**, not authenticated multiplayer: before live sessions, implement verified command handling, replay-safe action IDs, revisions, turn ownership and DM permission checks enforced by the backend.
+
+## Validated encounter command protocol (offline foundation)
+
+`js/encounter-actions.js` implements deterministic `WBEncounter.applyAction` over a DM-owned encounter snapshot. Action IDs, expected revisions, current-turn checks, actor ownership hints, and DM-only mutations are checked before applying commands. AP uses `WBCombat.spendAp`; damage uses `WBCombat.afterArmor` then `WBCombat.damageHealth`. The encounter is optional inside the existing separate game save, preserving older map/foe saves and character exports. Pure tests cover retries, stale updates, bad payloads, action permissions and turn/health rules.
+
+**Important:** The role/user identity is supplied by the caller and is **not authenticated**. The local bounded retry cache is **not** a permanent action log and cannot prevent replay after eviction or synchronize devices. Never accept claimed `role:dm`, raw damage, dice, initiative, or token placement from browser clients on the future server. Server-side identity, a durable ID ledger, trusted dice and path/AP checks for actual player movement are required before online play. No DM UI has shipped in this phase.
