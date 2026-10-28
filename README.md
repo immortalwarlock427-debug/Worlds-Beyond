@@ -42,8 +42,9 @@ js/app.js           the app: rules, sheet, battlemap
 maps/               map pictures (drawn by maptools/, no grid lines baked in)
 maptools/           Python scripts that draw the map pictures
 tools/              build_single.py makes a one-file version for the Claude artifact
-docs/               how the code and data fit together, and the roadmap
+docs/               CONTEXT.md (rules and project context), ARCHITECTURE.md (code and saves), ROADMAP.md
+AGENTS.md           instructions for AI assistants (CLAUDE.md points to it)
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the data is stored and [docs/ROADMAP.md](docs/ROADMAP.md)
-for what's next.
+See [docs/CONTEXT.md](docs/CONTEXT.md) for the rules and project context, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for how the data is stored and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.

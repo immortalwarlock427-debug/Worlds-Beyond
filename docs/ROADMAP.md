@@ -15,7 +15,21 @@
 - A conditions tracker, after the Exhaustion revamp.
 - Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
 
-## Website (in this order)
+## Website
+
+The sheet grows into a lightweight, Foundry-style tool (not built inside Claude). Done so far: the sheet and
+battlemap are a static site on GitHub Pages, with the character and the game saved separately.
+
+- **Games:** the DM creates a game; a "server" is just a game record with a join code. Players join with the code
+  and bring their character.
+- **Visibility:** the DM sees full sheets; other players see only the basic info each player chooses to share.
+- **Combat screen:** the DM moves everyone into combat, with initiative order and creatures to target, and a
+  battlemap of 5 ft squares where each player moves their own token, spending their AP by the Movement rules.
+- **Stack:** this site as the front end, a hosted database with accounts and live sync (Supabase or Firebase, both
+  with free tiers), and static hosting (GitHub Pages). No server machine to run.
+- **Character format:** the sheet's exported `.json` file, so characters move between the sheet and the site.
+
+### In this order
 1. **A DM screen** that loads exported character files, with no networking. This is when `js/app.js` gets split
    into modules (rules, character, game, map, sheet view, map view), so both screens share the same rules code.
 2. **A combat tracker** on it: initiative, Health, targets, then the battlemap with every character's token.
