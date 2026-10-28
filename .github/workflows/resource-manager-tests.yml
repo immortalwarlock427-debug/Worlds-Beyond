@@ -17,6 +17,11 @@ on:
       - 'js/maps.js'
       - 'dm.html'
       - 'player.html'
+      - 'cloud.html'
+      - 'js/cloud.js'
+      - 'js/cloud-characters.js'
+      - 'css/cloud.css'
+      - 'supabase/migrations/**'
       - 'js/player.js'
       - 'js/player-session.js'
       - 'css/player.css'
@@ -36,6 +41,7 @@ on:
       - 'tests/dm-map.test.cjs'
       - 'tests/encounter-movement.test.cjs'
       - 'tests/player-session.test.cjs'
+      - 'tests/cloud-characters.test.cjs'
       - 'tests/abilities.test.cjs'
       - 'tests/status.test.cjs'
       - 'tests/navigation.test.cjs'
@@ -63,10 +69,12 @@ jobs:
           node --check js/dm-map.js
           node --check js/player-session.js
           node --check js/player.js
+          node --check js/cloud.js
+          node --check js/cloud-characters.js
           node --check js/encounter-map.js
           node --check js/equipment-profiles.js
           node --check js/abilities.js
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs tests/combat-resolution.test.cjs tests/encounter-actions.test.cjs tests/dm-room.test.cjs tests/dm-map.test.cjs tests/encounter-movement.test.cjs tests/player-session.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs tests/combat-resolution.test.cjs tests/encounter-actions.test.cjs tests/dm-room.test.cjs tests/dm-map.test.cjs tests/encounter-movement.test.cjs tests/player-session.test.cjs tests/cloud-characters.test.cjs
