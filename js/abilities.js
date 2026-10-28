@@ -240,6 +240,7 @@
     }
 
     function card(ability) {
+      if (!Array.isArray(ability.effects)) ability.effects = normalizeEffects(ability);
       const badges = [ability.type.charAt(0).toUpperCase() + ability.type.slice(1)];
       if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
       if (ability.resourceId && ability.resourceCost !== '') {
