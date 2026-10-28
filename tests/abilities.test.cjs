@@ -295,3 +295,23 @@ test('movement panel uses derived movement bonus', () => {
   assert.match(app, /WBAbilities\.movementBonus\(state\)/);
   assert.match(app, /refreshAll\(\); \/\/ Update movement and the battlemap after timed effects expire/);
 });
+
+test('movement display and derived speed do not double-count an active bonus', () => {
+  const { api } = harness();
+  const state = { abilities: [{ name: 'Enhanced Movement', effectTarget: 'movement', effectValue: 15, durationLeft: 3 }] };
+  api.normalizeState(state);
+  assert.equal(api.effectiveMovement(state, 15), 30);
+  assert.equal(api.effectiveMovement(state, 15), 30);
+  assert.equal(api.effectiveMovement(state, 10), 25);
+  api.advanceTurn(state);
+  api.advanceTurn(state);
+  api.advanceTurn(state);
+  assert.equal(api.effectiveMovement(state, 15), 15);
+  const app = read('js/app.js');
+  const css = read('css/sheet.css');
+  assert.match(app, /const speedNow = \(\) => window\.WBAbilities\.effectiveMovement\(state, speedBase\(\)\)/);
+  assert.match(app, /el\.classList\.toggle\('ability-adjusted', !manual && !!bonus\)/);
+  assert.match(app, /dataset\.editingBase/);
+  assert.match(css, /input\[data-auto\]\.ability-adjusted:not\(\.manual\)/);
+  assert.match(css, /var\(--verdigris\)/);
+});
