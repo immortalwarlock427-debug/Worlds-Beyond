@@ -113,7 +113,7 @@ test('bleeding at turn start matches sheet and given AP is spent first', () => {
   r = command(e, state, 'SpendAP', { actorId: 'hero', cost: 4 }, player);
   state = r.state;
   assert.equal(state.actors.hero.apAvail, 3);
-  assert.equal(state.actors.hero.apGiven, null);
+  assert.equal(state.actors.hero.apGiven.n, 0);
   r = command(e, state, 'EndTurn', { actorId: 'hero' }, player); state = r.state;
   r = command(e, state, 'EndTurn', { actorId: 'goblin' }); state = r.state;
   assert.equal(state.actors.hero.hp, -8, 'Bleeding repeats until stabilized');
