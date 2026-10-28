@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-ability-spacing-v3">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-loadouts-v4">
 </head>
 <body>
 <main class="sheet">
@@ -684,6 +684,23 @@
   <section class="ability-section" id="abilitySection" data-sheet-section="abilities" aria-labelledby="abilityHead" hidden>
     <div class="sec-head"><svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg><h2 id="abilityHead">Ability Library</h2></div>
     <p class="note">Create custom techniques, spells, traits, and passives. Use ability automatically spends configured AP and resources, and starts charge and cooldown tracking. Starting your turn advances cooldowns and durations. Configured effects on Movement, Armor, Evasion, stats and custom resource maximums apply automatically; other effects remain descriptive.</p>
+    <div class="ability-loadouts" aria-label="Ability forms and loadouts">
+      <div class="ability-loadouts-bar">
+        <label class="ability-field ability-loadout-active"><span class="foot-label">Active ability form</span>
+          <select id="abilityLoadoutSelect"><option value="">Base / shared abilities</option></select>
+        </label>
+        <label class="ability-field ability-loadout-name"><span class="foot-label">Create new form</span>
+          <input id="abilityLoadoutName" maxlength="60" placeholder="e.g. Warrior, Mage, Overdrive">
+        </label>
+        <button type="button" class="btn strong" id="abilityLoadoutAdd">+ New form</button>
+        <button type="button" class="btn danger" id="abilityLoadoutDelete" disabled>Delete form</button>
+      </div>
+      <div class="ability-loadouts-options">
+        <label class="ability-favorites"><input type="checkbox" id="abilityShowAll"> Show abilities from other forms (organize)</label>
+        <span>Shared abilities work in every form. Switching doesn't reset cooldowns or charges.</span>
+      </div>
+      <p id="abilityLoadoutFeedback" class="ability-loadouts-feedback" role="status" aria-live="polite"></p>
+    </div>
     <div class="ability-toolbar">
       <label class="ability-search"><span class="foot-label">Search abilities</span><input id="abilitySearch" type="search" autocomplete="off" placeholder="Name, effect, notes…"></label>
       <label class="ability-category"><span class="foot-label">Category</span><select id="abilityCategory"><option value="">All categories</option></select></label>
@@ -769,10 +786,10 @@
   </div>
 </div>
 
-<script src="js/maps.js?v=20261028-ability-spacing-v3"></script>
-<script src="js/resources.js?v=20261028-ability-spacing-v3"></script>
-<script src="js/abilities.js?v=20261028-ability-spacing-v3"></script>
-<script src="js/status.js?v=20261028-ability-spacing-v3"></script>
-<script src="js/app.js?v=20261028-ability-spacing-v3"></script>
+<script src="js/maps.js?v=20261028-loadouts-v4"></script>
+<script src="js/resources.js?v=20261028-loadouts-v4"></script>
+<script src="js/abilities.js?v=20261028-loadouts-v4"></script>
+<script src="js/status.js?v=20261028-loadouts-v4"></script>
+<script src="js/app.js?v=20261028-loadouts-v4"></script>
 </body>
 </html>
