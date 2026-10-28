@@ -1,8 +1,9 @@
 # Working on Worlds Beyond
 
 Read `README.md` and `docs/ARCHITECTURE.md` first. The full rules context (core rules, sheet assumptions, open
-design questions) is in the pinned doc "Worlds Beyond: Context for a New Chat" on claude.ai; the rules themselves
-are in Notion under D&D > Game Systems. Weavecasting is a separate magic system: don't mix its rules in.
+design questions) is in the pinned doc "Worlds Beyond: Context for a New Chat" on claude.ai
+(https://claude.ai/artifact/TD8M51dFyYpF1XghQkezsM, read it with the Claude Docs tools); the rules themselves are in
+Notion under D&D > Game Systems (https://app.notion.com/p/351c72092efb8089812cd231debc3e74). Weavecasting is a separate magic system: don't mix its rules in.
 
 - The sheet should follow the rules, but everything should stay resettable or changeable in case someone messes up.
 - When a rule changes, update Notion, the site and the context doc to match.

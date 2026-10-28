@@ -5,6 +5,7 @@ A character sheet and battlemap for **Worlds Beyond**, a homebrew D&D combat fra
 where a DM runs a game and players join with their characters.
 
 The rules live in Notion (D&D > Game Systems). This site follows them; when a rule changes, the site changes with it.
+The live site is at https://immortalwarlock427-debug.github.io/Worlds-Beyond/.
 
 ## What's here now
 
