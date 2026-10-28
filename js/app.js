@@ -353,6 +353,10 @@
   state.portraits = state.portraits.filter((f) => f && typeof f.src === 'string' && /^data:image\//.test(f.src)).map((f, i) => ({
     id: typeof f.id === 'string' && f.id ? f.id : 'f' + (i + 1), src: f.src, name: typeof f.name === 'string' ? f.name.slice(0, 30) : ''
   }));
+  const portraitIds = new Set(state.portraits.map(f => f.id));
+  state.abilityLoadouts.forEach(form => {
+    if (form.portraitId && !portraitIds.has(form.portraitId)) form.portraitId = '';
+  });
   if (!state.portraits.some((f) => f.id === state.formId)) state.formId = state.portraits.length ? state.portraits[0].id : null;
   }
 
@@ -439,7 +443,9 @@
   const baseScore = (k) => scoreAt(k, level());
   // Your score right now: your own score plus whatever your worn equipment adds.
   // Advancement (Health and Mana per level) always uses your own score, never gear.
-  const score = (k) => { const b = baseScore(k); return b == null ? null : b + gear(k) + window.WBAbilities.effectBonus(state, 'stat', k); };
+  const score = (k) => { const b = baseScore(k); return b == null ? null :
+    b + gear(k) + window.WBAbilities.effectBonus(state, 'stat', k) +
+    window.WBAbilities.formStatBonus(state, k); };
   const scoreOr12 = (k) => { const s = score(k); return s == null ? 12 : s; };
   function setLevel(n) {
     n = Math.max(1, Math.min(MAX_LEVEL, Math.floor(n) || 1));
@@ -2818,12 +2824,18 @@
   const NO_ROOM = "There's no room left in this browser for that picture. Remove a form, or export your character to keep a copy.";
   function addForm(src) {
     const prev = state.formId;
+    const prevAbilityForm = state.activeAbilityLoadoutId;
     const f = { id: newId(), src, name: '' };
     state.portraits.push(f);
-    state.formId = f.id;
+    window.WBAbilities.selectPortrait(state, f.id);
     if (storeNow()) setStatus(DEFAULT_STATUS);
-    else { state.portraits.pop(); state.formId = prev; setStatus(NO_ROOM, true); }
-    showPortrait();
+    else {
+      state.portraits.pop();
+      state.formId = prev;
+      state.activeAbilityLoadoutId = prevAbilityForm;
+      setStatus(NO_ROOM, true);
+    }
+    refreshAll();
   }
   // Tapping the big portrait changes this form's picture, or adds the first one.
   $('#portraitFile').addEventListener('change', (e) => {
@@ -2848,8 +2860,9 @@
     const t = e.target.closest('.form-thumb, .form-add');
     if (!t) return;
     if (t.classList.contains('form-add')) { $('#formFile').click(); return; }
-    state.formId = t.dataset.form;
-    showPortrait();
+    // Clicking a portrait is also a mechanical form switch, not just a picture swap.
+    if (!window.WBAbilities.selectPortrait(state, t.dataset.form)) return;
+    refreshAll(); // Updates stats, defenses, Movement, available abilities and portrait together.
     save();
     const again = formStrip.querySelector('.form-thumb[aria-pressed="true"]');
     if (again) again.focus();
@@ -2866,9 +2879,17 @@
     if (!f) return;
     const i = state.portraits.indexOf(f);
     state.portraits.splice(i, 1);
+    // Do not keep links to deleted pictures on mechanical ability forms.
+    state.abilityLoadouts.forEach(loadout => {
+      if (loadout.portraitId === f.id) loadout.portraitId = '';
+    });
     const next = state.portraits[Math.max(0, i - 1)];
-    state.formId = next ? next.id : null;
-    showPortrait();
+    if (next) window.WBAbilities.selectPortrait(state, next.id);
+    else {
+      state.formId = null;
+      window.WBAbilities.selectLoadout(state, '');
+    }
+    refreshAll();
     save();
   });
 
@@ -4123,6 +4144,7 @@
     });
     if (!onSheet) { mapTarget = null; renderMap(true); centerToken(); }
     if (onSheet && activeSheetTab === 'statuses') statusManager.render();
+    if (onSheet && activeSheetTab === 'abilities') abilityLibrary.render(); // Fresh portrait choices from Overview.
   }
   function viewFromHash() {
     const hash = location.hash.replace(/^#/, '').toLowerCase();
@@ -4165,8 +4187,9 @@
         // Shows your score with gear included; tapping in switches to your own score so you can edit it.
         const own = scoreAt(s.k, level());
         const g = gear(s.k);
-        el.value = own == null ? '' : String(own + g + window.WBAbilities.effectBonus(state, 'stat', s.k));
-        el.classList.toggle('geared', own != null && !!(g || window.WBAbilities.effectBonus(state, 'stat', s.k)));
+        const formBonus = window.WBAbilities.formStatBonus(state, s.k);
+        el.value = own == null ? '' : String(own + g + window.WBAbilities.effectBonus(state, 'stat', s.k) + formBonus);
+        el.classList.toggle('geared', own != null && !!(g || window.WBAbilities.effectBonus(state, 'stat', s.k) || formBonus));
       }
     });
     Object.keys(AUTO).forEach((id) => {
@@ -4182,7 +4205,8 @@
       if (id === 'armor' || id === 'evasion' || statKey)
         el.classList.toggle('ability-adjusted', !manual &&
           (!!window.WBAbilities.effectBonus(state, id) ||
-            !!(affectedStat && window.WBAbilities.effectBonus(state, 'stat', affectedStat))));
+            !!(affectedStat && (window.WBAbilities.effectBonus(state, 'stat', affectedStat) ||
+              window.WBAbilities.formStatBonus(state, affectedStat)))));
       el.title = manual ? 'Set by hand. Clear it to go back to the automatic value.' : '';
       if (el === active) return;
       if (id === 'speed') {
@@ -4190,7 +4214,7 @@
         const base = manual ? num(o) : num(AUTO.speed());
         // Manual overrides remain orange and editable. Automatic effect bonuses
         // are rendered teal, never stored as manual overrides.
-        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move') || !!window.WBAbilities.effectBonus(state, 'stat', 'AGL')));
+        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move') || !!window.WBAbilities.effectBonus(state, 'stat', 'AGL') || !!window.WBAbilities.formStatBonus(state, 'AGL')));
         el.title = manual
           ? 'Manually set base Movement. Effective movement: ' + window.WBAbilities.effectiveMovement(state, base) + ' ft/AP.'
           : bonus ? 'Base: ' + base + ' ft/AP. Abilities: ' + (bonus > 0 ? '+' : '') + bonus + ' ft/AP.' : '';
@@ -4205,10 +4229,12 @@
       const tile = document.getElementById('stat-' + s.k);
       const g = gear(s.k);
       const gEl = document.getElementById('gear-' + s.k);
-      gEl.hidden = !(g || window.WBAbilities.effectBonus(state, 'stat', s.k));
+      gEl.hidden = !(g || window.WBAbilities.effectBonus(state, 'stat', s.k) || window.WBAbilities.formStatBonus(state, s.k));
       const bs = baseScore(s.k);
       const abilityStatBonus = window.WBAbilities.effectBonus(state, 'stat', s.k);
-      gEl.textContent = [g ? sgn(g) + ' gear' : '', abilityStatBonus ? sgn(abilityStatBonus) + ' ability' : ''].filter(Boolean).join(' · ');
+      const formBonus = window.WBAbilities.formStatBonus(state, s.k);
+      gEl.textContent = [g ? sgn(g) + ' gear' : '', abilityStatBonus ? sgn(abilityStatBonus) + ' ability' : '',
+        formBonus ? sgn(formBonus) + ' form' : ''].filter(Boolean).join(' · ');
       gEl.title = g && bs != null ? 'Your own score is ' + bs + '. Gear adds ' + sgn(g) + '.' : '';
       tile.querySelectorAll('.milestones li').forEach((li) => {
         li.classList.toggle('reached', sc != null && sc >= Number(li.dataset.at));

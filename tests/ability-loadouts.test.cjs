@@ -193,3 +193,175 @@ test('form membership checkboxes are interactive even when Shared is selected', 
   assert.doesNotMatch(markup,/disabled/);
   assert.match(markup,/!shared && ability\.loadoutIds\.includes\(form\.id\)/);
 });
+
+
+test('optional linked portraits follow form switches without changing other portraits', () => {
+  const {api,state}=harness();
+  state.portraits=[{id:'p-warrior',src:'data:image/png;base64,a',name:'Warrior'},
+                   {id:'p-mage',src:'data:image/png;base64,b',name:'Mage'}];
+  state.formId='p-warrior';
+  const warrior=api.createLoadout(state,'Warrior'), mage=api.createLoadout(state,'Mage');
+  assert.equal(api.configureLoadout(state,warrior.id,'portraitId','p-warrior'),true);
+  assert.equal(api.configureLoadout(state,mage.id,'portraitId','p-mage'),true);
+  assert.equal(state.formId,'p-mage','Linking portrait on active form previews it immediately');
+  assert.equal(api.selectLoadout(state,warrior.id),true);
+  assert.equal(state.formId,'p-warrior');
+  assert.equal(api.selectLoadout(state,mage.id),true);
+  assert.equal(state.formId,'p-mage');
+  assert.equal(api.selectLoadout(state,''),true);
+  assert.equal(state.formId,'p-mage','Base form leaves current portrait unchanged');
+  const other=api.createLoadout(state,'Other');
+  assert.equal(api.configureLoadout(state,other.id,'portraitId','invalid'),true);
+  assert.equal(other.portraitId,'');
+  state.formId='p-warrior';
+  assert.equal(api.selectLoadout(state,other.id),true);
+  assert.equal(state.formId,'p-warrior','Unlinked form leaves portrait unchanged');
+});
+
+test('form stat adjustments apply only to the selected form and do not rewrite base stats', () => {
+  const {api,state,controls}=harness();
+  state.fields={baseSTR:14};
+  const a=api.createLoadout(state,'Warrior');
+  const b=api.createLoadout(state,'Mage');
+  assert.equal(api.configureLoadout(state,a.id,'STR',4),true);
+  assert.equal(api.configureLoadout(state,a.id,'AGL',-2),true);
+  assert.equal(api.configureLoadout(state,b.id,'INT',5),true);
+  assert.equal(api.configureLoadout(state,b.id,'STR','bad'),true);
+  assert.equal(api.formStatBonus(state,'STR'),0);
+  assert.equal(api.formStatBonus(state,'INT'),5);
+  assert.equal(api.selectLoadout(state,a.id),true);
+  assert.equal(api.formStatBonus(state,'STR'),4);
+  assert.equal(api.formStatBonus(state,'AGL'),-2);
+  assert.equal(api.formStatBonus(state,'INT'),0);
+  assert.equal(api.formStatBonus(state,'NOT_A_STAT'),0);
+  assert.equal(api.selectLoadout(state,''),true);
+  assert.equal(api.formStatBonus(state,'STR'),0);
+  assert.equal(state.fields.baseSTR,14);
+  assert.equal(api.configureLoadout(state,a.id,'STR',999),true);
+  assert.equal(api.selectLoadout(state,a.id),true);
+  assert.equal(api.formStatBonus(state,'STR'),28,'Out-of-range modifiers are bounded');
+  assert.equal(api.configureLoadout(state,a.id,'badProperty',3),false);
+});
+
+test('mechanical form configuration survives import and old loadouts get defaults', () => {
+  const {api,state}=harness();
+  state.portraits=[{id:'portrait1',name:'Form one',src:'data:image/png;base64,a'}];
+  const original=api.createLoadout(state,'Fae');
+  api.configureLoadout(state,original.id,'portraitId','portrait1');
+  api.configureLoadout(state,original.id,'DEX',3);
+  const imported=JSON.parse(JSON.stringify(state));
+  api.normalizeState(imported);
+  assert.equal(imported.abilityLoadouts[0].portraitId,'portrait1');
+  assert.equal(imported.abilityLoadouts[0].statBonuses.DEX,3);
+  assert.equal(api.formStatBonus(imported,'DEX'),3);
+  imported.abilityLoadouts=[{id:'loadabcdefg',name:'Legacy'}];
+  imported.activeAbilityLoadoutId='loadabcdefg';
+  api.normalizeState(imported);
+  assert.equal(imported.abilityLoadouts[0].portraitId,'');
+  assert.equal(api.formStatBonus(imported,'STR'),0);
+  assert.deepEqual(Object.keys(imported.abilityLoadouts[0].statBonuses),[]);
+});
+
+test('mechanical form UI and core derived score use the same form bonus', () => {
+  const h=read('index.html'),app=read('js/app.js'),abilities=read('js/abilities.js'),css=read('css/sheet.css');
+  assert.match(h,/id="abilityLoadoutConfig"/);
+  assert.match(abilities,/data-loadout-portrait/);
+  assert.match(abilities,/data-loadout-stat=/);
+  assert.match(app,/WBAbilities\.formStatBonus\(state, k\)/);
+  assert.match(app,/const formBonus = window\.WBAbilities\.formStatBonus\(state, s\.k\)/);
+  assert.match(app,/showPortrait\(\)/);
+  assert.match(css,/\.loadout-stat-grid/);
+});
+
+
+test('selecting a linked portrait on Overview switches abilities and temporary form stats', () => {
+  const {api,state,controls}=harness();
+  state.portraits=[
+    {id:'humanpic',name:'Human',src:'data:image/png;base64,a'},
+    {id:'monsterpic',name:'Monstrous',src:'data:image/png;base64,b'}
+  ];
+  const human=api.createLoadout(state,'Human');
+  const monster=api.createLoadout(state,'Monstrous');
+  api.configureLoadout(state,human.id,'portraitId','humanpic');
+  api.configureLoadout(state,monster.id,'portraitId','monsterpic');
+  api.configureLoadout(state,human.id,'CHA',3);
+  api.configureLoadout(state,monster.id,'STR',6);
+  state.abilities=[
+    ability('abilabcdefg','Human-only',[human.id]),
+    ability('abilhijklmn','Monstrous-only',[monster.id]),
+    ability('abilmnopqrst','Shared',[])
+  ];
+  state.abilities[0].cooldownLeft=2;
+  state.abilities[1].usesLeft=1;
+  state.abilities[1].durationLeft=2;
+  state.abilities[1].capacityCurrent=3;
+  const oldEnergy=state.resources[0].current;
+
+  assert.equal(api.selectPortrait(state,'humanpic'),true);
+  assert.equal(state.formId,'humanpic');
+  assert.equal(state.activeAbilityLoadoutId,human.id);
+  assert.equal(api.formStatBonus(state,'CHA'),3);
+  assert.equal(api.formStatBonus(state,'STR'),0);
+  assert.deepEqual(Array.from(api.filterAbilities(state,{sort:'name'},controls),a=>a.name),
+    ['Human-only','Shared']);
+
+  assert.equal(api.selectPortrait(state,'monsterpic'),true);
+  assert.equal(state.activeAbilityLoadoutId,monster.id);
+  assert.equal(api.formStatBonus(state,'STR'),6);
+  assert.equal(api.formStatBonus(state,'CHA'),0);
+  assert.deepEqual(Array.from(api.filterAbilities(state,{sort:'name'},controls),a=>a.name),
+    ['Monstrous-only','Shared']);
+  assert.equal(state.abilities[0].cooldownLeft,2);
+  assert.equal(state.abilities[1].usesLeft,1);
+  assert.equal(state.abilities[1].durationLeft,2);
+  assert.equal(state.abilities[1].capacityCurrent,3);
+  assert.equal(state.resources[0].current,oldEnergy);
+});
+
+test('an unlinked portrait switches to Base/shared abilities, with no lingering form stats', () => {
+  const {api,state,controls}=harness();
+  state.portraits=[
+    {id:'baseportrait',name:'Base',src:'data:image/png;base64,a'},
+    {id:'formportrait',name:'Form',src:'data:image/png;base64,b'}
+  ];
+  const form=api.createLoadout(state,'Monster');
+  api.configureLoadout(state,form.id,'portraitId','formportrait');
+  api.configureLoadout(state,form.id,'VIT',5);
+  state.abilities=[ability('abilabcdefg','Form-only',[form.id]),ability('abilhijklmn','Shared',[])];
+  assert.equal(api.selectPortrait(state,'formportrait'),true);
+  assert.equal(api.formStatBonus(state,'VIT'),5);
+  assert.equal(api.selectPortrait(state,'baseportrait'),true);
+  assert.equal(state.activeAbilityLoadoutId,'');
+  assert.equal(state.formId,'baseportrait');
+  assert.equal(api.formStatBonus(state,'VIT'),0);
+  assert.deepEqual(Array.from(api.filterAbilities(state,{},controls),a=>a.name),['Shared']);
+
+  const before=JSON.stringify(state);
+  assert.equal(api.selectPortrait(state,'missingportrait'),false);
+  assert.equal(JSON.stringify(state),before,'An invalid portrait ID should be a no-op');
+});
+
+test('when two ability forms share one portrait, clicking it preserves current matched form', () => {
+  const {api,state}=harness();
+  state.portraits=[{id:'sharedportrait',name:'Shared',src:'data:image/png;base64,a'}];
+  const a=api.createLoadout(state,'Knight');
+  const b=api.createLoadout(state,'Paladin');
+  api.configureLoadout(state,a.id,'portraitId','sharedportrait');
+  api.configureLoadout(state,b.id,'portraitId','sharedportrait');
+  state.activeAbilityLoadoutId=b.id;
+  assert.equal(api.selectPortrait(state,'sharedportrait'),true);
+  assert.equal(state.activeAbilityLoadoutId,b.id);
+  state.activeAbilityLoadoutId='';
+  assert.equal(api.selectPortrait(state,'sharedportrait'),true);
+  assert.equal(state.activeAbilityLoadoutId,a.id,'First matching form is fallback only');
+});
+
+test('Overview portrait switches call the ability manager and refresh derived sheet values', () => {
+  const app=read('js/app.js');
+  const abilities=read('js/abilities.js');
+  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form\)/);
+  assert.match(app,/refreshAll\(\); \/\/ Updates stats, defenses, Movement, available abilities and portrait together/);
+  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, f\.id\)/);
+  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id\)/);
+  assert.match(abilities,/selectPortrait, configureLoadout/);
+});

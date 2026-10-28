@@ -59,7 +59,7 @@ function navigationHarness() {
     document:dom, location:{hash:''},
     window:{addEventListener(event,fn){navHandlers[event]=fn;}},
     $:selector=>({addEventListener(event,fn){navHandlers[selector+':'+event]=fn;}}),
-    statusManager:{render(){statusCount++;}},renderMap(){mapCount++;},
+    statusManager:{render(){statusCount++;}},abilityLibrary:{render(){}},renderMap(){mapCount++;},
     centerToken(){},console
   };
   vm.runInNewContext('let view="sheet"; let mapTarget=null;\n'+app.slice(start,end)+
