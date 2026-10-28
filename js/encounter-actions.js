@@ -148,7 +148,7 @@
     const canAct = actor && (dm || (actor.kind === 'pc' && actor.ownerId === context.userId));
     let event = { type: action.type, actorId: action.actorId || null };
     if (['AddActor', 'RemoveActor', 'SetInitiative', 'StartEncounter',
-      'FinishEncounter', 'ApplyDamage', 'Heal', 'SetHealth', 'SetStable', 'UpdateActor', 'PlaceToken', 'ClearToken', 'GrantAP'].includes(action.type) && !dm)
+      'FinishEncounter', 'ReopenSetup', 'ApplyDamage', 'Heal', 'SetHealth', 'SetStable', 'UpdateActor', 'PlaceToken', 'ClearToken', 'GrantAP'].includes(action.type) && !dm)
       return fail('DM_ONLY');
     switch (action.type) {
       case 'AddActor': {
@@ -359,6 +359,23 @@
         actor.mapId = null;
         event.x = null;
         event.y = null;
+        break;
+      }
+      case 'ReopenSetup': {
+        if (state.phase !== 'finished') return fail('ENCOUNTER_NOT_FINISHED');
+        // Preserve the roster, positions, HP, initiative and imported snapshots.
+        // Refresh per-turn resources; the DM may edit HP/initiative in Setup.
+        state.phase = 'setup';
+        state.round = 0;
+        state.turnIndex = 0;
+        state.order.forEach(id => {
+          const member = state.actors[id];
+          member.apAvail = member.apMax;
+          member.apGiven = null;
+          member.move = { ft:0, left:0, surge:0 };
+        });
+        event.actorId = null;
+        event.rosterCount = state.order.length;
         break;
       }
       case 'FinishEncounter': {
