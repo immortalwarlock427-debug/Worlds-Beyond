@@ -283,9 +283,9 @@ test('effect values and targets persist safely through character import', () => 
   const state = { abilities: [{ name: 'Speed', effectTarget: 'movement', effectValue: 15, durationLeft: 3 },
     { name: 'Bad target', effectTarget: 'eval', effectValue: 999999 }] };
   api.normalizeState(state);
-  assert.equal(state.abilities[0].effectValue, 15);
-  assert.equal(state.abilities[1].effectTarget, 'none');
-  assert.equal(state.abilities[1].effectValue, 99999);
+  assert.equal(state.abilities[0].effects[0].value, 15);
+  assert.equal(state.abilities[1].effects[0].target, 'none');
+  assert.equal(state.abilities[1].effects[0].value, 99999);
   const recovered = JSON.parse(JSON.stringify(state));
   api.normalizeState(recovered);
   assert.equal(api.movementBonus(recovered), 15);
