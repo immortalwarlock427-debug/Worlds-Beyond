@@ -126,7 +126,7 @@
   const $ = (s) => document.querySelector(s);
   const blank = () => ({
     fields: {}, over: {}, hist: {}, rolls: {},
-    pool: [], alloc: {}, items: [], equip: {}, order: [], lvGear: {}, settled: {}, spent: {},
+    pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
     asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
   });
@@ -322,6 +322,7 @@
   });
   { const mw = itemById(state.equip.main); if (mw && mw.type === 'twohand') delete state.equip.off; }
   fixPairs();
+  window.WBEquipment.normalizeState(state); // Legacy characters inherit their current worn equipment.
   // Movement this turn: feet moved, feet left over from AP already spent, and Surge AP used.
   const mv = state.move;
   state.move = mv && typeof mv === 'object' ? {
@@ -368,6 +369,7 @@
   }
   let saveTimer = null;
   function save() {
+    window.WBEquipment.capture(state); // Save the currently worn slots in this form's profile.
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
@@ -1910,6 +1912,29 @@
   // ---------- Equipment ----------
   const packEl = $('#pack');
   const wornEl = $('#wornList');
+  function renderEquipmentProfile() {
+    const selectedForm = (state.abilityLoadouts || []).find(f => f.id === state.activeAbilityLoadoutId);
+    const label = $('#equipmentProfileName');
+    label.textContent = selectedForm ? selectedForm.name : 'Base';
+    $('#equipmentCopyBase').disabled = !selectedForm;
+    $('#equipmentClearForm').disabled = !Object.keys(state.equip || {}).length;
+    $('#equipmentProfileNote').textContent = selectedForm ?
+      'Worn equipment is saved for this form. All forms share the same inventory; switching does not reset gear bonuses, AP or spent items.' :
+      'Base equipment is worn while no special form is selected. Other forms keep their own worn-slot layouts.';
+  }
+  $('#equipmentCopyBase').addEventListener('click', () => {
+    if (!window.WBEquipment.copyBase(state)) return;
+    selected = null;
+    refreshAll();
+    save();
+  });
+  $('#equipmentClearForm').addEventListener('click', () => {
+    if (!window.confirm('Unequip all gear in this form? The items stay in your shared inventory.')) return;
+    window.WBEquipment.clearCurrent(state);
+    selected = null;
+    refreshAll();
+    save();
+  });
   function newId() { return 'i' + Date.now().toString(36) + randInt(1e6).toString(36); }
   function toPack(slot) {
     const id = state.equip[slot];
@@ -1949,6 +1974,7 @@
     unequip(id);
     delete state.spent[id];
     state.items = state.items.filter((it) => it.id !== id);
+    window.WBEquipment.removeItem(state, id); // No deleted gear can reappear on a form switch.
     if (selected && selected.id === id) selected = null;
     if (editingId === id) resetForge();
   }
@@ -2018,6 +2044,7 @@
       '</div>';
   }
   function renderEquip() {
+    renderEquipmentProfile();
     SLOTS.forEach((s) => {
       const el = document.querySelector('.slot[data-slot="' + s.k + '"]');
       const it = itemById(state.equip[s.k]);
@@ -4419,6 +4446,7 @@
   }
   $('#exportBtn').addEventListener('click', async () => {
     const filename = exportFilename();
+    window.WBEquipment.capture(state); // Export includes the latest currently worn items.
     const data = JSON.stringify({ format: 'worlds-beyond-character', version: 1, exported: new Date().toISOString(), state });
     if (downloads) {
       try {
