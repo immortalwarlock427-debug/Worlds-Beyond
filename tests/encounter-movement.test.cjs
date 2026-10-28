@@ -210,6 +210,7 @@ test('DM map previews movement first and only deducts AP after Confirm',()=>{
    command(type,data) {
      calls.push({type,data});
      state=apply(e,state,type,data,{...dm,map});
+     return true;
    },
    selectMap(id){game.map.id=id;},
    message(s){throw Error('Unexpected error: '+s);}
