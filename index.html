@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-form-resources-v8">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-equip-profiles-v9">
 </head>
 <body>
 <main class="sheet">
@@ -510,6 +510,16 @@
       <h2 id="equipHead">Equipment</h2>
     </div>
     <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm, leg pieces either leg and rings either hand, unless the piece is a set, like boots, which fills both. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Gear counts toward a level-up's Health, Mana and hit die once you've worn it through a long rest, and never changes levels you already have.</p>
+    <div class="equipment-profile-bar">
+      <div><span class="foot-label">Worn equipment profile</span>
+        <strong id="equipmentProfileName">Base</strong>
+        <p id="equipmentProfileNote" class="equipment-profile-note">Different forms may wear different gear from the same inventory.</p>
+      </div>
+      <div class="equipment-profile-actions">
+        <button type="button" class="btn" id="equipmentCopyBase">Copy Base equipment</button>
+        <button type="button" class="btn" id="equipmentClearForm">Unequip all in this form</button>
+      </div>
+    </div>
     <div class="equip-grid">
       <div class="doll-col">
         <div class="doll" id="doll">
@@ -791,10 +801,11 @@
   </div>
 </div>
 
-<script src="js/maps.js?v=20261028-form-resources-v8"></script>
-<script src="js/resources.js?v=20261028-form-resources-v8"></script>
-<script src="js/abilities.js?v=20261028-form-resources-v8"></script>
-<script src="js/status.js?v=20261028-form-resources-v8"></script>
-<script src="js/app.js?v=20261028-form-resources-v8"></script>
+<script src="js/maps.js?v=20261028-equip-profiles-v9"></script>
+<script src="js/resources.js?v=20261028-equip-profiles-v9"></script>
+<script src="js/equipment-profiles.js?v=20261028-equip-profiles-v9"></script>
+<script src="js/abilities.js?v=20261028-equip-profiles-v9"></script>
+<script src="js/status.js?v=20261028-equip-profiles-v9"></script>
+<script src="js/app.js?v=20261028-equip-profiles-v9"></script>
 </body>
 </html>
