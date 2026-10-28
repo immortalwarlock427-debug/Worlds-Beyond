@@ -19,11 +19,18 @@
     const maps = window.WB_MAPS;
     const helper = window.WBEncounterMap;
     const combat = window.WBCombat;
-    const mapPick = $('#dmMapPick'), actorPick = $('#dmMapActor');
+    const mapPick = $('#dmMapPick'), mapChoices = $('#dmMapChoices');
+    const actorPick = $('#dmMapActor');
     const stage = $('#dmMapBoard'), layer = $('#dmMapTokens');
     const grid = $('#dmMapGrid'), pathLayer = $('#dmMapPath');
     const modePick = $('#dmMapMode');
-    let selectedActorId = '', preview = null, lastPhase = null;
+    let selectedActorId = '', preview = null, lastPhase = null, lastTurnKey = null;
+    const notice = $('#dmMapNotice');
+    function notify(text,isError = false) {
+      notice.textContent = text;
+      notice.className = 'dm-map-notice' + (isError ? ' error' : '');
+      if (isError) options.message(text,true);
+    }
     function cancelPreview() { preview = null; render(); }
     function previewMessage(error) {
       const errors = {
@@ -35,7 +42,7 @@
         OCCUPIED_SQUARE:'A combatant occupies the destination.',
         NO_PATH:'No walkable route reaches that square.'
       };
-      options.message(errors[error] || 'Cannot move to that square.',true);
+      return errors[error] || 'Cannot move to that square.';
     }
     function render() {
       let game;
@@ -49,8 +56,28 @@
         modePick.value = encounter.phase === 'active' ? 'move' : 'place';
         lastPhase = encounter.phase;
         preview = null;
+        notice.textContent = '';
       }
+      modePick.disabled = encounter.phase !== 'active';
+      const currentId = encounter.phase === 'active' ?
+        encounter.order[encounter.turnIndex] : null;
+      const turnKey = encounter.id + '|' + encounter.phase + '|' +
+        (encounter.round || 0) + '|' + (currentId || '');
+      if (lastTurnKey !== turnKey) {
+        // The first actor in import order is not necessarily the first actor in
+        // initiative. Follow the current turn automatically in movement mode.
+        if (currentId) selectedActorId = currentId;
+        preview = null;
+        lastTurnKey = turnKey;
+      }
+      if (modePick.value === 'move' && currentId) selectedActorId = currentId;
       mapPick.value = map.id;
+      mapChoices.innerHTML = Object.keys(maps).map(id =>
+        '<button type="button" data-dm-map="' + escapeHtml(id) +
+        '" class="dm-map-choice' + (map.id === id ? ' active' : '') +
+        '" aria-pressed="' + (map.id === id) + '">' +
+        escapeHtml(maps[id].short || maps[id].name || id) +
+        '</button>').join('');
       const actors = (encounter.order || []).map(id =>
         Object.prototype.hasOwnProperty.call(encounter.actors,id) ? encounter.actors[id] : null)
         .filter(Boolean);
@@ -61,7 +88,8 @@
           escapeHtml(actor.name) + (actor.kind === 'npc' ? ' (NPC)' : ' (Player)') +
           '</option>').join('') : '<option value="">No combatants</option>';
       actorPick.value = selectedActorId;
-      actorPick.disabled = !actors.length;
+      actorPick.disabled = !actors.length ||
+        (modePick.value === 'move' && encounter.phase === 'active');
       $('#dmMapClear').disabled = !actors.some(a => a.id === selectedActorId && a.mapId === map.id);
       stage.style.width = map.cols * SIZE + 'px';
       stage.style.height = map.rows * SIZE + 'px';
@@ -106,22 +134,39 @@
         (selected ? ' · Selected: ' + selected.name : '') +
         (selected && encounter.phase === 'active' ? ' · ' + selected.speedFt + ' ft/AP · ' +
           (selected.apAvail + (selected.apGiven ? selected.apGiven.n : 0)) + ' AP remaining' : '');
-      $('#dmMapHelp').textContent = modePick.value === 'move' ?
-        'Combat movement: select the current combatant, then click an open destination to preview distance and AP before confirming.' :
-        'DM placement: click an open square to position or relocate any token without AP cost. Switch modes to spend AP for real movement.';
+      $('#dmMapHelp').textContent = encounter.phase === 'finished' ?
+        'This combat has ended. Click Reuse roster / Edit setup above, then Start encounter to move with AP again. Free DM token placement still works here.' :
+        modePick.value === 'move' ?
+        'Combat movement: the current combatant is selected automatically. Click an open destination, review the route and click Confirm move.' :
+        'DM placement: click an open square to position or relocate any token without AP cost. During combat, switch to Combat movement to spend AP.';
     }
     actorPick.addEventListener('change', () => {
       selectedActorId = actorPick.value;
       preview = null;
       render();
     });
-    modePick.addEventListener('change', cancelPreview);
-    mapPick.addEventListener('change', () => {
-      if (!Object.prototype.hasOwnProperty.call(maps,mapPick.value)) return;
+    modePick.addEventListener('change', () => {
       preview = null;
-      options.selectMap(mapPick.value);
+      notice.textContent = '';
       render();
     });
+    function chooseMap(id) {
+      if (!Object.prototype.hasOwnProperty.call(maps,id)) return;
+      preview = null;
+      if (options.selectMap(id)) {
+        notify('Showing ' + (maps[id].name || id) + '.');
+      } else {
+        notify('Map change could not be saved. Check browser storage.',true);
+      }
+      render();
+    }
+    // Large, explicit buttons work around native select popups that do not
+    // render their options in some browser themes.
+    mapChoices.addEventListener('click', event => {
+      const button = event.target.closest('button[data-dm-map]');
+      if (button) chooseMap(button.dataset.dmMap);
+    });
+    mapPick.addEventListener('change', () => chooseMap(mapPick.value));
     $('#dmMapClear').addEventListener('click', () => {
       if (!selectedActorId) return;
       preview = null;
@@ -132,14 +177,27 @@
       if (!preview) return;
       const target = preview;
       preview = null;
-      options.command('MoveToken',{actorId:target.actorId,x:target.x,y:target.y});
+      const success = options.command('MoveToken',{actorId:target.actorId,x:target.x,y:target.y});
+      if (success) notify('Movement completed to ' +
+        helper.squareName(target.x,target.y) + '. AP and Surge have been updated.');
+      else notify('Move was rejected. Check the combat tracker and try again.',true);
       render();
     });
     stage.addEventListener('click', event => {
       const selectedToken = event.target.closest('button[data-dm-token]');
       if (selectedToken) {
-        selectedActorId = selectedToken.dataset.dmToken;
+        const id = selectedToken.dataset.dmToken;
+        const enc = options.getEncounter();
+        const current = enc.phase === 'active' ?
+          enc.actors[enc.order[enc.turnIndex]] : null;
+        if (modePick.value === 'move' && current && id !== current.id) {
+          notify('It is ' + current.name +
+            '\'s turn. Use DM placement (free) to reposition other tokens.',true);
+          return;
+        }
+        selectedActorId = id;
         preview = null;
+        notice.textContent = '';
         render();
         return;
       }
@@ -154,34 +212,36 @@
       const encounter = options.getEncounter();
       if (modePick.value === 'move') {
         if (encounter.phase !== 'active' || encounter.order[encounter.turnIndex] !== selectedActorId) {
-          options.message('Only the current combatant can move using AP. Use DM placement for administrative changes.',true);
+          notify('Only the current combatant can move with AP. Change to DM placement for manual repositioning.',true);
           return;
         }
         const actor = encounter.actors[selectedActorId];
         if (actor.hp <= 0) {
-          options.message('A downed combatant cannot move using AP.',true);
+          notify('A downed combatant cannot move using AP.',true);
           return;
         }
         const route = helper.movementRoute(encounter,map,selectedActorId,x,y);
-        if (!route.ok) { previewMessage(route.error); return; }
+        if (!route.ok) { notify(previewMessage(route.error),true); return; }
         const free = Math.max(0,actor.surgeMax-actor.move.surge);
         const plan = combat.movePlan(route.ft,actor.speedFt,actor.move,free);
         if (!actor.speedFt && plan.fromLeft < plan.ft) {
-          options.message('This combatant has 0 Movement and no leftover distance.',true);
+          notify('This combatant has 0 Movement and no leftover distance.',true);
           return;
         }
         if (plan.paid > combat.apAvailable(actor,actor.apAvail)) {
-          options.message('Not enough AP. This move costs ' + plan.paid +
+          notify('Not enough AP. This move costs ' + plan.paid +
             ' AP and ' + plan.free + ' Surge AP.',true);
           return;
         }
         preview = { actorId:selectedActorId,x,y,route,plan,mapId:map.id,
           encounterId:encounter.id,revision:encounter.revision };
+        notify('Route preview ready. Review its cost, then press Confirm move to spend AP.');
         render();
         return;
       }
       const attempt = helper.checkPlacement(encounter,map,selectedActorId,x,y);
-      if (!attempt.ok) { previewMessage(attempt.error); return; }
+      if (!attempt.ok) { notify(previewMessage(attempt.error),true); return; }
+      notice.textContent = '';
       options.command('PlaceToken',{actorId:selectedActorId,x,y});
     });
     return {render};
