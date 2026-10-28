@@ -827,10 +827,11 @@ body { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 .views button + button { border-left: 1px solid var(--rule); }
 .views button[aria-pressed="true"] { background: var(--brass); color: var(--sheet); }
 .views button:focus-visible { outline: 2px solid var(--brass); outline-offset: -3px; }
+/* Only the Battlemap is a different destination; sheet panels use their own tabs. */
 main.sheet:not(.view-map) > .mapsec { display: none; }
-main.sheet:not(.view-status) > .statussec { display: none; }
-main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
-main.view-status > section:not(.statussec), main.view-status > footer { display: none; }
+main.sheet > section[hidden] { display: none !important; }
+main.view-map > section:not(.mapsec), main.view-map > footer,
+main.view-map > .sheet-tabs { display: none; }
 
 /* battlemap */
 .note b.free-word { color: var(--verdigris); }
@@ -1214,3 +1215,58 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 
 .status-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
 .status-actions .status-summary { flex:1 1 180px; }
+
+/* Two levels of navigation: separate Battlemap destination above the sheet tabs.
+   Both rows stay reachable while scrolling long ability and equipment libraries. */
+.views.main-views {
+  position: sticky; top: 0; z-index: 60;
+  justify-self: stretch; display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; width: 100%; padding: 7px 2px;
+  margin-top: -10px; border: 0; border-radius: 0; overflow: visible;
+  background: var(--sheet); box-shadow: 0 4px 12px -11px var(--ink);
+}
+.views.main-views button {
+  border: 1px solid var(--rule); border-radius: 5px; background: var(--field);
+  padding: 10px 16px; font-size: 14px; font-weight: 700; letter-spacing: .055em;
+}
+.views.main-views button + button { border-left: 1px solid var(--rule); }
+.views.main-views button[data-view="sheet"] { flex: 0 1 auto; }
+.views.main-views button[data-view="map"] {
+  margin-left: auto; border-color: var(--verdigris); color: var(--verdigris);
+  box-shadow: inset 3px 0 0 var(--verdigris);
+}
+.views.main-views button[data-view="map"][aria-pressed="true"] {
+  background: var(--verdigris); border-color: var(--verdigris); color: var(--sheet);
+  box-shadow: none;
+}
+.views.main-views button[data-view="sheet"][aria-pressed="true"] {
+  background: var(--brass); border-color: var(--brass); color: var(--sheet);
+}
+.sheet-tabs {
+  position: sticky; top: 59px; z-index: 59; justify-self: stretch;
+  display: flex; align-items: center; flex-wrap: nowrap; gap: 4px;
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin;
+  margin-top: -23px; padding: 8px 4px;
+  background: var(--sheet); border-bottom: 2px solid var(--rule);
+  box-shadow: 0 4px 12px -12px var(--ink);
+}
+.sheet-tabs button {
+  appearance: none; flex: 0 0 auto; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; padding: 9px 13px;
+  font: 700 13px var(--font-label); letter-spacing: .04em;
+  white-space: nowrap; cursor: pointer; color: var(--muted);
+}
+.sheet-tabs button:hover { color: var(--brass); }
+.sheet-tabs button[aria-pressed="true"] {
+  color: var(--brass); background: var(--field); border-bottom-color: var(--brass);
+}
+.sheet-tabs button:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+@media (max-width: 540px) {
+  .views.main-views { gap: 12px; }
+  .views.main-views button {
+    flex: 0 1 auto; font-size: 13px; letter-spacing: 0;
+    padding: 9px 11px;
+  }
+  .sheet-tabs { top: 55px; margin-top: -24px; padding-inline: 0; }
+  .sheet-tabs button { font-size: 12px; padding: 9px 10px; }
+}
