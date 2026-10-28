@@ -2824,12 +2824,18 @@
   const NO_ROOM = "There's no room left in this browser for that picture. Remove a form, or export your character to keep a copy.";
   function addForm(src) {
     const prev = state.formId;
+    const prevAbilityForm = state.activeAbilityLoadoutId;
     const f = { id: newId(), src, name: '' };
     state.portraits.push(f);
-    state.formId = f.id;
+    window.WBAbilities.selectPortrait(state, f.id);
     if (storeNow()) setStatus(DEFAULT_STATUS);
-    else { state.portraits.pop(); state.formId = prev; setStatus(NO_ROOM, true); }
-    showPortrait();
+    else {
+      state.portraits.pop();
+      state.formId = prev;
+      state.activeAbilityLoadoutId = prevAbilityForm;
+      setStatus(NO_ROOM, true);
+    }
+    refreshAll();
   }
   // Tapping the big portrait changes this form's picture, or adds the first one.
   $('#portraitFile').addEventListener('change', (e) => {
@@ -2854,8 +2860,9 @@
     const t = e.target.closest('.form-thumb, .form-add');
     if (!t) return;
     if (t.classList.contains('form-add')) { $('#formFile').click(); return; }
-    state.formId = t.dataset.form;
-    showPortrait();
+    // Clicking a portrait is also a mechanical form switch, not just a picture swap.
+    if (!window.WBAbilities.selectPortrait(state, t.dataset.form)) return;
+    refreshAll(); // Updates stats, defenses, Movement, available abilities and portrait together.
     save();
     const again = formStrip.querySelector('.form-thumb[aria-pressed="true"]');
     if (again) again.focus();
@@ -2877,8 +2884,12 @@
       if (loadout.portraitId === f.id) loadout.portraitId = '';
     });
     const next = state.portraits[Math.max(0, i - 1)];
-    state.formId = next ? next.id : null;
-    showPortrait();
+    if (next) window.WBAbilities.selectPortrait(state, next.id);
+    else {
+      state.formId = null;
+      window.WBAbilities.selectLoadout(state, '');
+    }
+    refreshAll();
     save();
   });
 
