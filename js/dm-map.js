@@ -22,10 +22,86 @@
     const mapPick = $('#dmMapPick'), mapChoices = $('#dmMapChoices');
     const actorPick = $('#dmMapActor');
     const stage = $('#dmMapBoard'), layer = $('#dmMapTokens');
+    const animationLayer = $('#dmMapAnimation');
     const grid = $('#dmMapGrid'), pathLayer = $('#dmMapPath');
     const modePick = $('#dmMapMode');
     let selectedActorId = '', preview = null, lastPhase = null, lastTurnKey = null;
     const notice = $('#dmMapNotice');
+    let traveling = null;  // Visual-only; the encounter save is authoritative.
+    function savedToken(id) {
+      return layer.querySelector ? layer.querySelector(
+        '[data-dm-token="' + id + '"]') : null;
+    }
+    function hideSavedToken() {
+      const saved = traveling && savedToken(traveling.actorId);
+      if (saved) saved.style.visibility = 'hidden';
+    }
+    function cancelTravel() {
+      const previous = traveling;
+      traveling = null;
+      if (previous && previous.timer != null &&
+          typeof window.clearTimeout === 'function')
+        window.clearTimeout(previous.timer);
+      if (previous && previous.animation && previous.animation.cancel)
+        previous.animation.cancel();
+      animationLayer.innerHTML = '';
+      if (previous) {
+        const saved = savedToken(previous.actorId);
+        if (saved) saved.style.visibility = '';
+      }
+    }
+    function animateCommittedMove(actor,path,encounterId,mapId) {
+      cancelTravel();
+      if (!actor || !Array.isArray(path) || path.length < 2 ||
+          (window.matchMedia && window.matchMedia(
+            '(prefers-reduced-motion: reduce)').matches)) return false;
+      const start = path[0], end = path[path.length-1];
+      const state = {actorId:actor.id,encounterId,mapId,
+        endX:end.x,endY:end.y,animation:null,timer:null};
+      const label = escapeHtml(initials(actor.name));
+      animationLayer.innerHTML = '<span class="dm-map-token' +
+        (actor.kind === 'npc' ? ' enemy' : ' player') +
+        '" style="left:' + (start.x*SIZE+3) + 'px;top:' +
+        (start.y*SIZE+3) + 'px">' + label + '</span>';
+      const token = animationLayer.querySelector &&
+        animationLayer.querySelector('.dm-map-token');
+      if (!token) { animationLayer.innerHTML=''; return false; }
+      traveling = state;
+      hideSavedToken();
+      function finished() {
+        if (traveling !== state) return;
+        cancelTravel();
+        render();
+        notify('Movement completed to ' + helper.squareName(end.x,end.y) +
+          '. AP and Surge have been updated.');
+      }
+      if (typeof token.animate === 'function') {
+        const frames = path.map((point,index) => ({
+          offset:index/(path.length-1),
+          transform:'translate(' + ((point.x-start.x)*SIZE) + 'px, ' +
+            ((point.y-start.y)*SIZE) + 'px)'
+        }));
+        // Each neighboring square is its own keyframe; 170 ms per square
+        // makes travel visible without delaying verified state persistence.
+        const motion=token.animate(frames,{
+          duration:(path.length-1)*170,easing:'linear',fill:'forwards'
+        });
+        state.animation=motion;
+        motion.finished.then(finished,finished);
+      } else if (typeof window.setTimeout === 'function') {
+        let index=0;
+        function step() {
+          if (traveling !== state) return;
+          index++;
+          if(index>=path.length){ finished(); return; }
+          token.style.left=(path[index].x*SIZE+3)+'px';
+          token.style.top=(path[index].y*SIZE+3)+'px';
+          state.timer=window.setTimeout(step,170);
+        }
+        state.timer=window.setTimeout(step,170);
+      } else { cancelTravel(); return false; }
+      return true;
+    }
     function notify(text,isError = false) {
       notice.textContent = text;
       notice.className = 'dm-map-notice' + (isError ? ' error' : '');
@@ -52,6 +128,13 @@
       }
       const encounter = options.getEncounter();
       const map = helper.mapModel(game,maps);
+      if (traveling) {
+        const moving = encounter.actors && encounter.actors[traveling.actorId];
+        if (encounter.id !== traveling.encounterId ||
+            map.id !== traveling.mapId || !moving ||
+            moving.x !== traveling.endX || moving.y !== traveling.endY)
+          cancelTravel();
+      }
       if (lastPhase !== encounter.phase) {
         modePick.value = encounter.phase === 'active' ? 'move' : 'place';
         lastPhase = encounter.phase;
@@ -112,6 +195,7 @@
           helper.squareName(actor.x,actor.y) + '">' +
           escapeHtml(initials(actor.name)) + '</button>';
       }).join('');
+      if (traveling) hideSavedToken();
       if (preview && (preview.mapId !== map.id || preview.actorId !== selectedActorId ||
           preview.encounterId !== encounter.id || preview.revision !== encounter.revision ||
           modePick.value !== 'move')) preview = null;
@@ -146,12 +230,14 @@
       render();
     });
     modePick.addEventListener('change', () => {
+      cancelTravel();
       preview = null;
       notice.textContent = '';
       render();
     });
     function chooseMap(id) {
       if (!Object.prototype.hasOwnProperty.call(maps,id)) return;
+      cancelTravel();
       preview = null;
       if (options.selectMap(id)) {
         notify('Showing ' + (maps[id].name || id) + '.');
@@ -177,10 +263,22 @@
       if (!preview) return;
       const target = preview;
       preview = null;
-      const success = options.command('MoveToken',{actorId:target.actorId,x:target.x,y:target.y});
-      if (success) notify('Movement completed to ' +
-        helper.squareName(target.x,target.y) + '. AP and Surge have been updated.');
-      else notify('Move was rejected. Check the combat tracker and try again.',true);
+      const success = options.command('MoveToken',{
+        actorId:target.actorId,x:target.x,y:target.y
+      });
+      if (success) {
+        const encounter = options.getEncounter();
+        const actor = encounter.actors[target.actorId];
+        // Use the route recomputed by the validated command when available.
+        const committedPath = success.event && Array.isArray(success.event.path)
+          ? success.event.path : target.route.path;
+        const animating = animateCommittedMove(actor,committedPath,
+          encounter.id,target.mapId);
+        if (animating) notify('Moving ' + actor.name +
+          ' along the route. AP was saved when you confirmed.');
+        else notify('Movement completed to ' +
+          helper.squareName(target.x,target.y) + '. AP and Surge have been updated.');
+      } else notify('Move was rejected. Check the combat tracker and try again.',true);
       render();
     });
     stage.addEventListener('click', event => {
@@ -205,6 +303,7 @@
         options.message('Add a combatant before placing a token.',true);
         return;
       }
+      if (traveling) cancelTravel();
       const rect = stage.getBoundingClientRect();
       const x = Math.floor((event.clientX - rect.left) / SIZE);
       const y = Math.floor((event.clientY - rect.top) / SIZE);
