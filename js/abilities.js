@@ -425,7 +425,7 @@
         loadoutConfig.innerHTML = '<p class="ability-effect-hint">Choose a named form to customize its appearance and stat modifiers. Base uses your normal character.</p>';
         return;
       }
-      const oldDetails = loadoutConfig.querySelector('details');
+      const oldDetails = loadoutConfig.querySelector ? loadoutConfig.querySelector('details') : null;
       const expanded = oldDetails && oldDetails.open;
       const options = '<option value="">No linked portrait</option>' +
         (state.portraits || []).map((p,i) =>
