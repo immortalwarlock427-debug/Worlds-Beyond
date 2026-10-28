@@ -34,6 +34,25 @@
     state.activeAbilityLoadoutId = entry.id;
     return entry;
   }
+  // Select specific forms directly even when an ability starts as shared.
+  // Empty membership always means shared across all forms; specific selections
+  // replace that shared setting without a separate uncheck step.
+  function setLoadoutMembership(state, ability, mode, identifier, checked) {
+    if (!ability || !Array.isArray(state.abilityLoadouts) || !state.abilityLoadouts.length) return false;
+    const forms = state.abilityLoadouts;
+    if (mode === 'shared') {
+      if (checked) ability.loadoutIds = [];
+      else ability.loadoutIds = [forms.find(x => x.id === state.activeAbilityLoadoutId)?.id || forms[0].id];
+      return true;
+    }
+    if (mode !== 'member' || !forms.some(x => x.id === identifier)) return false;
+    const selected = new Set(ability.loadoutIds || []);
+    if (checked) selected.add(identifier);
+    else selected.delete(identifier);
+    ability.loadoutIds = [...selected];
+    return true; // Empty = shared again when the last selected form is cleared.
+  }
+
   function removeLoadout(state, identifier) {
     const before = (state.abilityLoadouts || []).length;
     state.abilityLoadouts = (state.abilityLoadouts || []).filter(x => x.id !== identifier);
@@ -352,12 +371,12 @@
       if (!forms.length) return '';
       const shared = !ability.loadoutIds || ability.loadoutIds.length === 0;
       return '<fieldset class="ability-memberships"><legend>Available in forms</legend>' +
-        '<p class="ability-effect-hint">Shared abilities work in every form. Otherwise select one or more forms.</p>' +
+        '<p class="ability-effect-hint">Choose any form to make this ability form-specific. Select multiple forms if needed; clearing them all makes it shared again.</p>' +
         '<label><input type="checkbox" data-loadout-shared ' + (shared ? 'checked' : '') + '> Shared across all forms</label>' +
         '<div class="ability-membership-list">' + forms.map(form =>
           '<label><input type="checkbox" data-loadout-member="' + esc(form.id) + '" ' +
             (!shared && ability.loadoutIds.includes(form.id) ? 'checked ' : '') +
-            (shared ? 'disabled ' : '') + '> ' + esc(form.name) + '</label>').join('') + '</div></fieldset>';
+            '> ' + esc(form.name) + '</label>').join('') + '</div></fieldset>';
     }
     function renderLoadouts() {
       const state = getState();
@@ -647,13 +666,9 @@
         const ability = cardElement && byId(cardElement.dataset.abilityId);
         if (!ability) return;
         if (member.hasAttribute('data-loadout-shared')) {
-          ability.loadoutIds = member.checked ? [] :
-            [getState().activeAbilityLoadoutId || getState().abilityLoadouts[0].id];
+          setLoadoutMembership(getState(), ability, 'shared', '', member.checked);
         } else {
-          const key = member.dataset.loadoutMember;
-          const selected = new Set(ability.loadoutIds);
-          if (member.checked) selected.add(key); else selected.delete(key);
-          ability.loadoutIds = Array.from(selected);
+          setLoadoutMembership(getState(), ability, 'member', member.dataset.loadoutMember, member.checked);
         }
         render();
         save();
@@ -749,7 +764,7 @@
 
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
-    createLoadout, removeLoadout, advanceTurn, resetForRest,
+    createLoadout, removeLoadout, setLoadoutMembership, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();

@@ -139,5 +139,57 @@ test('UI and character state store ability loadouts separately from portrait for
   }
   assert.match(app,/abilityLoadouts: \[\], activeAbilityLoadoutId: ''/);
   assert.match(css,/\.ability-loadouts/);
-  assert.match(h, /\?v=20261028-loadouts-v4/);
+  assert.match(h, /css\/sheet\.css\?v=[a-z0-9-]+/); // Asset version can change between releases.
+});
+
+
+test('clicking a form while Shared is selected makes it exclusive without an extra uncheck', () => {
+  const {api,state}=harness();
+  const warrior=api.createLoadout(state,'Warrior');
+  const mage=api.createLoadout(state,'Mage');
+  const a=ability('abilabcdefg','Aegis');
+  state.abilities.push(a);
+  assert.deepEqual(Array.from(a.loadoutIds),[]);
+  assert.equal(api.loadoutVisible(state,a),true);
+  assert.equal(api.setLoadoutMembership(state,a,'member',warrior.id,true),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[warrior.id]);
+  state.activeAbilityLoadoutId=mage.id;
+  assert.equal(api.loadoutVisible(state,a),false);
+  assert.equal(api.setLoadoutMembership(state,a,'member',mage.id,true),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[warrior.id,mage.id]);
+  assert.equal(api.setLoadoutMembership(state,a,'member',warrior.id,false),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[mage.id]);
+  assert.equal(api.setLoadoutMembership(state,a,'member',mage.id,false),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[],'Unchecking last selected form restores Shared');
+  assert.equal(api.loadoutVisible(state,a),true);
+});
+
+test('selecting Shared clears all specific forms without resetting ability trackers', () => {
+  const {api,state}=harness();
+  const warrior=api.createLoadout(state,'Warrior');
+  const mage=api.createLoadout(state,'Mage');
+  const a=ability('abilabcdefg','Aegis',[warrior.id,mage.id]);
+  a.cooldownLeft=2;a.usesLeft=1;a.durationLeft=1;a.capacityCurrent=2;
+  state.abilities.push(a);
+  assert.equal(api.setLoadoutMembership(state,a,'shared','',true),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[]);
+  assert.equal(a.cooldownLeft,2);
+  assert.equal(a.usesLeft,1);
+  assert.equal(a.durationLeft,1);
+  assert.equal(a.capacityCurrent,2);
+  assert.equal(api.setLoadoutMembership(state,a,'shared','',false),true);
+  assert.deepEqual(Array.from(a.loadoutIds),[mage.id],'Unchecking Shared chooses the current form');
+  assert.equal(api.setLoadoutMembership(state,a,'member','nonexistent',true),false);
+  assert.deepEqual(Array.from(a.loadoutIds),[mage.id]);
+});
+
+test('form membership checkboxes are interactive even when Shared is selected', () => {
+  const js=read('js/abilities.js');
+  const start=js.indexOf('function memberships(ability)');
+  const end=js.indexOf('function renderLoadouts()',start);
+  assert.ok(start>0 && end>start);
+  const markup=js.slice(start,end);
+  assert.match(markup,/data-loadout-member/);
+  assert.doesNotMatch(markup,/disabled/);
+  assert.match(markup,/!shared && ability\.loadoutIds\.includes\(form\.id\)/);
 });
