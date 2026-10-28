@@ -150,3 +150,70 @@ test('two local views share encounter storage and player writes do not edit shee
  assert.deepEqual(plain(dmAfter.tokens),plain(game.tokens));
  assert.deepEqual(plain(dmAfter.foes),plain(game.foes));
 });
+
+test('player browser controls preview, confirm and propagate movement across local game saves',()=>{
+  const {w,state,game}=setup();
+  const store=new Map(), events={};
+  w.localStorage={
+    getItem(k){return store.has(k)?store.get(k):null;},
+    setItem(k,v){store.set(k,v);},
+    removeItem(k){store.delete(k);}
+  };
+  w.sessionStorage={getItem(){return null;},setItem(){}};
+  w.confirm=()=>true;
+  w.matchMedia=()=>({matches:true});
+  w.addEventListener=(type,fn)=>{events['window:'+type]=fn;};
+  const repository=w.WBPersistence.createLocalRepositories(()=>w.localStorage);
+  repository.characters.save({fields:{charName:'Stored sheet'},hist:{}});
+  repository.games.save({...game,encounter:state});
+  const listener={},elements={};
+  const ids=['playerMapBoard','playerMapTokens','playerMapAnimation',
+    'playerFeedback','playerSeat','playerRefresh','playerStatus',
+    'playerTurnHeading','playerTurnHint','playerEndTurn','playerSpendAP',
+    'playerStats','playerMapGrid','playerMovePreview','playerMapPath',
+    'playerMoveText','playerMapStatus','playerMapHelp','playerMoveCancel',
+    'playerMoveConfirm','playerSpendForm'];
+  for(const id of ids){
+    elements['#'+id]={
+      innerHTML:'',textContent:'',value:'',hidden:false,disabled:false,
+      style:{},classList:{toggle(){}},
+      addEventListener(type,fn){listener[id+':'+type]=fn;},
+      getBoundingClientRect(){return {left:0,top:0};},
+      querySelector(){return null;}
+    };
+  }
+  const doc={
+    querySelector(id){if(!elements[id])throw Error(id);return elements[id];},
+    addEventListener(type,fn){listener['document:'+type]=fn;}
+  };
+  vm.runInNewContext(read('js/player.js'),{
+    window:w,document:doc,Date,Math,Number,crypto:undefined
+  });
+  assert.equal(elements['#playerSeat'].value,'hero');
+  assert.match(elements['#playerTurnHeading'].textContent,/Your turn/);
+  assert.match(elements['#playerStats'].innerHTML,/20 \/ 20/);
+  assert.doesNotMatch(elements['#playerStats'].innerHTML,/55/);
+  assert.match(elements['#playerMapTokens'].innerHTML,/Warden/);
+  listener['playerMapBoard:click']({clientX:5*36+2,clientY:5*36+2});
+  assert.equal(elements['#playerMovePreview'].hidden,false);
+  assert.equal(w.WBGameState.normalizeGame(repository.games.load()).encounter.actors.hero.x,3,
+    'Preview must not change the saved position');
+  listener['playerMoveConfirm:click']();
+  const after=w.WBGameState.normalizeGame(repository.games.load());
+  assert.equal(after.encounter.actors.hero.x,5);
+  assert.equal(after.encounter.actors.hero.apAvail,5);
+  assert.equal(after.encounter.actors.boss.hp,55);
+  assert.deepEqual(plain(repository.characters.load()),{fields:{charName:'Stored sheet'},hist:{}});
+  // Simulate the DM tab changing the encounter and sending a same-origin
+  // storage notification to the Player Preview.
+  const turn=w.WBEncounter.applyAction(after.encounter,{
+    id:'dm-end',type:'EndTurn',actorId:'hero',
+    expectedRevision:after.encounter.revision
+  },dm);
+  assert.equal(turn.ok,true);
+  repository.games.save({...after,encounter:turn.state});
+  events['window:storage']({key:w.WBPersistence.GAME_KEY});
+  assert.match(elements['#playerTurnHeading'].textContent,/Now acting: Aran/);
+  assert.equal(elements['#playerEndTurn'].disabled,true);
+  assert.equal(elements['#playerSpendAP'].disabled,true);
+});
