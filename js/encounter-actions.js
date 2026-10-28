@@ -28,6 +28,10 @@
       trauma: value.trauma === undefined ? 0 : value.trauma,
       apMax: value.apMax === undefined ? 4 : value.apMax,
       apAvail: value.apAvail === undefined ? (value.apMax === undefined ? 4 : value.apMax) : value.apAvail,
+      speedFt: value.speedFt === undefined ? 5 : value.speedFt,
+      surgeMax: value.surgeMax === undefined ? 0 : value.surgeMax,
+      move: value.move == null ? { ft:0, left:0, surge:0 } :
+        { ft:value.move.ft, left:value.move.left, surge:value.move.surge },
       apGiven: value.apGiven == null ? null : {
         n: value.apGiven.n, fresh: !!value.apGiven.fresh
       },
@@ -44,6 +48,12 @@
         !integer(fields.trauma, 0, 100000) ||
         !integer(fields.apMax, 0, 40) ||
         !integer(fields.apAvail, 0, fields.apMax) ||
+        !integer(fields.speedFt, 0, 10000) ||
+        !integer(fields.surgeMax, 0, 2) ||
+        !(value.move == null || isRecord(value.move)) ||
+        !integer(fields.move.ft, 0, 1000000) ||
+        !integer(fields.move.left, 0, 10000) ||
+        !integer(fields.move.surge, 0, fields.surgeMax) ||
         !integer(fields.initiative, -10000, 10000) ||
         !(fields.initiativeBonus === null || integer(fields.initiativeBonus, -10000, 10000)) ||
         !(fields.mapId === null || (validId(fields.mapId) && fields.mapId.length <= 40)) ||
@@ -102,6 +112,7 @@
   }
   function startTurn(actor) {
     actor.apAvail = actor.apMax;
+    actor.move = { ft:0, left:0, surge:0 };
     if (actor.apGiven && actor.apGiven.n > 0) {
       actor.apGiven = actor.apGiven.fresh
         ? { n: actor.apGiven.n, fresh: false } : null;
@@ -164,7 +175,7 @@
         if (!actor) return fail('ACTOR_NOT_FOUND');
         if (!isRecord(action.changes) || !Object.keys(action.changes).length ||
             Object.keys(action.changes).some(key =>
-              !['name','hp','maxHp','ar','apMax','initiative','deathThreshold'].includes(key)))
+              !['name','hp','maxHp','ar','apMax','initiative','deathThreshold','speedFt','surgeMax'].includes(key)))
           return fail('INVALID_ACTOR');
         const updated = actorFrom({
           ...actor, ...action.changes,
@@ -221,6 +232,38 @@
         Object.assign(actor, combat().spendAp(actor, actor.apAvail, action.cost));
         event.spent = action.cost;
         event.remaining = combat().apAvailable(actor, actor.apAvail);
+        break;
+      }
+      case 'MoveToken': {
+        if (state.phase !== 'active') return fail('ENCOUNTER_NOT_ACTIVE');
+        if (!active) return fail('NOT_CURRENT_TURN');
+        if (!canAct) return fail('NOT_YOUR_ACTOR');
+        if (!integer(action.x,0,999) || !integer(action.y,0,999))
+          return fail('INVALID_POSITION');
+        const map = context.map;
+        if (!isRecord(map) || !validId(map.id) ||
+            !integer(map.cols,1,60) || !integer(map.rows,1,60) ||
+            !isRecord(map.def) || !window.WBEncounterMap)
+          return fail('MAP_REQUIRED');
+        if (actor.hp <= 0) return fail('ACTOR_UNCONSCIOUS');
+        const route = window.WBEncounterMap.movementRoute(
+          state,map,action.actorId,action.x,action.y);
+        if (!route.ok) return fail(route.error);
+        // AP, Surge charges and leftover movement are calculated by WBCombat,
+        // never accepted from a client-supplied cost or route.
+        const freeLeft=Math.max(0,actor.surgeMax-actor.move.surge);
+        const plan=combat().movePlan(route.ft,actor.speedFt,actor.move,freeLeft);
+        if (!actor.speedFt && plan.fromLeft < plan.ft) return fail('NO_MOVEMENT');
+        if (plan.paid > combat().apAvailable(actor,actor.apAvail))
+          return fail('INSUFFICIENT_AP');
+        Object.assign(actor,combat().spendAp(actor,actor.apAvail,plan.paid));
+        actor.move=combat().movementAfter(actor.move,route.ft,plan);
+        actor.x=action.x;actor.y=action.y;
+        event.x=actor.x;event.y=actor.y;event.ft=route.ft;
+        event.rough=route.rough;event.path=route.path;
+        event.paid=plan.paid;event.free=plan.free;
+        event.left=actor.move.left;
+        event.remaining=combat().apAvailable(actor,actor.apAvail);
         break;
       }
       case 'GrantAP': {
