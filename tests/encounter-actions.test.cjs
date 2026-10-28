@@ -152,3 +152,14 @@ test('game normalizer preserves optional DM encounter, and no encounter leaves o
   assert.ok(html.indexOf('src="js/combat-core.js') < html.indexOf('src="js/encounter-actions.js'));
   assert.ok(html.indexOf('src="js/encounter-actions.js') < html.indexOf('src="js/app.js'));
 });
+
+test('unregistered inherited object keys cannot masquerade as encounter actors', () => {
+  let { e, state } = setup();
+  assert.equal(command(e, state, 'ApplyDamage', { actorId: 'constructor', rawDamage: 1 }).error, 'ACTOR_NOT_FOUND');
+  assert.equal(command(e, state, 'SetHealth', { actorId: 'toString', hp: 5 }).error, 'ACTOR_NOT_FOUND');
+  assert.equal(command(e, state, 'AddActor', { actor: { id: '__proto__', name: 'Exploit' } }).error, 'INVALID_ACTOR');
+  const r = command(e, state, 'AddActor', { actor: { id: 'constructor', name: 'Valid character' } });
+  assert.equal(r.ok, true);
+  assert.equal(r.state.actors.constructor.name, 'Valid character');
+  assert.equal(e.normalizeEncounter(r.state).actors.constructor.name, 'Valid character');
+});
