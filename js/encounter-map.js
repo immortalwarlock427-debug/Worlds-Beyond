@@ -1,6 +1,6 @@
 /* Worlds Beyond encounter map model.
- * Pure, shared map geometry and DM placement checks. This is manual DM
- * positioning, not player movement or a path/AP spending engine.
+ * Pure geometry, placement checks and natural shortest-path routing.
+ * Actual movement and AP spending are validated by WBEncounter.
  */
 (function () {
   'use strict';
@@ -65,68 +65,87 @@
     const occupied = new Set(tokenActors(encounter,map)
       .filter(a=>a.id!==actorId).map(a=>a.y*map.cols+a.x));
     const width=map.cols, total=width*map.rows;
-    const start=actor.y*width+actor.x, finish=toY*width+toX;
-    const dist=new Array(total).fill(Infinity),prev=new Int32Array(total).fill(-1);
-    // Dijkstra over 8 neighboring five-foot squares. Unlike a visual path
-    // sent by the browser, this route is calculated from trusted map geometry.
+    const startCell=actor.y*width+actor.x, finish=toY*width+toX;
+    // Paths with the same number of movement feet should look natural:
+    // prefer fewer unnecessary diagonals, then fewer direction changes, then
+    // cells closer to the direct line to the destination. To compare turns
+    // correctly, each (cell, incoming-direction) needs its own Dijkstra state.
+    const DIRS=CELLS.length, stride=DIRS+1, origin=startCell*stride+DIRS;
+    const best=new Array(total*stride).fill(null);
+    const previous=new Int32Array(total*stride).fill(-1);
+    const compare=(a,b)=>{
+      for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]-b[i];
+      return 0;
+    };
     const heap=[];
-    const push=(d,pos)=>{
-      heap.push([d,pos]);
+    const push=(score,index)=>{
+      heap.push({score,index});
       let i=heap.length-1;
       while(i>0){
-        const p=(i-1)>>1;
-        if(heap[p][0]<=heap[i][0])break;
-        [heap[p],heap[i]]=[heap[i],heap[p]];i=p;
+        const parent=(i-1)>>1;
+        if(compare(heap[parent].score,heap[i].score)<=0)break;
+        [heap[parent],heap[i]]=[heap[i],heap[parent]];i=parent;
       }
     };
     const pop=()=>{
-      const first=heap[0],last=heap.pop();
+      const top=heap[0],last=heap.pop();
       if(heap.length){
         heap[0]=last;let i=0;
         for(;;){
-          const l=i*2+1,r=l+1;let small=i;
-          if(l<heap.length&&heap[l][0]<heap[small][0])small=l;
-          if(r<heap.length&&heap[r][0]<heap[small][0])small=r;
-          if(small===i)break;
-          [heap[i],heap[small]]=[heap[small],heap[i]];i=small;
+          const l=2*i+1,r=l+1;let pick=i;
+          if(l<heap.length&&compare(heap[l].score,heap[pick].score)<0)pick=l;
+          if(r<heap.length&&compare(heap[r].score,heap[pick].score)<0)pick=r;
+          if(pick===i)break;
+          [heap[i],heap[pick]]=[heap[pick],heap[i]];i=pick;
         }
       }
-      return first;
+      return top;
     };
-    dist[start]=0;push(0,start);
+    const dxGoal=toX-actor.x,dyGoal=toY-actor.y;
+    best[origin]=[0,0,0,0];push(best[origin],origin);
+    let finished=-1;
     while(heap.length){
-      const [distance,idx]=pop();
-      if(distance!==dist[idx])continue;
-      if(idx===finish)break;
-      const x=idx%width,y=Math.floor(idx/width);
-      for(const [dx,dy] of CELLS){
-        const nx=x+dx,ny=y+dy;
+      const {score,index}=pop();
+      if(compare(score,best[index])!==0)continue;
+      const cell=Math.floor(index/stride),dir=index%stride;
+      if(cell===finish){finished=index;break;}
+      const x=cell%width,y=Math.floor(cell/width);
+      for(let i=0;i<DIRS;i++){
+        const [dx,dy]=CELLS[i],nx=x+dx,ny=y+dy;
         if(nx<0||ny<0||nx>=map.cols||ny>=map.rows)continue;
-        const next=ny*width+nx;
-        if(blocked(map,nx,ny)||occupied.has(next))continue;
+        const nextCell=ny*width+nx;
+        if(blocked(map,nx,ny)||occupied.has(nextCell))continue;
         if(dx&&dy&&blocked(map,x+dx,y)&&blocked(map,x,y+dy))continue;
-        const terrain=map.def && map.def.terrain && map.def.terrain[ny];
-        const step=terrain&&ROUGH.includes(terrain[nx])?10:5;
-        const nextDist=distance+step;
-        if(nextDist<dist[next]){
-          dist[next]=nextDist;prev[next]=idx;push(nextDist,next);
+        const terrain=map.def&&map.def.terrain&&map.def.terrain[ny];
+        const rough=!!(terrain&&ROUGH.includes(terrain[nx]));
+        const deviation=Math.abs((nx-actor.x)*dyGoal-(ny-actor.y)*dxGoal);
+        const nextScore=[
+          score[0]+(rough?10:5),
+          score[1]+(dx&&dy?1:0),
+          score[2]+(dir!==DIRS&&dir!==i?1:0),
+          score[3]+deviation
+        ];
+        const next=nextCell*stride+i;
+        if(!best[next]||compare(nextScore,best[next])<0){
+          best[next]=nextScore;previous[next]=index;push(nextScore,next);
         }
       }
     }
-    if(!Number.isFinite(dist[finish]))return {ok:false,error:'NO_PATH'};
+    if(finished<0)return {ok:false,error:'NO_PATH'};
     const path=[];
-    let idx=finish,rough=0;
-    while(idx!==-1){
-      const x=idx%width,y=Math.floor(idx/width);
+    let rough=0,index=finished;
+    while(index!==-1){
+      const cell=Math.floor(index/stride);
+      const x=cell%width,y=Math.floor(cell/width);
       path.push({x,y});
-      if(idx!==start){
+      if(cell!==startCell){
         const terrain=map.def&&map.def.terrain&&map.def.terrain[y];
         if(terrain&&ROUGH.includes(terrain[x]))rough++;
       }
-      idx=prev[idx];
+      index=previous[index];
     }
     path.reverse();
-    return {ok:true,ft:dist[finish],rough,path};
+    return {ok:true,ft:best[finished][0],rough,path};
   }
 
   window.WBEncounterMap={mapModel,blocked,tokenActors,checkPlacement,squareName,movementRoute};
