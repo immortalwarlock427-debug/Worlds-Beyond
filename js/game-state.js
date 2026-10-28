@@ -44,6 +44,12 @@
       grid: v.grid != null && isFinite(Number(v.grid)) ? Number(v.grid) : null,
       terrainOn: !!v.terrainOn, reachOff: !!v.reachOff
     };
+    // Encounter data belongs to the game save, never to the character.
+    // Legacy games omit this optional field entirely.
+    if (g.encounter != null && window.WBEncounter) {
+      const encounter = window.WBEncounter.normalizeEncounter(g.encounter);
+      if (encounter) out.encounter = encounter;
+    }
     return out;
   }
   window.WBGameState = { blankGame, normalizeGame };
