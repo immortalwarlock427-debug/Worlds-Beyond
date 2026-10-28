@@ -1,0 +1,8 @@
+# Worlds-Beyond is published by GitHub Pages, not Netlify production.
+# Keep Netlify connected for free pull-request Deploy Previews.
+# Netlify's ignore command exits 0 to skip, 1 to continue.
+# Production deploys normally cost 15 credits; previews cost 0 deploy credits.
+#
+# If we later move live hosting to Netlify, remove this section.
+[context.production]
+  ignore = "exit 0"
