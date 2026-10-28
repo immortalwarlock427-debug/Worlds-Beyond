@@ -19,7 +19,7 @@
 - Status Effects view: separate third tab showing active timed ability effects by source with applied bonuses and remaining turns, plus manually entered buffs, debuffs and conditions with optional timers. Effect-ending controls and status expiry work with the character save. Future: built-in combat/health conditions, per-effect target selection, conditions that change combat calculations, status presets, richer filtering.
 - A conditions tracker, after the Exhaustion revamp.
 - Character export/import/clear moved to the top, accessible from Sheet and Battlemap. Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
-- Ability Library enhancements: type, category, resource-cost, AP-cost and readiness/cooldown filters, sort order, and compact list implemented in draft PR. Later: tags, groups, custom ordering, saved filter presets, batch actions for 30–50+ skills.
+- Ability Library enhancements: type, category, resource-cost, AP-cost and readiness/cooldown filters, sort order, and compact list implemented. **Ability Forms v1 (current PR):** create named forms/loadouts, assign abilities to one or more, share abilities across all forms, and switch available skills without resetting trackers; separate from portrait forms. Next: per-form resources, mechanical gear/stat swaps, tags/groups/custom ordering, saved filter presets and batch actions.
 
 ## Website
 
