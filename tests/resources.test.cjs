@@ -165,6 +165,16 @@ test('resource adjustment amount persists through actions, rerenders and charact
   const { api } = setup();
   api.normalizeState(imported);
   assert.equal(imported.resources[0].amount, 10);
+  // Each pool has its own amount, so adjusting one must not change the other.
+  el('addResource').emit('click');
+  const other = state.resources[1];
+  fireAction(el, other.id, 'spend', '7');
+  assert.equal(other.amount, 7);
+  assert.equal(other.current, 93);
+  assert.equal(r.amount, 10);
+  manager.render();
+  assert.match(el('resourceList').innerHTML, /value="10" data-resource-amount/);
+  assert.match(el('resourceList').innerHTML, /value="7" data-resource-amount/);
 });
 
 test('turn recovery and long rest obey individual preferences', () => {
