@@ -2,6 +2,10 @@
 
 **Status:** phase-0 persistence repository and DOM-free game normalizer are now implemented in the corresponding refactor PR. The DM screen, cloud services, accounts, authorization and live sync are not implemented. The existing GitHub Pages character sheet and offline exports remain the supported experience until new pieces are tested.
 
+## Shared combat-rules foundation (phase-1 extraction)
+- `js/combat-core.js` now supplies pure functions for scores/modifiers, current gear, AP spending/refunds, and movement planning. The main sheet delegates to these functions instead of maintaining separate formulas. Ability/form effects are supplied explicitly from `WBAbilities`.
+- This still leaves attacks, damage, defenses and the encounter action protocol to extract. Do not ship a DM screen that guesses these values or duplicates their rules. The combat core has no database, permission, or cloud-sync capabilities.
+
 ## Guiding rules
 
 1. **One authoritative rules engine.** Extract calculations, item validation, ability activation and form switching from the DOM-heavy `js/app.js` into pure, tested modules that accept a character state and return results/actions. The Sheet, DM view and multiplayer processes must not duplicate their own rules. Keep custom STR/VIT/DEX/AGL/INT/WIS/CHA/FTH and AP mechanics; this is not a generic D&D engine.
