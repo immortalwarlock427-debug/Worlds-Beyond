@@ -1321,3 +1321,17 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .ability-item.ability-inactive { opacity:.75; }
 .ability-item.ability-inactive .ability-quick-use { filter:grayscale(1); cursor:not-allowed; }
 @media(max-width:460px) { .ability-loadouts { padding:10px; } .ability-loadouts-bar { align-items:stretch; } .ability-loadouts-bar button { flex:1 1 auto; } }
+
+/* Second-stage mechanical forms: optional portrait sync and derived stat bonuses. */
+.ability-loadout-config { min-width:0; }
+.loadout-mechanics { border:1px solid var(--rule); border-radius:4px; padding:9px 11px; background:var(--sheet); }
+.loadout-mechanics > summary { cursor:pointer; color:var(--brass); font:700 13px var(--font-label); }
+.loadout-mechanics > summary:focus-visible { outline:2px solid var(--brass); outline-offset:3px; }
+.loadout-mechanics-content { display:grid; gap:10px; padding-top:12px; }
+.loadout-mechanics-content > .ability-field { max-width:440px; }
+.loadout-mechanics-content select, .loadout-stat-grid input {
+  box-sizing:border-box; background:var(--field); border:1px solid var(--rule);
+  color:var(--ink); padding:7px 8px; border-radius:4px; font:inherit; width:100%; min-width:0;
+}
+.loadout-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+@media(max-width:520px) { .loadout-stat-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
