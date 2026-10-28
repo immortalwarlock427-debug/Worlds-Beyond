@@ -400,3 +400,10 @@ See [ROADMAP.md](ROADMAP.md).
 - `WBEncounterMap.movementRoute` computes shortest routes across eight adjacent 5-ft squares, charging 10 ft for rubble, water and bones, and rejecting walls, blocked corners, occupied cells and inaccessible destinations. Route costs are recomputed in the validated `WBEncounter.MoveToken` command; never accept a browser-supplied cost.
 - `WBCombat.movePlan`, `movementAfter` and `spendAp` handle leftover feet, Command AP priority, and free Surge AP (2/turn when effective AGL reaches 21). Turn starts reset the encounter's movement tracker; move commands require the actor's own turn and a placed token on the correct map.
 - Character imports snapshot Movement ft/AP from effective AGL, gear, form/ability bonuses and manual override. NPC movement is editable in setup. Movement does not synchronize back to player character sheets or `game.tokens`. No cloud account or true player-authorized multiplayer yet.
+
+## PR #25 preview fixes (movement UX and roster continuity)
+
+- Fixed the native Map dropdown that looked blank or only showed a popup border on some browsers by replacing it with explicit map-choice buttons; same saved map semantics.
+- Combat movement now selects the current initiative combatant automatically; another actor cannot be moved using AP outside their own turn. Inactive/finished encounters disable Combat movement and explain how to reopen setup. Movement/path errors also appear beside the map, instead of only in the far-away top feedback banner.
+- Added DM-only `ReopenSetup` command and **Reuse roster / Edit setup** button after Finish combat. It preserves imported actors, health, map positions and initiative; refreshes AP/Surge/leftover movement and returns to setup where new NPCs/players and value edits are allowed. **New empty roster** still clears everything after confirmation.
+- Added browser-interaction and encounter regression tests for map switching, turn auto-selection, movement confirmation, roster reuse and restarting. Existing character saves and game tokens are untouched.
