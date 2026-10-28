@@ -93,3 +93,32 @@ test('HTML loads abilities before app, saved in character rather than game', () 
   assert.match(app, /WBAbilities\.init\(\(\) => state, save\)/);
   assert.match(app, /JSON\.stringify\(\{ format: 'worlds-beyond-character'/);
 });
+
+
+test('optional uses remain blank for unlimited abilities, while zero remains an explicit limit', () => {
+  const { api } = harness();
+  const state = { abilities: [
+    { name: 'Mana powered', apCost: 5, resourceCost: 25, uses: '' },
+    { name: 'Exhausted ability', uses: 0 }
+  ] };
+  api.normalizeState(state);
+  assert.equal(state.abilities[0].uses, '');
+  assert.equal(state.abilities[1].uses, 0);
+  const exported = JSON.parse(JSON.stringify(state));
+  api.normalizeState(exported);
+  assert.equal(exported.abilities[0].uses, '');
+  assert.equal(exported.abilities[1].uses, 0);
+  const html = read('js/abilities.js');
+  assert.match(html, /Uses \/ charges \(blank = unlimited\)/);
+});
+
+test('character file actions are grouped at the top with unique IDs and confirmations', () => {
+  const html = read('index.html');
+  const navIndex = html.indexOf('id="viewNav"');
+  const actionIndex = html.indexOf('class="foot sheet-actions"');
+  const mapIndex = html.indexOf('id="mapSec"');
+  assert.ok(navIndex < actionIndex && actionIndex < mapIndex);
+  for (const id of ['exportBtn', 'importBtn', 'clearBtn', 'clearConfirm', 'importConfirm', 'footBtns', 'importFile', 'saveStatus']) {
+    assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id + ' should be unique');
+  }
+});
