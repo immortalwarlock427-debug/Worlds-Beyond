@@ -5,6 +5,7 @@
 - `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link).
 - `css/sheet.css` holds every style. Colors are tokens on `:root` with a dark theme.
 - `js/maps.js` defines `window.WB_MAPS`, the maps that come with the site. Add a map there; the app needs no change.
+- `js/abilities.js` owns the player-built Ability Library (search, categories, favorites, metadata); it stores data on the character, not the game, and does not change combat math.
 - `js/resources.js` owns the optional custom resource manager; its resources live on the character, not the game. Existing Mana/Holy Power values remain intact and may be hidden.
 - `js/app.js` is the main application script for now. Its sections, in order: rules data (stats, milestones, gear),
   loading and saving, rules math, pools, trackers, AP and movement, Command, defenses, dice and attacks, health and
