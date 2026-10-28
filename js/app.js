@@ -4144,7 +4144,14 @@
       const o = state.over[id];
       const manual = isSet(o);
       el.classList.toggle('manual', manual);
-      if (id === 'armor' || id === 'evasion') el.classList.toggle('ability-adjusted', !manual && !!window.WBAbilities.effectBonus(state, id));
+      const statKey = id.startsWith('mod-') ? id.slice(4) : null;
+      const affectedStat = statKey ? statKey :
+        id === 'evasion' || id === 'speed' ? 'AGL' :
+        id === 'armor' ? 'VIT' : null;
+      if (id === 'armor' || id === 'evasion' || statKey)
+        el.classList.toggle('ability-adjusted', !manual &&
+          (!!window.WBAbilities.effectBonus(state, id) ||
+            !!(affectedStat && window.WBAbilities.effectBonus(state, 'stat', affectedStat))));
       el.title = manual ? 'Set by hand. Clear it to go back to the automatic value.' : '';
       if (el === active) return;
       if (id === 'speed') {
