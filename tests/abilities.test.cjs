@@ -90,7 +90,7 @@ test('HTML loads abilities before app, saved in character rather than game', () 
   assert.match(html, /id="abilitySection"/);
   assert.match(app, /abilities: \[\]/);
   assert.match(app, /WBAbilities\.normalizeState\(state\)/);
-  assert.match(app, /WBAbilities\.init\(\(\) => state, save\)/);
+  assert.match(app, /WBAbilities\.init\(\(\) => state, save,/);
   assert.match(app, /JSON\.stringify\(\{ format: 'worlds-beyond-character'/);
 });
 
