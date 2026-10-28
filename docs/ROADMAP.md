@@ -63,3 +63,10 @@ See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md). **Before adding cloud
 - `WBEncounter` defines the DM-owned encounter record and validates action IDs/revisions, actor ownership hints, turn order and numeric payloads. It reuses shared combat math for AP, armor, bleeding and Death's Mercy. An optional `game.encounter` field round-trips through `WBGameState` without changing old saves.
 - **Next feature:** first visible offline DM screen: import several exported character files into encounter snapshots; manage NPCs, initiative, health, AP and turns; use `WBEncounter.applyAction`. Later add a shared battlemap, trusted player movement, real authentication, cloud saves, multi-device conflicts and live play.
 - Dice polish idea: 2D/3D animated d20/dice result layer driven by deterministic roll result events, not by each client's independent animation RNG.
+
+## First offline DM Room delivered (Draft 32)
+
+- Added `dm.html` with separate DM navigation, mobile-friendly multiple-character JSON import and manual NPC creation.
+- Setup roster edits name, HP/max HP, AR, AP max, Death Threshold and initiative total; combat view tracks current actor/round, AP spending, raw-damage-per-hit, healing, HP corrections, and stabilization.
+- Data stays in optional `game.encounter`, imported player sheets remain unchanged, and the underlying command engine verifies revisions before every mutation. Sheet Health history logic is reused through `WBCombat`.
+- **Next:** improve DM encounter history/export, connect shared battlemap tokens and player movement with validated path/AP, then begin secure cloud authentication, character syncing and real-time sessions. Animated dice can be added to presentation later while the roll result remains separate from the animation.
