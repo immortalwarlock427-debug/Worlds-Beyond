@@ -4105,22 +4105,47 @@
     mapWrap.scrollLeft = Math.max(0, MAP_EDGE + ms.x * S + S / 2 - mapWrap.clientWidth / 2);
     mapWrap.scrollTop = Math.max(0, MAP_EDGE + ms.y * S + S / 2 - mapWrap.clientHeight / 2);
   }
-  // Sheet / Status / Battlemap views, linked as #sheet, #status or #map.
-  function setView(v) {
-    view = v === 'map' ? 'map' : v === 'status' ? 'status' : 'sheet';
-    mainEl.classList.toggle('view-map', view === 'map');
-    mainEl.classList.toggle('view-status', view === 'status');
-    document.querySelectorAll('#viewNav button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
-    if (view === 'map') { mapTarget = null; renderMap(true); centerToken(); }
-    if (view === 'status') statusManager.render();
+  // Independent destinations: Character Sheet (with its own sub-tabs) and Battlemap.
+  // Keep old #sheet, #status and #map URLs usable alongside #sheet/abilities etc.
+  const SHEET_TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses'];
+  let activeSheetTab = 'overview';
+  function setView(destination, tab) {
+    view = destination === 'map' ? 'map' : 'sheet';
+    if (tab && SHEET_TABS.includes(tab)) activeSheetTab = tab;
+    const onSheet = view === 'sheet';
+    mainEl.classList.toggle('view-map', !onSheet);
+    document.querySelectorAll('#viewNav button').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+    document.querySelectorAll('#sheetTabs button').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.sheetTab === activeSheetTab)));
+    document.querySelectorAll('[data-sheet-section]').forEach(section => {
+      section.hidden = !onSheet || section.dataset.sheetSection !== activeSheetTab;
+    });
+    if (!onSheet) { mapTarget = null; renderMap(true); centerToken(); }
+    if (onSheet && activeSheetTab === 'statuses') statusManager.render();
   }
-  $('#viewNav').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-view]');
-    if (!b) return;
-    try { location.hash = b.dataset.view; } catch (err) { /* hash not available */ }
-    setView(b.dataset.view);
+  function viewFromHash() {
+    const hash = location.hash.replace(/^#/, '').toLowerCase();
+    if (hash === 'map') setView('map');
+    else if (hash === 'status') setView('sheet', 'statuses'); // legacy Status link
+    else if (hash.startsWith('sheet/')) setView('sheet', hash.slice(6));
+    else setView('sheet', 'overview'); // legacy #sheet and default
+  }
+  $('#viewNav').addEventListener('click', e => {
+    const button = e.target.closest('button[data-view]');
+    if (!button) return;
+    const hash = button.dataset.view === 'map' ? '#map' : '#sheet/' + activeSheetTab;
+    try { location.hash = hash; } catch (err) { /* hash not available */ }
+    setView(button.dataset.view, activeSheetTab);
   });
-  window.addEventListener('hashchange', () => setView(location.hash === '#map' ? 'map' : location.hash === '#status' ? 'status' : 'sheet'));
+  $('#sheetTabs').addEventListener('click', e => {
+    const button = e.target.closest('button[data-sheet-tab]');
+    if (!button || !SHEET_TABS.includes(button.dataset.sheetTab)) return;
+    const tab = button.dataset.sheetTab;
+    try { location.hash = '#sheet/' + tab; } catch (err) { /* hash not available */ }
+    setView('sheet', tab);
+  });
+  window.addEventListener('hashchange', viewFromHash);
   let resizeT = null;
   window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => renderMap(), 150); });
 
@@ -4445,5 +4470,5 @@
 
   fillInputs();
   refreshAll();
-  setView(location.hash === '#map' ? 'map' : location.hash === '#status' ? 'status' : 'sheet');
+  viewFromHash();
 })();
