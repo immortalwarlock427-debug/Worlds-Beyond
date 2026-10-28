@@ -98,7 +98,7 @@ test('new map representation roundtrips inside game without rewriting other reco
 });
 test('DM map has controls, terrain display and browser click-to-place wiring',()=>{
  const html=read('dm.html'),css=read('css/dm.css'),controller=read('js/dm.js'),mapUi=read('js/dm-map.js');
- for(const id of ['dmMapPick','dmMapChoices','dmMapNotice','dmMapActor','dmMapClear','dmMapBoard','dmMapGrid','dmMapTokens','dmMapStatus']){
+ for(const id of ['dmMapPick','dmMapChoices','dmMapNotice','dmMapAnimation','dmMapActor','dmMapClear','dmMapBoard','dmMapGrid','dmMapTokens','dmMapStatus']){
    assert.ok(html.includes('id="'+id+'"'),'missing map control '+id);
  }
  for(const resource of ['js/maps.js','js/encounter-map.js','js/dm-map.js']){
@@ -122,7 +122,7 @@ test('render and click board use selected actor and map coordinates without free
  const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
    'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
    'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp',
-   'dmMapChoices','dmMapNotice'];
+   'dmMapChoices','dmMapNotice','dmMapAnimation'];
  for(const id of ids){
    elements['#'+id]={
      innerHTML:'',textContent:'',value:'',disabled:false,style:{},
