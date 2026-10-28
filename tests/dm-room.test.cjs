@@ -42,6 +42,7 @@ test('imports real historical Health/AP/Armor formulas without touching player s
   assert.equal(p.actor.apAvail,14);
   assert.equal(p.actor.initiative,0,'Initiative total must be entered, not treated as a rolled value');
   assert.equal(p.initiativeBonus,2);
+  assert.equal(p.actor.initiativeBonus,2,'Import saves the modifier for DM reference');
   assert.deepEqual(plain(p.warnings),[]);
 });
 test('manual overrides, missing advances and older exported characters are supported', () => {
