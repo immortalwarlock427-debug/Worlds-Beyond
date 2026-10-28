@@ -156,3 +156,21 @@
   .dm-map-toolbar label { min-width: 130px; }
   .dm-map-toolbar button { width: 100%; }
 }
+
+/* Confirmable AP movement, with client-only visual path feedback. */
+.dm-move-preview {
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:1px solid var(--brass);border-radius:4px;
+  background:var(--brass-soft);padding:10px 14px;
+}
+.dm-move-preview p { flex:1 1 250px;margin:0;color:var(--ink); }
+.dm-map-path {position:absolute;inset:0;z-index:2;pointer-events:none;}
+.dm-path-cell {
+  position:absolute;width:36px;height:36px;
+  background:rgba(95,196,177,.33);
+  outline:1px solid rgba(123,227,201,.8);
+  outline-offset:-2px;
+}
+.dm-path-cell.destination { background:rgba(242,196,107,.55);outline:2px solid #f2c46b; }
+.dm-map-tokens {z-index:3;}
+@media(max-width:550px){.dm-move-preview button{flex:1;}}
