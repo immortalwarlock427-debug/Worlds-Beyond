@@ -141,5 +141,6 @@ test('cloud save page loads private adapter without changing sheet or DM scripts
  for(const file of ['index.html','dm.html','player.html'])
    assert.match(read(file),/href="cloud\.html"/);
  const controller=read('js/cloud.js');
- assert.match(controller,/repo\.save\(\{\.\.\.fresh/ , 'noop');
+ assert.match(controller,/local\.save\(latest\.document\)/);
+ assert.match(controller,/cloud\.save\(state,row\?row\.revision:null\)/);
 });
