@@ -40,6 +40,17 @@
     if (portrait) state.formId = portrait.id;
     return true;
   }
+  // Choosing a portrait from Overview is the inverse of selectLoadout.
+  // Prefer the already selected form when multiple forms share one portrait;
+  // otherwise pick the first linked form. Unlinked portraits mean Base.
+  function selectPortrait(state, portraitId) {
+    if (!(state.portraits || []).some(x => x.id === portraitId)) return false;
+    state.formId = portraitId;
+    const forms = (state.abilityLoadouts || []).filter(x => x.portraitId === portraitId);
+    const current = forms.find(x => x.id === state.activeAbilityLoadoutId);
+    state.activeAbilityLoadoutId = current ? current.id : forms.length ? forms[0].id : '';
+    return true;
+  }
   function configureLoadout(state, identifier, property, value) {
     const form = (state.abilityLoadouts || []).find(x => x.id === identifier);
     if (!form) return false;
@@ -436,7 +447,7 @@
         '<div class="loadout-mechanics-content">' +
           '<label class="ability-field"><span class="foot-label">Linked portrait</span>' +
             '<select data-loadout-portrait>' + options + '</select></label>' +
-          '<p class="ability-effect-hint">Link an existing portrait from Overview. Selecting this ability form also switches to that portrait. No link leaves your current portrait unchanged.</p>' +
+          '<p class="ability-effect-hint">Link an existing portrait from Overview. Changing the ability form switches its portrait, and selecting a portrait in Overview switches to its linked ability form. An unlinked portrait selects Base/shared abilities.</p>' +
           '<p class="ability-effect-hint">Temporary form score adjustments (not permanent stat points). Bonuses and penalties apply while this form is selected.</p>' +
           '<div class="loadout-stat-grid">' + STATS.map(k =>
             '<label class="ability-field"><span class="foot-label">' + k + '</span>' +
@@ -843,7 +854,7 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, selectLoadout, configureLoadout, advanceTurn, resetForRest,
+    formStatBonus, selectLoadout, selectPortrait, configureLoadout, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
 })();
