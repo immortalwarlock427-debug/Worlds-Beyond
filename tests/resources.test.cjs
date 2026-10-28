@@ -140,6 +140,32 @@ test('Spend, Restore and Fill cap correctly without ever spending AP', () => {
   assert.equal(ap, 15);
 });
 
+test('resource adjustment amount persists through actions, rerenders and character saves', () => {
+  const { state, manager, getElementById: el } = setup();
+  el('addResource').emit('click');
+  const r = state.resources[0];
+  const amountInput = {
+    value: '10',
+    closest: (selector) => selector === '[data-resource-amount]' ? amountInput :
+      selector === '[data-resource-id]' ? { dataset: { resourceId: r.id } } : null
+  };
+  el('resourceList').emit('change', { target: amountInput });
+  assert.equal(r.amount, 10);
+  assert.match(el('resourceList').innerHTML, /value="10" data-resource-amount/);
+  fireAction(el, r.id, 'spend', '10');
+  assert.equal(r.current, 90);
+  assert.equal(r.amount, 10);
+  assert.match(el('resourceList').innerHTML, /value="10" data-resource-amount/);
+  fireAction(el, r.id, 'restore', '10');
+  assert.equal(r.current, 100);
+  manager.render();
+  assert.match(el('resourceList').innerHTML, /value="10" data-resource-amount/);
+  const imported = JSON.parse(JSON.stringify(state));
+  const { api } = setup();
+  api.normalizeState(imported);
+  assert.equal(imported.resources[0].amount, 10);
+});
+
 test('turn recovery and long rest obey individual preferences', () => {
   const { state, manager, getElementById: el } = setup();
   el('addResource').emit('click');
