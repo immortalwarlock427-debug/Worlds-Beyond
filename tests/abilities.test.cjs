@@ -310,7 +310,11 @@ test('movement display and derived speed do not double-count an active bonus', (
   const app = read('js/app.js');
   const css = read('css/sheet.css');
   assert.match(app, /const speedNow = \(\) => window\.WBAbilities\.effectiveMovement\(state, speedBase\(\)\)/);
-  assert.match(app, /el\.classList\.toggle\('ability-adjusted', !manual && \(!!bonus \|\| !!gear\('move'\)\)\)/);
+  // Check the behavior hooks rather than matching the entire implementation expression.
+  // The style now also covers Movement derived from temporary AGL score effects.
+  assert.match(app, /el\.classList\.toggle\('ability-adjusted', !manual/);
+  assert.match(app, /!!gear\('move'\)/);
+  assert.match(app, /effectBonus\(state, 'stat', 'AGL'\)/);
   assert.match(app, /dataset\.editingBase/);
   assert.match(css, /input\[data-auto\]\.ability-adjusted:not\(\.manual\)/);
   assert.match(css, /var\(--verdigris\)/);
