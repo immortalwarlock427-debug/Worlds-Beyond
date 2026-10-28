@@ -80,6 +80,11 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - `js/game-state.js` extracts the existing pure blank/normalize game state logic for maps, fog, tokens and foes so the future local DM screen can reuse it. The main UI retains its current rules and renderers. Next: extract pure stat/gear/AP movement actions and add versioned migrations, then implement local DM screen before live sessions.
 - Strict ownership: individual characters belong to players, game session map/fog/enemies belong to DM/session; preserve existing separate save formats. Cloud sync later needs authenticated owners, revision/conflict checks, offline queues, and server-side permissions. Full plan: `docs/CLOUD_MULTIPLAYER_PLAN.md`.
   
+## Shared Combat Core phase one (current PR)
+- `js/combat-core.js` is browser-independent and deterministic, carrying exact current rules for level score history, ASI increases, STR/DEX and general stat modifiers, worn gear bonuses and Armor Rating, AP spending and refunds (Command AP first), and movement cost with leftover feet and free Surge AP. `js/app.js` uses these functions directly; this is not a parallel second rules implementation.
+- Existing manual modifier overrides, active ability bonuses, form bonuses, item-settled gear progression and character/game saving remain unchanged. Tests exercise form/ability buffs, Command AP, movement/AP accounting and stat history.
+- Remaining refactor: attack and damage resolution, defense and resistances, then DM encounter screen. No networking, player permissions or online saves are introduced by this PR.
+
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
