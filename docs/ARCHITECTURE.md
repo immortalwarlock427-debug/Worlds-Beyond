@@ -134,3 +134,7 @@ The DM UI has explicit `DM placement (free)` and `Combat movement (AP)` modes. C
 ### PR #25 interaction fixes
 
 `WBDMMap` renders map choice buttons (native select retained hidden for legacy compatibility), follows the active initiative actor in AP movement mode, disables AP movement in setup/finished phases, and writes inline map notices for invalid paths and completed moves. `WBEncounter.ReopenSetup` is DM-only and accepts only finished encounters; it resets round/index and per-turn AP/Surge/movement but preserves roster, HP, map placement and initiative, enabling an editable next fight without player reimport. Existing `createEncounter` still makes an empty encounter when explicitly requested.
+
+### Route visual polish (PR #25)
+
+The encounter pathfinder uses direction-aware shortest paths with a lexicographic route preference: movement feet, number of diagonal steps, turns, and straight-line deviation. This preserves the original 5-ft or 10-ft cost model while avoiding equally costly zigzags. The DM UI consumes the verified `MoveToken` event path, persists AP/position first, and animates an overlay token through each waypoint (170 ms per adjacent square). The saved destination token stays hidden while traveling, then reappears when the overlay completes or is canceled. Reduced-motion skips the animation; interactions with another map/encounter invalidate the overlay safely. This is client-side presentation only; no extra movement actions are issued per visual frame.
