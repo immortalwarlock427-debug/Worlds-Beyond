@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DM Room · Worlds Beyond</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-dm-room-v14">
+<link rel="stylesheet" href="css/dm.css?v=20261028-dm-room-v14">
+</head>
+<body>
+<main class="sheet dm-sheet">
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Encounter command</p>
+      <h1>Worlds Beyond</h1>
+    </div>
+    <p class="meta">Offline DM Room · Draft 32</p>
+  </header>
+  <nav class="dm-nav" aria-label="Main destinations">
+    <a href="index.html#sheet">Character Sheet</a>
+    <a href="index.html#map">Battlemap</a>
+    <a href="dm.html" aria-current="page">DM Room</a>
+  </nav>
+
+  <div class="dm-banner">
+    <div>
+      <strong>Local DM workspace</strong>
+      <p>Run a tabletop encounter on this device. Player imports are snapshots, not live-linked sheets. No accounts, shared multiplayer, or network synchronization yet.</p>
+    </div>
+    <span class="dm-local">Local only</span>
+  </div>
+
+  <div class="dm-topline">
+    <div>
+      <h2>Encounter</h2>
+      <p class="dm-sub" id="encounterSummary">Loading your saved encounter…</p>
+    </div>
+    <button class="btn" id="newEncounter" type="button">New encounter</button>
+  </div>
+  <p class="dm-feedback" id="dmFeedback" role="status" aria-live="polite">Preparing the DM room…</p>
+
+  <section class="dm-setup" id="setupSection" aria-labelledby="setupHeading">
+    <div class="dm-section-title">
+      <h3 id="setupHeading">Assemble your party</h3>
+      <p>Import exported character JSON files or add an enemy. You can correct their values and enter initiative totals before starting.</p>
+    </div>
+    <div class="dm-setup-grid">
+      <div class="dm-panel">
+        <h4>Import player characters</h4>
+        <label for="dmCharacterFiles" class="dm-field-label">Character export files (.json)</label>
+        <input id="dmCharacterFiles" type="file" accept=".json,application/json" multiple>
+        <button id="dmImport" class="btn strong" type="button">Import selected files</button>
+        <p class="dm-help">Imports only name and combat snapshot values. Ability profiles, portraits, and full sheets stay in the player's own file.</p>
+      </div>
+      <form id="dmNpcForm" class="dm-panel" autocomplete="off">
+        <h4>Add enemy or NPC</h4>
+        <div class="dm-form-grid">
+          <label class="dm-wide">Name<input name="name" type="text" maxlength="100" required placeholder="Fallen guardian"></label>
+          <label>Max HP<input name="maxHp" type="number" min="1" max="1000000" value="20" required></label>
+          <label>Armor Rating<input name="ar" type="number" min="0" max="1000000" value="0" required></label>
+          <label>AP / turn<input name="apMax" type="number" min="0" max="40" value="15" required></label>
+          <label>Initiative total<input name="initiative" type="number" min="-10000" max="10000" value="0" required></label>
+          <label>Death Threshold<input name="deathThreshold" type="number" min="0" max="1000000" placeholder="Optional"></label>
+        </div>
+        <button class="btn strong" type="submit">+ Add combatant</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="dm-turn" aria-labelledby="turnHeading">
+    <div class="dm-turn-text">
+      <p class="dm-kicker">Combat tracker</p>
+      <h3 id="turnHeading">Not started</h3>
+      <p id="turnHint">Add characters and set initiative totals to begin.</p>
+    </div>
+    <div class="dm-turn-actions">
+      <button id="startEncounter" type="button" class="btn strong">Start encounter</button>
+      <button id="nextTurn" type="button" class="btn strong" hidden>Next turn</button>
+      <button id="finishEncounter" type="button" class="btn" hidden>Finish combat</button>
+    </div>
+  </section>
+
+  <section class="dm-roster" aria-labelledby="rosterHeading">
+    <div class="dm-section-title">
+      <h3 id="rosterHeading">Initiative &amp; combatants</h3>
+      <p id="rosterHint">Highest initiative acts first. Ties keep their current order.</p>
+    </div>
+    <div id="dmActorList" class="dm-actors">
+      <p class="dm-empty">No combatants yet. Import a character or create an NPC above.</p>
+    </div>
+  </section>
+
+  <footer class="dm-footer">
+    <span id="dmSaveStatus" role="status">Encounter saves on this device.</span>
+    <p>Damage inputs are already-rolled damage before resistance and Armor Rating. Each hit is applied separately. Turn starts handle AP resets and bleeding automatically. Open the Battlemap separately; player token movement is not connected to this encounter yet.</p>
+  </footer>
+</main>
+<script src="js/persistence.js?v=20261028-dm-room-v14"></script>
+<script src="js/combat-core.js?v=20261028-dm-room-v14"></script>
+<script src="js/encounter-actions.js?v=20261028-dm-room-v14"></script>
+<script src="js/game-state.js?v=20261028-dm-room-v14"></script>
+<script src="js/abilities.js?v=20261028-dm-room-v14"></script>
+<script src="js/dm-characters.js?v=20261028-dm-room-v14"></script>
+<script src="js/dm.js?v=20261028-dm-room-v14"></script>
+</body>
+</html>
