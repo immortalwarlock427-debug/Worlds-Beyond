@@ -210,7 +210,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 32)
+## What the site does (Draft 33)
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
@@ -387,3 +387,9 @@ See [ROADMAP.md](ROADMAP.md).
 - It shows current actor and round, initiative order, Health, Armor Rating, AP, and per-actor controls for raw damage, healing, manual HP edits and stabilization. Next turn refreshes AP and applies 4 bleeding damage at 0 or less if not stabilized. All operations use `WBEncounter` with shared `WBCombat` formulas and revision/ID validation.
 - `WBCombat.healthAtLevel` is now used for the sheet's `computeLog` and DM import. Max HP includes historical VIT, per-level rolls, chosen hit die and gear; incomplete advancement produces a DM-review warning. Imported characters retain no live sync to their originals, and the player-character save is never changed by DM actions.
 - Only the optional DM-owned `game.encounter` is saved, and the original map/tokens/fog/foes remain intact. The room does **not** provide online multiplayer, authenticated permissions, joined player movement, automatic initiative rolls, attack/dice animation, or cross-device cloud saves. Keep a single tab for active local edits until transactional cloud saving exists.
+
+## Offline DM tactical map (Draft 33)
+
+- The local DM screen displays the same Stone Hall, Barrow, and blank five-foot-grid map sources as the character Battlemap. The DM can select any encounter PC/NPC, click a free map square to place/reposition the token, click tokens to select them, and clear their placement.
+- Token placement is revisioned through `WBEncounter.PlaceToken` / `ClearToken`, checked against map bounds, impassable cells and other encounter actor positions by pure `WBEncounterMap`. Each actor stores optional `mapId` so changing maps doesn't teleport placed tokens.
+- The shared game map selection is saved in `game.map`. DM encounter positions are still **separate** from the player movement and legacy foes, and manual DM placement costs **no AP**. There is no player pathfinding/AP validation in the DM room, no shared player-map token movement, no cloud syncing, and no access permissions yet.
