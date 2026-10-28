@@ -61,3 +61,9 @@ Open `dm.html` or select **Open DM Room** on the character sheet. This is a same
 4. The encounter saves automatically to the optional `game.encounter` field in `worlds-beyond-game-v1`; player `worlds-beyond-sheet-v1` data and JSON files are not overwritten. **New encounter** clears only the saved encounter after confirmation.
 
 **Important limitations:** The tracker does not synchronize other devices or browser tabs, update the imported player character files, or move tokens on the existing battlemap. It does not automatically roll initiative or attack dice; enter already-rolled raw damage per hit (resistance then Armor Rating is applied automatically). Do not open the sheet and DM room simultaneously in different tabs for active editing: separate tabs may overwrite the game save. Imported advancement data may be incomplete; warnings tell you when to verify Health before combat. There is no account login or secure multiplayer authorization yet.
+
+## Tactical map in the DM Room (Draft 33)
+
+The DM Room now contains a scrollable map with the same built-in artwork as the sheet Battlemap, or an empty grid. Choose a map and combatant, then click a square to place the token. Click a token to select it; choose **Remove selected token** to unplace. Player and NPC tokens are color-coded and the current actor is outlined in combat. Walls, occupied squares and out-of-bounds placements are rejected. Placements are saved with the local encounter and tagged by map ID; map switches do not teleport actors.
+
+The map selector updates the shared game map, but token placements are DM-only encounter snapshots. They do not change player AP, movement, or the legacy battlemap foe set. Until secure movement synchronization exists, use the DM Room for tactical tracking and the existing character Battlemap for each character's own movement. No fog-of-war or online multiplayer yet.

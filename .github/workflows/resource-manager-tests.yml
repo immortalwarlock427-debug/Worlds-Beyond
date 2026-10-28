@@ -12,6 +12,9 @@ on:
       - 'js/encounter-actions.js'
       - 'js/dm-characters.js'
       - 'js/dm.js'
+      - 'js/dm-map.js'
+      - 'js/encounter-map.js'
+      - 'js/maps.js'
       - 'dm.html'
       - 'css/dm.css'
       - 'js/abilities.js'
@@ -26,6 +29,7 @@ on:
       - 'tests/combat-resolution.test.cjs'
       - 'tests/encounter-actions.test.cjs'
       - 'tests/dm-room.test.cjs'
+      - 'tests/dm-map.test.cjs'
       - 'tests/abilities.test.cjs'
       - 'tests/status.test.cjs'
       - 'tests/navigation.test.cjs'
@@ -50,9 +54,11 @@ jobs:
           node --check js/encounter-actions.js
           node --check js/dm-characters.js
           node --check js/dm.js
+          node --check js/dm-map.js
+          node --check js/encounter-map.js
           node --check js/equipment-profiles.js
           node --check js/abilities.js
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs tests/combat-resolution.test.cjs tests/encounter-actions.test.cjs tests/dm-room.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs tests/persistence.test.cjs tests/game-state.test.cjs tests/combat-core.test.cjs tests/combat-resolution.test.cjs tests/encounter-actions.test.cjs tests/dm-room.test.cjs tests/dm-map.test.cjs
