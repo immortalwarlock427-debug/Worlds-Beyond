@@ -8,6 +8,7 @@
   const combat = () => window.WBCombat;
   const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v);
   const copy = v => JSON.parse(JSON.stringify(v));
+  const owns = (record, key) => Object.prototype.hasOwnProperty.call(record, key);
   const validId = v => typeof v === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(v);
   const integer = (v, min, max) => typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max;
   const MAX_ACTORS = 60, MAX_ACTIONS = 256;
@@ -70,7 +71,7 @@
     });
     const ids = Object.keys(out.actors);
     out.order = Array.isArray(value.order)
-      ? value.order.filter((id, i, arr) => validId(id) && out.actors[id] && arr.indexOf(id) === i)
+      ? value.order.filter((id, i, arr) => validId(id) && owns(out.actors, id) && arr.indexOf(id) === i)
       : [];
     ids.forEach(id => { if (!out.order.includes(id)) out.order.push(id); });
     out.turnIndex = integer(value.turnIndex, 0, Math.max(0, out.order.length - 1)) ? value.turnIndex : 0;
@@ -127,7 +128,7 @@
     if (action.expectedRevision !== before.revision) return fail('REVISION_CONFLICT');
     const state = copy(before);
     const dm = context.role === 'dm';
-    const actor = state.actors[action.actorId];
+    const actor = owns(state.actors, action.actorId) ? state.actors[action.actorId] : null;
     const active = state.phase === 'active' && state.order[state.turnIndex] === action.actorId;
     const canAct = actor && (dm || (actor.kind === 'pc' && actor.ownerId === context.userId));
     let event = { type: action.type, actorId: action.actorId || null };
@@ -139,7 +140,7 @@
         if (state.phase !== 'setup') return fail('ENCOUNTER_NOT_IN_SETUP');
         const added = actorFrom(action.actor);
         if (!added) return fail('INVALID_ACTOR');
-        if (state.actors[added.id]) return fail('ACTOR_EXISTS');
+        if (owns(state.actors, added.id)) return fail('ACTOR_EXISTS');
         if (state.order.length >= MAX_ACTORS) return fail('ACTOR_LIMIT');
         state.actors[added.id] = added;
         state.order.push(added.id);
