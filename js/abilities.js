@@ -46,6 +46,7 @@
   }
   function selectLoadout(state, identifier) {
     if (identifier && !(state.abilityLoadouts || []).some(x => x.id === identifier)) return false;
+    if (window.WBEquipment) window.WBEquipment.switchForm(state, identifier);
     state.activeAbilityLoadoutId = identifier || '';
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
     const portrait = form && (state.portraits || []).find(x => x.id === form.portraitId);
@@ -60,7 +61,9 @@
     state.formId = portraitId;
     const forms = (state.abilityLoadouts || []).filter(x => x.portraitId === portraitId);
     const current = forms.find(x => x.id === state.activeAbilityLoadoutId);
-    state.activeAbilityLoadoutId = current ? current.id : forms.length ? forms[0].id : '';
+    const nextFormId = current ? current.id : forms.length ? forms[0].id : '';
+    if (window.WBEquipment) window.WBEquipment.switchForm(state, nextFormId);
+    state.activeAbilityLoadoutId = nextFormId;
     return true;
   }
   function configureLoadout(state, identifier, property, value) {
@@ -90,6 +93,7 @@
     if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
     const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, manaMode: 'inherit' };
     state.abilityLoadouts.push(entry);
+    if (window.WBEquipment) window.WBEquipment.switchForm(state, entry.id); // New form copies current gear.
     state.activeAbilityLoadoutId = entry.id;
     return entry;
   }
@@ -114,6 +118,10 @@
 
   function removeLoadout(state, identifier) {
     const before = (state.abilityLoadouts || []).length;
+    if ((state.abilityLoadouts || []).some(x => x.id === identifier) &&
+        state.activeAbilityLoadoutId === identifier && window.WBEquipment) {
+      window.WBEquipment.switchForm(state, ''); // Restore Base gear before removing active form.
+    }
     state.abilityLoadouts = (state.abilityLoadouts || []).filter(x => x.id !== identifier);
     if (state.abilityLoadouts.length === before) return false;
     for (const a of (state.abilities || [])) {
@@ -123,6 +131,7 @@
       if (Array.isArray(r.loadoutIds)) r.loadoutIds = r.loadoutIds.filter(id => id !== identifier);
     }
     if (state.activeAbilityLoadoutId === identifier) state.activeAbilityLoadoutId = '';
+    if (window.WBEquipment) window.WBEquipment.removeForm(state, identifier);
     return true;
   }
   const signedNumber = (n) => {
