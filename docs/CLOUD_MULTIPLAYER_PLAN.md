@@ -1,0 +1,67 @@
+# Future architecture: cloud characters, DM screen and multiplayer
+
+**Status:** engineering plan, not an implemented service. The existing GitHub Pages character sheet and offline exports remain the supported experience until new pieces are tested.
+
+## Guiding rules
+
+1. **One authoritative rules engine.** Extract calculations, item validation, ability activation and form switching from the DOM-heavy `js/app.js` into pure, tested modules that accept a character state and return results/actions. The Sheet, DM view and multiplayer processes must not duplicate their own rules. Keep custom STR/VIT/DEX/AGL/INT/WIS/CHA/FTH and AP mechanics; this is not a generic D&D engine.
+2. **Separate ownership.** Character data is player-owned. Encounters, maps, fog, NPCs, and hidden information are session/DM-owned. This separation already exists as distinct localStorage keys, `worlds-beyond-sheet-v1` and `worlds-beyond-game-v1`. Keep it.
+3. **Local-first compatibility.** Import/export JSON remains available even after account login exists. Don't discard local character edits when the network drops. Show clear sync states (Local only, Saving, Saved, Conflict, Offline) and never silently overwrite an unsynced character.
+4. **Permission checks must be enforced by the backend.** Hiding a button in the client is not authorization. Do not ship secrets, private DM maps or fog to clients that lack permission to see them.
+
+## Phased delivery
+
+| Phase | Goal | Definition of done |
+|---|---|---|
+| 0. Domain / save boundary | Separate reusable rules functions and define `CharacterRepository` / `GameRepository` interfaces | Existing UI still works, tests cover migrated/imported characters and game saves |
+| 1. Offline DM room | DM imports several character JSON files and can create an encounter, initiative order, health and turn tracker | Can run a complete test encounter without accounts, all using shared rules |
+| 2. Cloud character accounts | Sign in, save/list/restore multiple characters, sync between phone and laptop | Private characters, ownership enforced, offline export and recovery available |
+| 3. Online sessions | DM creates session, gives invite/join code, players join with selected characters | Real-time map, tokens, turns and status updates; reconnect safely |
+| 4. Permissions and polish | Per-player privacy, DM role, spectators, replay/action log, assets and mobile UX | Security tests, reconciliation tests, clear connection status |
+
+Phase 2 can start before phase 1 if cross-device saving becomes the immediate priority, but the domain/data separation in phase 0 comes first either way.
+
+## Proposed data entities
+
+- **Account**: `user_id` from authentication. A single account can own multiple characters.
+- **Character**: stable `character_id` (existing `state.id`), `owner_id`, `revision`, `updated_at`, `schema_version`, and a private character document. Keep form profiles, abilities, resources and portraits in this player-owned document initially.
+- **Game**: `game_id`, `dm_user_id`, metadata and a join/invite mechanism; must be separate from an individual character.
+- **Game membership**: `game_id`, `user_id`, `character_id` when playing, `role` (DM / player / spectator), and sharing settings. Validate ownership when joining with a character.
+- **Encounter**: `encounter_id`, game reference, map state, enemies, fog, initiative/turn, and the version of current encounter state.
+- **Action log** (later): `action_id`, actor, encounter, action type/payload, server sequence and result. This lets clients reconnect without guessing which move or AP expenditure happened.
+
+Don't combine everyone into one giant character JSON, and don't use display names or browser storage keys as cloud identity.
+
+## Cloud storage and authorization
+
+A candidate is Supabase Auth + PostgreSQL + Row Level Security + Realtime; Firebase is another possible backend. The choice is not locked until the first cloud prototype.
+
+- Enable and test database row-level ownership/security policies **before** exposing private records. Users can read and write their own characters; a DM sees only data explicitly granted by a player or by game rules. Being a game member does not grant blanket write access to all members' characters.
+- A join code is a convenience, **not** authentication or blanket permission. DM-only actions (initiative advances, hidden creature movements and fog) must be validated server-side.
+- Real-time messages are signals, not truth: validate rule-changing actions, permissions, turn order, AP costs, ownership, and revision against authoritative state before broadcasting results. Never trust `spentAp: 0` or client-calculated damage without validation.
+- Store portraits and map images in an authenticated file/object store with owner-restricted paths, not indefinitely as giant base64 values in JSON/localStorage. Plan size/format limits for mobile.
+- Never put service-role keys or privileged credentials in GitHub Pages JavaScript. Public client SDK keys are only safe when authorization policies are correct.
+
+## Sync and conflicts
+
+- Today `state` is mutable and saved with a 250ms localStorage debounce. Don't directly replace that with constant "upload entire object on every keypress" calls.
+- Add a repository adapter for local saves, with a later cloud adapter. An explicit sync queue can batch changes. Include a `revision`/version token so saving from two devices does not silently overwrite changes.
+- For **character editing**, detect conflicting revisions, show which copy is newer and allow the player to choose or merge. Keep local backup/export.
+- For **live combat**, send typed commands (e.g. `UseAbility`, `MoveToken`, `EndTurn`, `ApplyDamage`) instead of two clients replacing the same entire session document. Apply them once, in a defined order, to authoritative state.
+- Mobile browsers can suspend background tabs and clear storage. Show last cloud-sync timestamp and the distinction between `Saved on this device` and `Synced to cloud`; test interrupted network/reconnect.
+
+## Migrations and testing
+
+- Current exports are `{format: 'worlds-beyond-character', version: 1, state}`; the schema is evolving inside version 1. Before cloud release, introduce deterministic versioned migrations (`migrateCharacter`, `migrateGame`) with fixtures for legacy characters. Preserve unknown but safe custom fields when possible.
+- Keep pure rules tests in Node, plus browser smoke tests on Netlify and eventual end-to-end tests against an isolated database project.
+- Build tests for two devices modifying one character, permission denials (player tries to edit another character/see DM fog), disconnect during turn action, duplicate action submitted twice, import/export round trips, and characters with many abilities and multiple form profiles.
+- Treat game and character as separate collections and avoid automatically merging a DM-owned game record into a character on import.
+
+## Immediate engineering guardrails
+
+Continue independent modules (e.g., `js/abilities.js`, `js/resources.js`, `js/equipment-profiles.js`) instead of adding every new feature to `js/app.js`. For upcoming work, prioritize moving reusable character and combat calculations out of DOM handlers; keep functions deterministic and give them regression tests. No accounts, network endpoints, or external keys should be added merely to prepare the architecture.
+
+Reference documentation:
+- Supabase RLS: https://supabase.com/docs/guides/database/postgres/row-level-security
+- Supabase Realtime: https://supabase.com/docs/guides/realtime/getting_started
+- Firebase Firestore offline persistence: https://firebase.google.com/docs/firestore/manage-data/enable-offline

@@ -8,6 +8,7 @@ on:
       - 'js/resources.js'
       - 'js/abilities.js'
       - 'js/status.js'
+      - 'js/equipment-profiles.js'
       - 'js/app.js'
       - 'index.html'
       - 'tests/resources.test.cjs'
@@ -16,6 +17,7 @@ on:
       - 'tests/navigation.test.cjs'
       - 'tests/ability-filters.test.cjs'
       - 'tests/ability-loadouts.test.cjs'
+      - 'tests/equipment-profiles.test.cjs'
       - '.github/workflows/resource-manager-tests.yml'
 jobs:
   resources:
@@ -28,8 +30,9 @@ jobs:
       - name: Validate JavaScript syntax
         run: |
           node --check js/resources.js
+          node --check js/equipment-profiles.js
           node --check js/abilities.js
           node --check js/status.js
           node --check js/app.js
       - name: Character features regression tests
-        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs
+        run: node --test tests/resources.test.cjs tests/abilities.test.cjs tests/status.test.cjs tests/navigation.test.cjs tests/ability-filters.test.cjs tests/ability-loadouts.test.cjs tests/equipment-profiles.test.cjs

@@ -66,6 +66,11 @@ The browser keeps two things apart, because a character and a game have differen
 ## Form-specific custom resources
 - `state.resources[].loadoutIds` uses the same stable ability form ids as `state.abilities[].loadoutIds`. Empty is shared. The resource manager only renders available pools unless Show all is enabled; actual ability activation and regen gate independently on availability, so hidden resources cannot be spent via stale UI. Current values do not get reset on form switches. Built-in Mana is controlled by each form's `manaMode` (`inherit`/`show`/`hide`), layered over the original global `showMana` flag. Rest intentionally restores opted-in pools across forms.
 
+## Form-specific equipment profiles
+- `js/equipment-profiles.js` maintains `state.equipmentProfiles`: a `base` slot mapping and one mapping per named ability form, with `state.equip` as the currently worn, authoritative slot mapping. All profiles refer to shared `state.items` IDs; items are never copied or cloned.
+- `WBEquipment.switchForm(state, nextId)` snapshots current worn slots before restoring the target profile. Linked portrait switching uses the same path. New forms inherit the currently worn set, then diverge. Deleting a form restores Base (if currently active) and deletes only its profile; removing an item scrubs every saved profile. Import normalization removes missing or incompatible slot assignments.
+- No changes to `state.settled` (long-rest gear progression), `state.spent` (per-item uses), `state.resources`, AP or other trackers on transformations. Equipping/unequipping manually still follows existing advancement rules. The current profile is captured before local saves and character exports.
+
 ## Ability form loadouts
 - Character state keeps `abilityLoadouts` (stable ids and names), `activeAbilityLoadoutId`, and per-ability `loadoutIds` (empty means shared). Loadout switching doesn't reset trackers or change the underlying character stats and resources; ability availability validation gates activation. Portrait `formId` and `portraits` are intentionally independent.
   
@@ -75,3 +80,7 @@ The browser keeps two things apart, because a character and a game have differen
 ## Static asset versioning
 
 GitHub Pages may serve updated HTML while a visitor's browser still has older CSS/JS cached. The HTML uses a shared `?v=...` release token on `css/sheet.css` and all `js/*.js` script references. **Every release that changes CSS or JavaScript should bump the shared token in `index.html`** so the browser fetches matching files on production rather than mixing versions. The navigation regression suite checks that all references share a token. Avoid changing character storage keys to solve cache issues.
+
+## Next architectural boundary
+
+The app currently uses a mutable `state` in `js/app.js` and separate browser keys for the character and game. To support cloud saves and DM multiplayer safely, extract rule actions from DOM handlers and use local/cloud repository adapters rather than replacing localStorage with direct remote writes. See [Cloud & Multiplayer Plan](CLOUD_MULTIPLAYER_PLAN.md) for identity, ownership, offline sync, permissions and migration priorities.

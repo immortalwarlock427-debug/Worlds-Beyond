@@ -124,7 +124,7 @@ test('sticky navigation and hidden sections maintain map separation', () => {
 
 test('published styles and scripts use the same cache-busting release version', () => {
   const html = read('index.html');
-  const expected = ['css/sheet.css','js/maps.js','js/resources.js','js/abilities.js','js/status.js','js/app.js'];
+  const expected = ['css/sheet.css','js/maps.js','js/resources.js','js/equipment-profiles.js','js/abilities.js','js/status.js','js/app.js'];
   const versions = [];
   for (const asset of expected) {
     const match = html.match(new RegExp('(?:src|href)="' + asset.replace(/\./g, '\\.') + '\\?v=([\\w-]+)"'));
