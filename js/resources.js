@@ -23,6 +23,7 @@
       name: text(r.name) || 'Resource',
       max,
       current: Math.min(max, value(r.current, max)),
+      amount: Math.max(1, value(r.amount, 5)),
       display: r.display === 'percent' ? 'percent' : 'number',
       regen: value(r.regen, 0),
       refillOnRest: r.refillOnRest !== false,
@@ -79,7 +80,7 @@
           '</div>' +
           '<div class="resource-actions">' +
             '<label class="resource-adjust"><span class="foot-label">Amount</span>' +
-              '<input type="number" min="1" max="' + LIMIT + '" value="5" data-resource-amount aria-label="Amount to spend or restore"></label>' +
+              '<input type="number" min="1" max="' + LIMIT + '" value="' + r.amount + '" data-resource-amount aria-label="Amount to spend or restore"></label>' +
             '<button type="button" class="btn" data-resource-action="spend">Spend</button>' +
             '<button type="button" class="btn" data-resource-action="restore">Restore</button>' +
             '<button type="button" class="btn" data-resource-action="refill">Fill</button>' +
@@ -111,6 +112,17 @@
     });
 
     list.addEventListener('change', (e) => {
+      // Remember this amount independently for each pool, including after re-renders and reloads.
+      const amountInput = e.target.closest('[data-resource-amount]');
+      if (amountInput) {
+        const card = amountInput.closest('[data-resource-id]');
+        const r = card && byId(card.dataset.resourceId);
+        if (!r) return;
+        r.amount = String(amountInput.value).trim() === '' ? r.amount : Math.max(1, value(amountInput.value, r.amount));
+        amountInput.value = String(r.amount);
+        save();
+        return;
+      }
       const input = e.target.closest('[data-resource-prop]');
       if (!input) return;
       const card = input.closest('[data-resource-id]');
@@ -143,9 +155,10 @@
       } else if (action === 'refill') r.current = r.max;
       else {
         const field = card.querySelector('[data-resource-amount]');
-        const amount = Math.max(1, value(field.value, 1));
-        if (action === 'spend') r.current = Math.max(0, r.current - amount);
-        if (action === 'restore') r.current = Math.min(r.max, r.current + amount);
+        // Save the amount before the card is rebuilt; never revert to the default 5.
+        r.amount = field && String(field.value).trim() !== '' ? Math.max(1, value(field.value, r.amount)) : r.amount;
+        if (action === 'spend') r.current = Math.max(0, r.current - r.amount);
+        if (action === 'restore') r.current = Math.min(r.max, r.current + r.amount);
       }
       render();
       save();
