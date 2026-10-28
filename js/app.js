@@ -1,6 +1,6 @@
 // Worlds Beyond: character sheet and battlemap. One script for now; see docs/ARCHITECTURE.md.
 (() => {
-  const KEY = 'worlds-beyond-sheet-v1';
+  const repositories = window.WBPersistence.createLocalRepositories(() => window.localStorage);
   const MAX_LEVEL = 100;
   const ASI_LEVELS = [4, 8, 12, 16, 19];
   const STATS = [
@@ -136,7 +136,6 @@
   // characters (and the DM) can share one game. map: which map and its size; tokens: each character's
   // square by character id; fog: per map, which squares the party has seen; foes: enemies on any map;
   // view: how this browser draws the map (grid strength, terrain overlay, reach shading).
-  const GAME_KEY = 'worlds-beyond-game-v1';
   const blankGame = () => ({ map: null, tokens: {}, fog: {}, foes: [], view: {} });
   let game = blankGame();
   const whole = (v, d) => { const n = Math.round(Number(v)); return isFinite(n) ? Math.max(-999, Math.min(9999, n)) : d; };
@@ -240,18 +239,16 @@
     return isSet(e.text);
   }
 
-  // Load the game first, so a character saved by an older draft can hand its battlemap over to it.
+  // Character and game have independent repositories. Keep game load first for
+  // migrating pre-website character files that embedded the map.
   try {
-    const raw = localStorage.getItem(GAME_KEY);
-    if (raw) game = normalizeGame(JSON.parse(raw));
-  } catch (e) { /* storage unavailable: start blank */ }
+    const savedGame = repositories.games.load();
+    if (savedGame) game = normalizeGame(savedGame);
+  } catch (e) { /* unavailable storage: start blank */ }
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') state = Object.assign(blank(), parsed);
-    }
-  } catch (e) { /* storage unavailable: start blank */ }
+    const savedCharacter = repositories.characters.load();
+    if (savedCharacter) state = Object.assign(blank(), savedCharacter);
+  } catch (e) { /* unavailable storage: start blank */ }
   normalizeState();
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
@@ -373,8 +370,8 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(KEY, JSON.stringify(state));
-        localStorage.setItem(GAME_KEY, JSON.stringify(game));
+        repositories.characters.save(state);
+        repositories.games.save(game);
         setStatus(DEFAULT_STATUS);
       } catch (e) {
         setStatus("This browser won't save the sheet. Your entries stay until you close the page.", true);
@@ -2846,7 +2843,11 @@
   // Pictures are saved right away; one that doesn't fit in this browser's storage is taken back out.
   function storeNow() {
     clearTimeout(saveTimer);
-    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; } catch (e) { return false; }
+    try {
+      window.WBEquipment.capture(state);
+      repositories.characters.save(state);
+      return true;
+    } catch (e) { return false; }
   }
   const NO_ROOM = "There's no room left in this browser for that picture. Remove a form, or export your character to keep a copy.";
   function addForm(src) {
@@ -4425,7 +4426,7 @@
     setTok(null);
     state = blank();
     state.id = newCharId();
-    try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    try { repositories.characters.remove(); } catch (e) { /* ignore */ }
     resetSession();
     clearConfirm.hidden = true;
     footBtns.hidden = false;
@@ -4447,7 +4448,7 @@
   $('#exportBtn').addEventListener('click', async () => {
     const filename = exportFilename();
     window.WBEquipment.capture(state); // Export includes the latest currently worn items.
-    const data = JSON.stringify({ format: 'worlds-beyond-character', version: 1, exported: new Date().toISOString(), state });
+    const data = window.WBPersistence.exportCharacter(state);
     if (downloads) {
       try {
         await downloads.save({ filename, data });
@@ -4484,10 +4485,7 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      let data = null;
-      try { data = JSON.parse(String(reader.result)); } catch (err) { data = null; }
-      const st = data && data.format === 'worlds-beyond-character' && data.state && typeof data.state === 'object' ? data.state
-        : data && typeof data === 'object' && data.fields && data.hist ? data : null;
+      const st = window.WBPersistence.parseCharacterFile(String(reader.result));
       if (!st) { setStatus('That file isn\u2019t a Worlds Beyond character.', true); return; }
       pendingImport = st;
       const nm = st.fields && isSet(st.fields.charName) ? String(st.fields.charName).trim() : 'the character in that file';
