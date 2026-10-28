@@ -330,3 +330,104 @@ test('map choice buttons work and movement follows active turn with visible loca
   assert.equal(elements['#dmMapMode'].disabled,true);
   assert.match(elements['#dmMapHelp'].textContent,/Reuse roster/);
 });
+
+
+test('equal-cost routes stay straight on open horizontal and vertical lines',()=>{
+  const {m,map,state}=gameSetup();
+  const horizontal=m.movementRoute(state,map,'hero',7,3);
+  assert.equal(horizontal.ok,true);
+  assert.equal(horizontal.ft,20);
+  assert.deepEqual(plain(horizontal.path),[
+    {x:3,y:3},{x:4,y:3},{x:5,y:3},{x:6,y:3},{x:7,y:3}
+  ]);
+  const vertical=m.movementRoute(state,map,'hero',3,7);
+  assert.equal(vertical.ok,true);
+  assert.deepEqual(plain(vertical.path),[
+    {x:3,y:3},{x:3,y:4},{x:3,y:5},{x:3,y:6},{x:3,y:7}
+  ]);
+  const mixed=m.movementRoute(state,map,'hero',8,5);
+  assert.equal(mixed.ft,25);
+  assert.equal(mixed.path.length,6);
+  // A necessary diagonal is fine; zigzag detours should not be chosen when
+  // equally cheap straight steps exist.
+  const diagonals=mixed.path.slice(1).filter((v,i)=>{
+    const p=mixed.path[i];return v.x!==p.x&&v.y!==p.y;
+  });
+  assert.equal(diagonals.length,2);
+  const crooked=m.movementRoute(state,map,'hero',7,7);
+  assert.deepEqual(plain(crooked.path),[
+    {x:3,y:3},{x:4,y:4},{x:5,y:5},{x:6,y:6},{x:7,y:7}
+  ]);
+});
+
+test('approved movement animates through route keyframes without delaying AP save',async()=>{
+  const {w,e,map,game}=gameSetup();
+  let state=gameSetup().state;
+  state=apply(e,state,'StartEncounter');
+  const elements={},listeners={};
+  const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
+    'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
+    'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices',
+    'dmMapNotice','dmMapAnimation'];
+  for(const id of ids)elements['#'+id]={
+    style:{},value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,
+    addEventListener(type,fn){listeners[id+':'+type]=fn;},
+    getBoundingClientRect(){return {left:0,top:0}}
+  };
+  let frames=null,settings=null,resolveAnimation;
+  const animatedToken={
+    style:{},
+    animate(nextFrames,nextSettings){
+      frames=plain(nextFrames);
+      settings=plain(nextSettings);
+      return {
+        finished:new Promise(resolve=>{resolveAnimation=resolve;}),
+        cancel(){}
+      };
+    }
+  };
+  const saved={style:{visibility:''}};
+  elements['#dmMapTokens'].querySelector=()=>saved;
+  elements['#dmMapAnimation'].querySelector=()=>{
+    return elements['#dmMapAnimation'].innerHTML.includes('<span')?animatedToken:null;
+  };
+  const context={window:{WB_MAPS:w.WB_MAPS,WBEncounterMap:w.WBEncounterMap,
+    WBCombat:w.WBCombat},
+    document:{querySelector(id){if(!elements[id])throw Error(id);return elements[id]}}};
+  vm.runInNewContext(read('js/dm-map.js'),context);
+  const ui=context.window.WBDMMap.init({
+    getGame:()=>game,getEncounter:()=>state,
+    command(type,params){
+      const result=e.applyAction(state,{
+        id:'animate-'+state.revision,type,expectedRevision:state.revision,...params
+      },{...dm,map});
+      assert.equal(result.ok,true,result.error);
+      state=result.state;return result;
+    },
+    selectMap(){return true;},
+    message(message){throw Error(message);}
+  });
+  ui.render();
+  listeners['dmMapBoard:click']({
+    clientX:5*36+2,clientY:3*36+2,
+    target:{closest(){return null;}}
+  });
+  assert.equal(state.actors.hero.x,3,'Preview should not commit a move');
+  listeners['dmMoveConfirm:click']();
+  assert.equal(state.actors.hero.x,5,'Validated position is stored immediately');
+  assert.equal(state.actors.hero.apAvail,5,'AP is spent exactly once at confirmation');
+  assert.equal(saved.style.visibility,'hidden','End-position token is hidden while traveling');
+  assert.equal(settings.easing,'linear');
+  assert.equal(settings.duration,340,'One visible transition per five-foot square');
+  assert.deepEqual(frames.map(f=>f.transform),[
+    'translate(0px, 0px)',
+    'translate(36px, 0px)',
+    'translate(72px, 0px)'
+  ]);
+  assert.match(elements['#dmMapAnimation'].innerHTML,/left:111px;top:111px/);
+  resolveAnimation();
+  await Promise.resolve();
+  assert.equal(elements['#dmMapAnimation'].innerHTML,'');
+  assert.equal(saved.style.visibility,'');
+  assert.match(elements['#dmMapNotice'].textContent,/Movement completed/);
+});
