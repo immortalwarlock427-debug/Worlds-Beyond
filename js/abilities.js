@@ -31,6 +31,10 @@
       cooldown: optionalNumber(value.cooldown),
       duration: optionalNumber(value.duration),
       uses: optionalNumber(value.uses),
+      usesLeft: optionalNumber(value.uses) === '' ? null :
+        Math.min(optionalNumber(value.uses), value.usesLeft == null ? optionalNumber(value.uses) : optionalNumber(value.usesLeft)),
+      cooldownLeft: optionalNumber(value.cooldownLeft) || 0,
+      durationLeft: optionalNumber(value.durationLeft) || 0,
       favorite: value.favorite === true
     };
   }
@@ -45,12 +49,74 @@
       });
   }
 
-  function init(getState, save) {
+  // Three independent trackers: limited uses, cooldown lock, and active duration.
+  // A duration is informational until sheet-targeted effects are implemented.
+  function activate(state, abilityId, controls) {
+    const a = state.abilities.find((x) => x.id === abilityId);
+    if (!a) return { ok: false, message: 'Ability not found.' };
+    if (a.type === 'passive') return { ok: false, message: 'Passive abilities do not need activation.' };
+    if (a.cooldownLeft > 0) return { ok: false, message: a.name + ' is cooling down for ' + a.cooldownLeft + ' more turn(s).' };
+    if (a.uses !== '' && a.usesLeft <= 0) return { ok: false, message: a.name + ' has no uses left.' };
+    const ap = a.apCost === '' ? 0 : a.apCost;
+    if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
+      return { ok: false, message: 'AP tracker is not available.' };
+    }
+    if (ap > controls.getAp()) return { ok: false, message: 'Not enough AP to use ' + a.name + '.' };
+    const cost = a.resourceCost === '' ? 0 : a.resourceCost;
+    let resource = null;
+    if (cost > 0) {
+      if (!a.resourceId) return { ok: false, message: 'Choose a resource for ' + a.name + ' before activating it.' };
+      if (a.resourceId === 'base-mana') {
+        if (!controls.getMana || !controls.spendMana || state.showMana === false) {
+          return { ok: false, message: 'Mana / Holy Power is unavailable for this character.' };
+        }
+        const mana = controls.getMana();
+        if (mana == null || !Number.isFinite(mana)) return { ok: false, message: 'Set your maximum Mana / Holy Power before using this ability.' };
+        if (mana < cost) return { ok: false, message: 'Not enough Mana / Holy Power to use ' + a.name + '.' };
+      } else {
+        resource = (state.resources || []).find((r) => r.id === a.resourceId);
+        if (!resource) return { ok: false, message: 'Selected resource no longer exists for ' + a.name + '.' };
+        if (resource.current < cost) return { ok: false, message: 'Not enough ' + resource.name + ' to use ' + a.name + '.' };
+      }
+    }
+    // Validate all costs first. Only then commit the expenditure as one activation.
+    if (ap) controls.spendAp(ap);
+    if (cost) {
+      if (a.resourceId === 'base-mana') controls.spendMana(cost);
+      else resource.current -= cost;
+    }
+    if (a.uses !== '') a.usesLeft = Math.max(0, a.usesLeft - 1);
+    a.cooldownLeft = a.cooldown === '' ? 0 : a.cooldown;
+    a.durationLeft = a.duration === '' ? 0 : a.duration;
+    return { ok: true, message: 'Used ' + a.name + (a.durationLeft ? ' — duration: ' + a.durationLeft + ' turn(s)' : '') + '.' };
+  }
+
+  function advanceTurn(state) {
+    let changed = false;
+    for (const a of state.abilities) {
+      if (a.cooldownLeft > 0) { a.cooldownLeft -= 1; changed = true; }
+      if (a.durationLeft > 0) { a.durationLeft -= 1; changed = true; }
+    }
+    return changed;
+  }
+
+  function resetForRest(state) {
+    for (const a of state.abilities) {
+      a.cooldownLeft = 0;
+      a.durationLeft = 0;
+      a.usesLeft = a.uses === '' ? null : a.uses;
+    }
+  }
+
+  function init(getState, save, controls) {
+    controls = controls || {};
+
     const list = document.getElementById('abilityList');
     const search = document.getElementById('abilitySearch');
     const category = document.getElementById('abilityCategory');
     const favorites = document.getElementById('abilityFavorites');
     const count = document.getElementById('abilityCount');
+    const feedback = document.getElementById('abilityFeedback');
     const addButton = document.getElementById('abilityAdd');
     const byId = (abilityId) => getState().abilities.find((a) => a.id === abilityId);
     const open = new Set();
@@ -89,6 +155,9 @@
       }
       if (ability.cooldown !== '') badges.push(ability.cooldown + '-turn cooldown');
       if (ability.duration !== '') badges.push(ability.duration + '-turn duration');
+      if (ability.uses !== '') badges.push(ability.usesLeft + '/' + ability.uses + ' uses');
+      if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
+      if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
       return '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
         (open.has(ability.id) ? ' open' : '') + '>' +
         '<summary class="ability-summary">' +
@@ -125,7 +194,20 @@
           '<label class="ability-field"><span class="foot-label">Notes</span>' +
             '<textarea data-ability-prop="notes" rows="2" maxlength="6000" placeholder="Optional conditions, limits, or reminders.">' +
             esc(ability.notes) + '</textarea></label>' +
+          '<div class="ability-activate">' +
+            (ability.type === 'passive'
+              ? '<span class="ability-status">Passive · always available; no activation needed</span>'
+              : '<button type="button" class="btn strong" data-ability-action="use">Use ability</button>' +
+                '<span class="ability-status">' +
+                  (ability.cooldownLeft ? 'Cooldown: ' + ability.cooldownLeft + ' turn(s)' :
+                    ability.uses !== '' && ability.usesLeft <= 0 ? 'Out of uses' : 'Ready') +
+                  (ability.durationLeft ? ' · Active for ' + ability.durationLeft + ' more turn(s)' : '') +
+                '</span>') +
+            (ability.durationLeft ? '<button type="button" class="btn" data-ability-action="end">End effect</button>' : '') +
+          '</div>' +
+          (ability.uses !== '' ? '<label class="ability-field ability-uses-left"><span class="foot-label">Uses remaining (adjust manually)</span><input data-ability-prop="usesLeft" type="number" min="0" max="' + ability.uses + '" value="' + ability.usesLeft + '"></label>' : '') +
           '<div class="ability-card-actions">' +
+            '<button type="button" class="btn" data-ability-action="reset">Reset ability tracker</button>' +
             '<button type="button" class="btn" data-ability-action="favorite" aria-pressed="' +
               (ability.favorite ? 'true' : 'false') + '">' + (ability.favorite ? '★ Favorite' : '☆ Add favorite') + '</button>' +
             '<button type="button" class="btn" data-ability-action="duplicate">Duplicate</button>' +
@@ -186,10 +268,18 @@
       const ability = cardElement && byId(cardElement.dataset.abilityId);
       if (!ability) return null;
       const prop = input.dataset.abilityProp;
+      if (prop === 'usesLeft') {
+        if (ability.uses !== '') {
+          ability.usesLeft = Math.min(ability.uses, optionalNumber(input.value) === '' ? ability.usesLeft : optionalNumber(input.value));
+          save();
+        }
+        return { ability, prop };
+      }
       if (!propNames.includes(prop)) return null;
       ability[prop] = numerical.has(prop) ? optionalNumber(input.value) :
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
+      if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
       save();
       return { ability, prop };
     }
@@ -218,19 +308,41 @@
         getState().abilities = getState().abilities.filter((a) => a.id !== ability.id);
         open.delete(ability.id);
       } else if (action === 'duplicate') {
-        const copy = normalizeAbility(Object.assign({}, ability, { id: id(), name: 'Copy of ' + ability.name, favorite: false }));
+        const copy = normalizeAbility(Object.assign({}, ability, {
+          id: id(), name: 'Copy of ' + ability.name, favorite: false,
+          usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0
+        }));
         getState().abilities.push(copy);
         open.add(copy.id);
         search.value = ''; category.value = ''; favorites.checked = false;
       } else if (action === 'favorite') {
         ability.favorite = !ability.favorite;
+      } else if (action === 'use') {
+        const result = activate(getState(), ability.id, controls);
+        feedback.textContent = result.message;
+        feedback.classList.toggle('ability-error', !result.ok);
+        if (result.ok && controls.refresh) controls.refresh();
+      } else if (action === 'reset') {
+        ability.cooldownLeft = 0;
+        ability.durationLeft = 0;
+        ability.usesLeft = ability.uses === '' ? null : ability.uses;
+        feedback.textContent = 'Reset ' + ability.name + ' tracker (previous AP and resource costs are not refunded).';
+        feedback.classList.remove('ability-error');
+      } else if (action === 'end') {
+        ability.durationLeft = 0;
+        feedback.textContent = 'Ended ' + ability.name + ' duration.';
+        feedback.classList.remove('ability-error');
       }
       render();
       save();
     });
     render();
-    return { render };
+    return {
+      render,
+      turnStart() { if (advanceTurn(getState())) { render(); save(); } },
+      longRest() { resetForRest(getState()); render(); }
+    };
   }
 
-  window.WBAbilities = { normalizeState, init };
+  window.WBAbilities = { normalizeState, init, activate, advanceTurn, resetForRest };
 })();
