@@ -122,3 +122,11 @@ test('UI contains all advanced controls and one versioned set of static assets',
   assert.match(css,/\.ability-list\.is-compact/);
   assert.match(css,/\.ability-list\.is-compact \.ability-quick-use/);
 });
+
+test('ability action row has clear vertical separation from the filter grid',()=>{
+  const css=read('css/sheet.css');
+  assert.match(css,/\.ability-view-controls\s*\{[^}]*margin-top:\s*16px/);
+  assert.match(css,/\.ability-view-controls #abilityClearFilters\s*\{[^}]*margin-left:\s*8px/);
+  const html=read('index.html');
+  assert.ok(html.indexOf('class="ability-view-controls"')>html.indexOf('class="ability-toolbar"'));
+});
