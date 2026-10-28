@@ -156,6 +156,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
 
 - **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
   by tapping a thumbnail.
+- **Ability Library:** custom homebrew abilities with types, categories, favorites, text descriptions and notes, optional AP/resource costs, cooldown, duration and charge metadata. Saved with character export/import, separate from the game; activation and effect automation are future work.
 - **Custom resources:** characters can keep or hide the legacy Mana/Holy Power pool and add multiple independent named resources with stable IDs, maximum/current values, point or percent display, colors, turn recovery, long-rest refill toggles, and manual spending/restoring. Resource data stays in the character export. Ability cost integration is future work.
 - **Health and Mana/Holy Power:** a Heal box, Death Threshold with a Trauma counter, and a dying panel (bleeding,
   Stabilized toggle, Indomitable roll, "Treated after combat"). Long rest refills everything, clears Trauma and has
