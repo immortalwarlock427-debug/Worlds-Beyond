@@ -373,38 +373,19 @@
   // Levels and per-level scores.
   // Each stat keeps a value for every level it was set at. A level uses the latest value
   // at or below it; levels before the first value use that first value.
-  function level() {
-    const l = Math.floor(num(state.fields.level));
-    return isNaN(l) || l < 1 ? 1 : Math.min(l, MAX_LEVEL);
-  }
-  function keyAt(k, n) {
-    const h = state.hist[k];
-    if (!h) return null;
-    let best = null, bestLv = -Infinity, first = null, firstLv = Infinity;
-    Object.keys(h).forEach((key) => {
-      const lv = Number(key);
-      const v = h[key];
-      if (!isSet(v) || isNaN(num(v))) return;
-      if (lv <= n && lv > bestLv) { best = key; bestLv = lv; }
-      if (lv < firstLv) { first = key; firstLv = lv; }
-    });
-    return best != null ? best : first;
-  }
-  function rawAt(k, n) { const key = keyAt(k, n); return key == null ? null : state.hist[k][key]; }
+  const level = () => window.WBCombat.level(state);
+  const keyAt = (k, n) => window.WBCombat.keyAt(state, k, n);
+  const rawAt = (k, n) => window.WBCombat.rawAt(state, k, n);
   const hasScore = (k) => rawAt(k, 1) != null;
   // Points spent at levels 4, 8, 12, 16 and 19 count from that level on.
-  function asiSum(k, n) {
-    let t = 0;
-    ASI_LEVELS.forEach((L) => { if (L <= n && state.asi[L] && state.asi[L][k]) t += state.asi[L][k]; });
-    return t;
-  }
-  const scoreAt = (k, n) => { const r = rawAt(k, n); return r == null ? null : num(r) + asiSum(k, n); };
+  const asiSum = (k, n) => window.WBCombat.asiSum(state, k, n);
+  const scoreAt = (k, n) => window.WBCombat.scoreAt(state, k, n);
   const baseScore = (k) => scoreAt(k, level());
   // Your score right now: your own score plus whatever your worn equipment adds.
   // Advancement (Health and Mana per level) always uses your own score, never gear.
-  const score = (k) => { const b = baseScore(k); return b == null ? null :
-    b + gear(k) + window.WBAbilities.effectBonus(state, 'stat', k) +
-    window.WBAbilities.formStatBonus(state, k); };
+  const score = (k) => window.WBCombat.effectiveScore(state, k, level(),
+    window.WBAbilities.effectBonus(state, 'stat', k),
+    window.WBAbilities.formStatBonus(state, k));
   const scoreOr12 = (k) => { const s = score(k); return s == null ? 12 : s; };
   function setLevel(n) {
     n = Math.max(1, Math.min(MAX_LEVEL, Math.floor(n) || 1));
@@ -444,16 +425,10 @@
 
   // Rules
   const fmt = (n) => (n >= 0 ? '+' : '−') + Math.abs(n);
-  function autoMod(k, s) {
-    if (k === 'STR' || k === 'DEX') return Math.floor((s - 12) / 2);
-    return s >= 12 ? Math.ceil((s - 12) / 3) : -Math.ceil((12 - s) / 3);
-  }
-  function mod(k) {
-    const o = state.over['mod-' + k];
-    if (isSet(o) && !isNaN(num(o))) return num(o);
-    const s = score(k);
-    return s == null ? 0 : autoMod(k, s);
-  }
+  const autoMod = (k, s) => window.WBCombat.autoMod(k, s);
+  const mod = (k) => window.WBCombat.modifier(state, k, level(),
+    window.WBAbilities.effectBonus(state, 'stat', k),
+    window.WBAbilities.formStatBonus(state, k));
   const kind = () => (state.fields.manaKind === 'holy' ? 'holy' : 'mana');
   const msStat = () => (kind() === 'holy' ? 'FTH' : 'INT');
   function manaPerLevel(s) {
@@ -533,28 +508,9 @@
     return r;
   }
   const resists = (dt) => !!dt && resistances().some((x) => x.toLowerCase() === dt.toLowerCase());
-  function armorTotal() {
-    let t = 0;
-    SLOTS.forEach((s) => { const it = itemById(state.equip[s.k]); if (it) t += Number(it.ar) || 0; });
-    return t;
-  }
-  function gear(k) {
-    let t = 0;
-    SLOTS.forEach((s) => {
-      const it = itemById(state.equip[s.k]);
-      if (it) (it.bonuses || []).forEach((b) => { if (b.t === k) t += b.v; });
-    });
-    return t;
-  }
-  function gearSettled(k) {
-    let t = 0;
-    SLOTS.forEach((s) => {
-      const id = state.equip[s.k];
-      const it = itemById(id);
-      if (it && state.settled[id]) (it.bonuses || []).forEach((b) => { if (b.t === k) t += b.v; });
-    });
-    return t;
-  }
+  const armorTotal = () => window.WBCombat.gearArmor(state);
+  const gear = (k) => window.WBCombat.gearBonus(state, k);
+  const gearSettled = (k) => window.WBCombat.gearBonus(state, k, true);
   const gearNote = (k) => { const g = gear(k); return g ? ', ' + sgn(g) + ' gear' : ''; };
   const poolGearNote = (k) => { const g = gear(k); return g ? ' · ' + sgn(g) + ' from gear' : ''; };
   const pointsBy = (L) => 4 * ASI_LEVELS.filter((x) => x <= L).length;
@@ -669,14 +625,12 @@
   function makeTracker(o) {
     const t = {
       max() {
-        let m = num(o.maxEl.value);
-        if (isNaN(m)) m = num(o.maxEl.placeholder);
-        return isNaN(m) || m < 0 ? 0 : Math.min(Math.floor(m), 40);
+        return window.WBCombat.trackerMax(o.maxEl.value, o.maxEl.placeholder);
       },
       avail() {
         const m = t.max();
         const a = state[o.key];
-        return a == null ? m : Math.max(0, Math.min(a, m));
+        return window.WBCombat.trackerAvailable(a, m);
       },
       render() {
         const m = t.max();
@@ -729,21 +683,15 @@
   // ---------- Spending AP ----------
   // AP an ally gave you with Command sits on top of your own (it can go past your max), is spent first,
   // and lasts until it's used or your next turn is over.
-  function givenAp() { return state.apGiven && state.apGiven.n > 0 ? state.apGiven.n : 0; }
+  const givenAp = () => window.WBCombat.givenAp(state);
   function setGiven(n) { state.apGiven = { n: Math.max(0, Math.min(40, Math.round(n))), fresh: state.apGiven ? !!state.apGiven.fresh : true }; }
-  const apHave = () => apTracker.avail() + givenAp();
+  const apHave = () => window.WBCombat.apAvailable(state, apTracker.avail());
   function spendAp(cost) {
-    const g = givenAp();
-    const fromG = Math.min(g, cost);
-    if (fromG) setGiven(g - fromG);
-    state.apAvail = Math.max(0, apTracker.avail() - (cost - fromG));
+    Object.assign(state, window.WBCombat.spendAp(state, apTracker.avail(), cost));
   }
   // Getting AP back (an attack that turns out to be an opportunity attack) refills your own first.
   function refundAp(n) {
-    const own = apTracker.avail();
-    const back = Math.min(Math.max(0, apTracker.max() - own), n);
-    state.apAvail = own + back;
-    if (n > back) setGiven(givenAp() + (n - back));
+    Object.assign(state, window.WBCombat.refundAp(state, apTracker.avail(), apTracker.max(), n));
   }
   // One undo for the last Move, Command or Receive.
   let apUndo = null;
@@ -794,15 +742,7 @@
   const surgeOn = () => reached('AGL', 21);
   const moveNow = () => state.move || { ft: 0, left: 0, surge: 0 };
   const surgeLeft = () => (surgeOn() ? Math.max(0, 2 - moveNow().surge) : 0);
-  function movePlan(ft) {
-    const sp = speedNow();
-    const m = moveNow();
-    const fromLeft = Math.min(m.left, ft);
-    const rest = ft - fromLeft;
-    const ap = rest > 0 && sp > 0 ? Math.ceil(rest / sp) : 0;
-    const free = Math.min(surgeLeft(), ap);
-    return { ft, sp, fromLeft, ap, free, paid: ap - free, leftAfter: m.left - fromLeft + (ap * sp - rest) };
-  }
+  const movePlan = (ft) => window.WBCombat.movePlan(ft, speedNow(), moveNow(), surgeLeft());
   function planText(p) {
     const parts = [];
     if (p.fromLeft) parts.push(p.fromLeft + ' ft left over');
@@ -843,7 +783,7 @@
     snapAp('move');
     spendAp(p.paid);
     const m = moveNow();
-    state.move = { ft: m.ft + ft, left: p.leftAfter, surge: m.surge + p.free };
+    state.move = window.WBCombat.movementAfter(m, ft, p);
     return p;
   }
   function moveToast(ft, p, where) {
@@ -1242,7 +1182,7 @@
   // d20 + modifier for checks and attacks. Wonder can reroll any roll that isn't an attack;
   // from FTH 21 (Defy Fate), it counts a check as a success instead.
   const toastEl = $('#toast');
-  const apCost = (m) => Math.max(5, 10 - m);
+  const apCost = window.WBCombat.attackApCost;
   const modText = (m) => (m >= 0 ? ' + ' : ' \u2212 ') + Math.abs(m);
   const defyFate = () => reached('FTH', 21);
   let lastRoll = null;
