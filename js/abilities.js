@@ -13,8 +13,8 @@
   };
   const TYPES = ['active', 'passive', 'reaction', 'other'];
   const propNames = ['name', 'category', 'type', 'description', 'apCost', 'resourceId',
-    'resourceCost', 'cooldown', 'duration', 'uses', 'notes'];
-  const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses']);
+    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes'];
+  const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
 
   function normalizeAbility(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -33,6 +33,11 @@
       uses: optionalNumber(value.uses),
       usesLeft: optionalNumber(value.uses) === '' ? null :
         Math.min(optionalNumber(value.uses), value.usesLeft == null ? optionalNumber(value.uses) : optionalNumber(value.usesLeft)),
+      // Capacity limits how many creations/objects can exist at once. Unlike limited
+      // uses, it is not refilled at rest or consumed permanently by activation.
+      capacityMax: optionalNumber(value.capacityMax),
+      capacityCurrent: optionalNumber(value.capacityMax) === '' ? 0 :
+        Math.min(optionalNumber(value.capacityMax), optionalNumber(value.capacityCurrent) || 0),
       cooldownLeft: optionalNumber(value.cooldownLeft) || 0,
       durationLeft: optionalNumber(value.durationLeft) || 0,
       favorite: value.favorite === true
@@ -57,6 +62,9 @@
     if (a.type === 'passive') return { ok: false, message: 'Passive abilities do not need activation.' };
     if (a.cooldownLeft > 0) return { ok: false, message: a.name + ' is cooling down for ' + a.cooldownLeft + ' more turn(s).' };
     if (a.uses !== '' && a.usesLeft <= 0) return { ok: false, message: a.name + ' has no uses left.' };
+    if (a.capacityMax !== '' && a.capacityCurrent >= a.capacityMax) {
+      return { ok: false, message: a.name + ' is at its limit (' + a.capacityCurrent + '/' + a.capacityMax + '). Release something first.' };
+    }
     const ap = a.apCost === '' ? 0 : a.apCost;
     if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
       return { ok: false, message: 'AP tracker is not available.' };
@@ -86,6 +94,7 @@
       else resource.current -= cost;
     }
     if (a.uses !== '') a.usesLeft = Math.max(0, a.usesLeft - 1);
+    if (a.capacityMax !== '') a.capacityCurrent += 1;
     a.cooldownLeft = a.cooldown === '' ? 0 : a.cooldown;
     a.durationLeft = a.duration === '' ? 0 : a.duration;
     return { ok: true, message: 'Used ' + a.name + (a.durationLeft ? ' — duration: ' + a.durationLeft + ' turn(s)' : '') + '.' };
@@ -156,9 +165,11 @@
       if (ability.cooldown !== '') badges.push(ability.cooldown + '-turn cooldown');
       if (ability.duration !== '') badges.push(ability.duration + '-turn duration');
       if (ability.uses !== '') badges.push(ability.usesLeft + '/' + ability.uses + ' uses');
+      if (ability.capacityMax !== '') badges.push(ability.capacityCurrent + '/' + ability.capacityMax + ' active');
       if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
       if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
-      return '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
+      return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') + '" data-ability-id="' + esc(ability.id) + '">' +
+        '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
         (open.has(ability.id) ? ' open' : '') + '>' +
         '<summary class="ability-summary">' +
           '<span class="ability-summary-name">' + esc(ability.name) + '</span>' +
@@ -189,7 +200,13 @@
           '<div class="ability-editor-row">' +
             field('Cooldown (turns)', 'cooldown', ability.cooldown, 'number') +
             field('Duration (turns)', 'duration', ability.duration, 'number') +
-            field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Leave blank for unlimited uses. Enter 0 to indicate none available."') +
+            field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Limits activations until rest; leave blank for unlimited."') +
+          '</div>' +
+          '<div class="ability-capacity">' +
+            field('Max active / held (blank = no limit)', 'capacityMax', ability.capacityMax, 'number', ' placeholder="No limit" title="Maximum number of creations or objects that can exist at once. Separate from uses."') +
+            (ability.capacityMax === '' ? '' :
+              '<label class="ability-field"><span class="foot-label">Currently active / held</span><input type="number" min="0" max="' + ability.capacityMax + '" value="' + ability.capacityCurrent + '" data-ability-prop="capacityCurrent"></label>' +
+              '<button type="button" class="btn" data-ability-action="release" title="Remove one currently active or held object">−1 Release</button>') +
           '</div>' +
           '<label class="ability-field"><span class="foot-label">Notes</span>' +
             '<textarea data-ability-prop="notes" rows="2" maxlength="6000" placeholder="Optional conditions, limits, or reminders.">' +
@@ -213,7 +230,12 @@
             '<button type="button" class="btn" data-ability-action="duplicate">Duplicate</button>' +
             '<button type="button" class="btn danger" data-ability-action="delete">Delete</button>' +
           '</div>' +
-        '</div></details>';
+        '</div></details>' +
+        (ability.type === 'passive' ? '' :
+          '<button type="button" class="ability-quick-use" data-ability-action="use" aria-label="Use ' +
+          esc(ability.name) + '" title="Use ' + esc(ability.name) + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg><span>Use</span></button>') +
+        '</div>';
     }
 
     function rememberOpen() {
@@ -268,6 +290,14 @@
       const ability = cardElement && byId(cardElement.dataset.abilityId);
       if (!ability) return null;
       const prop = input.dataset.abilityProp;
+      if (prop === 'capacityCurrent') {
+        if (ability.capacityMax !== '') {
+          const entered = optionalNumber(input.value);
+          if (entered !== '') ability.capacityCurrent = Math.min(ability.capacityMax, entered);
+          save();
+        }
+        return { ability, prop };
+      }
       if (prop === 'usesLeft') {
         if (ability.uses !== '') {
           ability.usesLeft = Math.min(ability.uses, optionalNumber(input.value) === '' ? ability.usesLeft : optionalNumber(input.value));
@@ -280,6 +310,10 @@
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
       if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
+      if (prop === 'capacityMax') {
+        ability.capacityCurrent = ability.capacityMax === '' ? 0 :
+          Math.min(ability.capacityMax, ability.capacityCurrent);
+      }
       save();
       return { ability, prop };
     }
@@ -310,7 +344,8 @@
       } else if (action === 'duplicate') {
         const copy = normalizeAbility(Object.assign({}, ability, {
           id: id(), name: 'Copy of ' + ability.name, favorite: false,
-          usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0
+          usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0,
+          capacityCurrent: 0
         }));
         getState().abilities.push(copy);
         open.add(copy.id);
@@ -331,6 +366,15 @@
       } else if (action === 'end') {
         ability.durationLeft = 0;
         feedback.textContent = 'Ended ' + ability.name + ' duration.';
+        feedback.classList.remove('ability-error');
+      } else if (action === 'release') {
+        if (ability.capacityMax !== '' && ability.capacityCurrent > 0) {
+          ability.capacityCurrent--;
+          feedback.textContent = 'Released one ' + ability.name + ' creation (' +
+            ability.capacityCurrent + '/' + ability.capacityMax + ' active).';
+        } else {
+          feedback.textContent = 'There is nothing to release for ' + ability.name + '.';
+        }
         feedback.classList.remove('ability-error');
       }
       render();

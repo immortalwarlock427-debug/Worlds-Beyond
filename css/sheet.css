@@ -1132,3 +1132,24 @@ main.view-map > section:not(.mapsec), main.view-map > footer { display: none; }
 .ability-feedback {font-size:14px; color:var(--verdigris); margin:8px 0; min-height:1em;}
 .ability-feedback.ability-error {color:var(--blood);}
 .ability-uses-left {max-width:180px;}
+
+/* Keep ability activation visible in both collapsed and expanded cards. */
+.ability-item { position:relative; min-width:0; }
+.ability-item.has-quick-use .ability-summary { padding-right:99px; }
+.ability-quick-use {
+  position:absolute; z-index:2; top:8px; right:31px;
+  display:inline-flex; align-items:center; justify-content:center; gap:4px;
+  min-height:34px; padding:5px 8px; border:1px solid var(--brass); border-radius:4px;
+  background:var(--brass); color:var(--sheet); font:700 12px var(--font-label);
+  cursor:pointer;
+}
+.ability-quick-use svg { width:16px; height:16px; fill:currentColor; }
+.ability-quick-use:hover { filter:brightness(1.09); }
+.ability-quick-use:focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+.ability-capacity { display:flex; align-items:end; flex-wrap:wrap; gap:10px; }
+.ability-capacity .ability-field { flex:1 1 145px; }
+.ability-capacity .btn { margin-bottom:1px; }
+@media(max-width:440px) {
+  .ability-item.has-quick-use .ability-summary { padding-right:87px; }
+  .ability-quick-use { right:26px; padding:5px 6px; min-height:33px; }
+}
