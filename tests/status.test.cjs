@@ -112,3 +112,22 @@ test('character exports/imports carry statuses; dedicated third view and turn ho
   assert.match(css,/main\.sheet:not\(\.view-status\) > \.statussec/);
   assert.match(css,/main\.view-status > section:not\(\.statussec\)/);
 });
+
+
+test('adding a condition through the form persists source, notes, and turn limit',()=>{
+  const {state,byId,saves}=setup();
+  byId('statusName').value='Poisoned';
+  byId('statusType').value='debuff';
+  byId('statusSource').value='Wyvern';
+  byId('statusDuration').value='2';
+  byId('statusNotes').value='Burns on every turn';
+  byId('statusAddForm').emit('submit');
+  assert.equal(state.statuses.length,1);
+  assert.equal(state.statuses[0].name,'Poisoned');
+  assert.equal(state.statuses[0].type,'debuff');
+  assert.equal(state.statuses[0].source,'Wyvern');
+  assert.equal(state.statuses[0].remaining,2);
+  assert.ok(saves()>0);
+  assert.match(byId('statusManualList').innerHTML,/Wyvern/);
+  assert.match(byId('statusManualList').innerHTML,/2 turns left/);
+});
