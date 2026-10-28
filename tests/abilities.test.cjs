@@ -208,3 +208,44 @@ test('activation integration uses the same sheet AP, turn, and long-rest control
   assert.match(app, /abilities: state\.abilities/);
   assert.match(html, /id="abilityFeedback"/);
 });
+
+
+test('Foundry holds at most six creations without consuming limited charges', () => {
+  const { api } = harness();
+  const state = { abilities: [{ id: 'abilabcdefg', name: 'Foundry', type: 'active', uses: '', capacityMax: 6 }],
+    resources: [] };
+  api.normalizeState(state);
+  const controls = { getAp: () => 15, spendAp: () => {} };
+  for (let i = 0; i < 6; i++) assert.equal(api.activate(state, 'abilabcdefg', controls).ok, true);
+  assert.equal(state.abilities[0].capacityCurrent, 6);
+  assert.equal(state.abilities[0].usesLeft, null);
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, false);
+  api.resetForRest(state);
+  assert.equal(state.abilities[0].capacityCurrent, 6);
+  state.abilities[0].capacityCurrent = 5; // one held item was released
+  assert.equal(api.activate(state, 'abilabcdefg', controls).ok, true);
+});
+
+test('capacity is optional, bounded, and saved with the character', () => {
+  const { api } = harness();
+  const state = { abilities: [
+    { name: 'No limit', capacityMax: '', capacityCurrent: 17 },
+    { name: 'Limited', capacityMax: 6, capacityCurrent: 99 }
+  ] };
+  api.normalizeState(state);
+  assert.equal(state.abilities[0].capacityMax, '');
+  assert.equal(state.abilities[0].capacityCurrent, 0);
+  assert.equal(state.abilities[1].capacityCurrent, 6);
+  const saved = JSON.parse(JSON.stringify(state));
+  api.normalizeState(saved);
+  assert.equal(saved.abilities[1].capacityMax, 6);
+  assert.equal(saved.abilities[1].capacityCurrent, 6);
+});
+
+test('quick Use stays outside details and remains available when collapsed', () => {
+  const js = read('js/abilities.js');
+  assert.match(js, /ability-quick-use/);
+  assert.match(js, /data-ability-action="use"/);
+  assert.match(js, /data-ability-action="release"/);
+  assert.match(js, /'<\/div><\/details>' \+/);
+});
