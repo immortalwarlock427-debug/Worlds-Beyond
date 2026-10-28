@@ -1,0 +1,34 @@
+/* Same-device Player Preview. Uses existing Worlds Beyond sheet and DM palette. */
+.player-sheet {gap:22px;}
+.player-controls {display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.player-controls h2,.player-turn h2,.player-own h3 {font-family:var(--font-display);margin:0;}
+.player-controls h2 {font-size:24px;}
+.player-controls label {min-width:200px;flex:1 1 235px;max-width:360px;gap:5px;}
+.player-controls select,.player-spend input {
+  background:var(--field);border:1px solid var(--rule);color:var(--ink);
+  padding:9px;border-radius:4px;min-height:42px;font:16px var(--font-body);width:100%;
+}
+.player-turn {background:var(--brass-soft);border:1px solid var(--brass);
+  border-radius:5px;display:flex;align-items:center;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;padding:20px;}
+.player-turn h2 {font-size:24px;}
+.player-turn p {margin:4px 0 0;color:var(--muted);}
+.player-turn .dm-kicker {color:var(--brass);}
+.player-own,.player-map-section {display:grid;gap:12px;}
+.player-own h3 {font-size:21px;}
+.player-stats {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.player-stat {border:1px solid var(--rule);border-radius:4px;background:var(--field);padding:13px 14px;display:grid;gap:3px;}
+.player-stat span {font:700 12px var(--font-label);text-transform:uppercase;color:var(--muted);}
+.player-stat strong {font:22px var(--font-display);color:var(--brass);}
+.player-spend {display:flex;align-items:end;gap:10px;flex-wrap:wrap;}
+.player-spend label {max-width:145px;font:700 13px var(--font-label);color:var(--muted);display:grid;gap:5px;}
+.player-map-section .dm-map-board {cursor:crosshair;}
+.player-map-section .dm-map-token {cursor:default;pointer-events:none;}
+.player-map-section .dm-map-token.self {box-shadow:0 0 0 3px #f2c46b;}
+.player-map-section .dm-map-animation .dm-map-token {box-shadow:0 0 0 3px #f2c46b;}
+.player-map-section .dm-map-wrap {max-height: min(72vh,720px);}
+@media(max-width:700px){.player-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:460px){.player-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .player-controls label {max-width:none;}
+  .player-move-preview button {flex:1;}
+}
