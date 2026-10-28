@@ -213,7 +213,7 @@ test('Mana visibility toggles without changing resource balances', () => {
 test('the character sheet loads manager before app and hooks turn/rest/export', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
-  assert.ok(html.indexOf('src="js/resources.js"') < html.indexOf('src="js/app.js"'));
+  assert.ok(html.indexOf('src="js/resources.js') < html.indexOf('src="js/app.js'));
   assert.match(html, /id="resourceSection"/);
   assert.match(app, /window\.WBResources\.normalizeState\(state\)/);
   assert.match(app, /resourceManager\.turnStart\(\)/);
