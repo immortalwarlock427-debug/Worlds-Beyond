@@ -57,6 +57,12 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - A Show all option exposes other-form abilities for editing but does not permit their activation. Deleting a form removes its references; if it was the only assigned form, the ability becomes shared. Ability loadouts and active selection are saved/exported with character JSON, never the game save.
 - Future: real transformations with separate resource sets and optional gear/stat profiles must explicitly define how active effects behave.
   
+## Mechanical Forms phase two (next PR)
+- Each named Ability Form can optionally link to one existing portrait from Overview. Switching forms selects its linked portrait; unlinked forms and Base leave the current portrait alone. Deleting a portrait clears references without deleting the form.
+- Each form can configure temporary signed score adjustments for the eight stats (bounded -28..+28). These add to effective scores, alongside equipment and active ability effects, and therefore feed normal derived modifiers and defenses. They never rewrite purchased points, level history, equipment or an explicit manual modifier override.
+- Switching to a different form replaces the previous form's modifiers instead of stacking. Switching to Base removes all form-specific modifiers. Ability cooldowns, duration effects, capacity and resource balances still carry across form changes.
+- Mechanical settings are in a collapsible editor in the Abilities tab so routine switching stays compact. No AP cost or cooldown for switching in phase two, and this is not yet a full resource/gear transformation system.
+  
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
