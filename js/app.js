@@ -4133,6 +4133,7 @@
     });
     if (!onSheet) { mapTarget = null; renderMap(true); centerToken(); }
     if (onSheet && activeSheetTab === 'statuses') statusManager.render();
+    if (onSheet && activeSheetTab === 'abilities') abilityLibrary.render(); // Fresh portrait choices from Overview.
   }
   function viewFromHash() {
     const hash = location.hash.replace(/^#/, '').toLowerCase();
