@@ -21,6 +21,7 @@
     INSUFFICIENT_AP: 'Not enough AP for this action.',
     ENCOUNTER_NOT_IN_SETUP: 'Finish this encounter or create a new one before adding or editing combatants.',
     ENCOUNTER_NOT_ACTIVE: 'Start combat before taking that action.',
+    ENCOUNTER_NOT_FINISHED: 'Finish combat before returning to roster setup.',
     CANNOT_START: 'Add at least one combatant before starting.',
     ACTOR_NOT_DOWN: 'Only a character at zero or lower Health can be stabilized.',
     INVALID_DAMAGE: 'Enter a valid nonnegative, whole-number damage amount.',
@@ -193,6 +194,7 @@
     $('#startEncounter').hidden = !setup;
     $('#startEncounter').disabled = !encounter.order.length;
     $('#nextTurn').hidden = !active;
+    $('#reuseRoster').hidden = encounter.phase !== 'finished';
     $('#finishEncounter').hidden = !active;
     $('#encounterSummary').textContent = encounter.order.length + ' combatant' +
       (encounter.order.length === 1 ? '' : 's') + ' · Revision ' + encounter.revision +
@@ -303,6 +305,12 @@
     }
   });
   $('#startEncounter').addEventListener('click', () => command('StartEncounter'));
+  $('#reuseRoster').addEventListener('click', () => {
+    if (!encounter.order.length) return;
+    // Reopen setup without resetting any imported character snapshots.
+    if (command('ReopenSetup')) message(
+      'Roster reopened. Characters and token positions are preserved. AP and movement are reset. Edit Health, initiative, or add combatants before starting another fight.');
+  });
   $('#nextTurn').addEventListener('click', () => {
     const actorId = encounter.order[encounter.turnIndex];
     if (actorId) command('EndTurn', { actorId });
@@ -312,7 +320,7 @@
       command('FinishEncounter');
   });
   $('#newEncounter').addEventListener('click', () => {
-    if (!window.confirm('Replace the saved encounter with a blank one? Your player files and battlemap will not be changed.'))
+    if (!window.confirm('Clear the entire encounter roster and begin empty? Use Reuse roster after finishing a combat to keep imported characters. Your player files and battlemap will not be changed.'))
       return;
     try {
       const game = latestGame();
