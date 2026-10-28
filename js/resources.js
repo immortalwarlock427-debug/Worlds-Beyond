@@ -49,6 +49,7 @@
     const showMana = document.getElementById('showManaPool');
     const mana = document.getElementById('manaPool');
     const byId = (resourceId) => getState().resources.find((r) => r.id === resourceId);
+    const effectiveMax = (r) => window.WBAbilities && window.WBAbilities.resourceMax ? window.WBAbilities.resourceMax(getState(), r) : r.max;
 
     function render() {
       const state = getState();
@@ -59,9 +60,9 @@
         return;
       }
       list.innerHTML = state.resources.map((r) => {
-        const effectiveMax = window.WBAbilities.resourceMax(state, r);
-        const percent = Math.min(100, Math.round(100 * r.current / effectiveMax));
-        const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + effectiveMax;
+        const maxNow = effectiveMax(r);
+        const percent = Math.min(100, Math.round(100 * r.current / maxNow));
+        const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + maxNow;
         return '<div class="custom-resource" data-resource-id="' + escape(r.id) + '">' +
           '<div class="resource-top">' +
             '<label class="resource-name"><span class="foot-label">Name</span>' +
@@ -69,7 +70,7 @@
             '<strong class="resource-figure" aria-live="polite">' + escape(currentDisplay) + '</strong>' +
             '<button type="button" class="xbtn del" data-resource-action="remove" aria-label="Remove ' + escape(r.name) + '">&times;</button>' +
           '</div>' +
-          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + effectiveMax + '" aria-valuenow="' + r.current + '">' +
+          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + maxNow + '" aria-valuenow="' + r.current + '">' +
             '<span style="width:' + percent + '%"></span></div>' +
           '<div class="resource-values">' +
             '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + effectiveMax + '" data-resource-prop="current" value="' + r.current + '"></label>' +
@@ -135,7 +136,7 @@
       else if (prop === 'max') {
         r.max = Math.max(1, value(input.value, r.max));
         r.current = Math.min(r.max, r.current);
-      } else if (prop === 'current') r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), value(input.value, r.current));
+      } else if (prop === 'current') r.current = Math.min(effectiveMax(r), value(input.value, r.current));
       else if (prop === 'regen') r.regen = value(input.value, r.regen);
       else if (prop === 'display') r.display = input.value === 'percent' ? 'percent' : 'number';
       else if (prop === 'color') r.color = COLORS.includes(input.value) ? input.value : 'teal';
@@ -160,7 +161,7 @@
         // Save the amount before the card is rebuilt; never revert to the default 5.
         r.amount = field && String(field.value).trim() !== '' ? Math.max(1, value(field.value, r.amount)) : r.amount;
         if (action === 'spend') r.current = Math.max(0, r.current - r.amount);
-        if (action === 'restore') r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), r.current + r.amount);
+        if (action === 'restore') r.current = Math.min(effectiveMax(r), r.current + r.amount);
       }
       render();
       save();
@@ -169,8 +170,8 @@
     function turnStart() {
       let changed = false;
       getState().resources.forEach((r) => {
-        if (r.regen && r.current < window.WBAbilities.resourceMax(getState(), r)) {
-          r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), r.current + r.regen);
+        if (r.regen && r.current < effectiveMax(r)) {
+          r.current = Math.min(effectiveMax(r), r.current + r.regen);
           changed = true;
         }
       });
