@@ -59,8 +59,9 @@
         return;
       }
       list.innerHTML = state.resources.map((r) => {
-        const percent = Math.round(100 * r.current / r.max);
-        const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + r.max;
+        const effectiveMax = window.WBAbilities.resourceMax(state, r);
+        const percent = Math.min(100, Math.round(100 * r.current / effectiveMax));
+        const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + effectiveMax;
         return '<div class="custom-resource" data-resource-id="' + escape(r.id) + '">' +
           '<div class="resource-top">' +
             '<label class="resource-name"><span class="foot-label">Name</span>' +
@@ -68,16 +69,17 @@
             '<strong class="resource-figure" aria-live="polite">' + escape(currentDisplay) + '</strong>' +
             '<button type="button" class="xbtn del" data-resource-action="remove" aria-label="Remove ' + escape(r.name) + '">&times;</button>' +
           '</div>' +
-          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + r.max + '" aria-valuenow="' + r.current + '">' +
+          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + effectiveMax + '" aria-valuenow="' + r.current + '">' +
             '<span style="width:' + percent + '%"></span></div>' +
           '<div class="resource-values">' +
-            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + r.max + '" data-resource-prop="current" value="' + r.current + '"></label>' +
-            '<label><span class="foot-label">Maximum</span><input type="number" inputmode="numeric" min="1" max="' + LIMIT + '" data-resource-prop="max" value="' + r.max + '"></label>' +
+            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + effectiveMax + '" data-resource-prop="current" value="' + r.current + '"></label>' +
+            '<label><span class="foot-label">Base maximum</span><input type="number" inputmode="numeric" min="1" max="' + LIMIT + '" data-resource-prop="max" value="' + r.max + '"></label>' +
             '<label><span class="foot-label">Display</span><select data-resource-prop="display">' +
               '<option value="number"' + (r.display === 'number' ? ' selected' : '') + '>Points</option>' +
               '<option value="percent"' + (r.display === 'percent' ? ' selected' : '') + '>Percent</option>' +
             '</select></label>' +
           '</div>' +
+          (effectiveMax !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + effectiveMax + ' (' + (effectiveMax > r.max ? '+' : '') + (effectiveMax - r.max) + ' from abilities)</span>' : '') +
           '<div class="resource-actions">' +
             '<label class="resource-adjust"><span class="foot-label">Amount</span>' +
               '<input type="number" min="1" max="' + LIMIT + '" value="' + r.amount + '" data-resource-amount aria-label="Amount to spend or restore"></label>' +
@@ -133,7 +135,7 @@
       else if (prop === 'max') {
         r.max = Math.max(1, value(input.value, r.max));
         r.current = Math.min(r.max, r.current);
-      } else if (prop === 'current') r.current = Math.min(r.max, value(input.value, r.current));
+      } else if (prop === 'current') r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), value(input.value, r.current));
       else if (prop === 'regen') r.regen = value(input.value, r.regen);
       else if (prop === 'display') r.display = input.value === 'percent' ? 'percent' : 'number';
       else if (prop === 'color') r.color = COLORS.includes(input.value) ? input.value : 'teal';
@@ -158,7 +160,7 @@
         // Save the amount before the card is rebuilt; never revert to the default 5.
         r.amount = field && String(field.value).trim() !== '' ? Math.max(1, value(field.value, r.amount)) : r.amount;
         if (action === 'spend') r.current = Math.max(0, r.current - r.amount);
-        if (action === 'restore') r.current = Math.min(r.max, r.current + r.amount);
+        if (action === 'restore') r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), r.current + r.amount);
       }
       render();
       save();
@@ -167,8 +169,8 @@
     function turnStart() {
       let changed = false;
       getState().resources.forEach((r) => {
-        if (r.regen && r.current < r.max) {
-          r.current = Math.min(r.max, r.current + r.regen);
+        if (r.regen && r.current < window.WBAbilities.resourceMax(getState(), r)) {
+          r.current = Math.min(window.WBAbilities.resourceMax(getState(), r), r.current + r.regen);
           changed = true;
         }
       });
