@@ -128,7 +128,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: []
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -256,6 +256,7 @@
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
     window.WBResources.normalizeState(state);
+    window.WBAbilities.normalizeState(state);
   ['fields', 'over', 'hist', 'rolls', 'alloc', 'equip', 'lvGear', 'settled', 'spent'].forEach((k) => { if (!state[k] || typeof state[k] !== 'object' || Array.isArray(state[k])) state[k] = {}; });
   ['pool', 'items', 'order'].forEach((k) => { if (!Array.isArray(state[k])) state[k] = []; });
   // Stat increases: { level: { STAT: points } }, at most 2 per stat per level up.
@@ -661,6 +662,7 @@
   }
   const manaPool = $('#manaPool');
   const resourceManager = window.WBResources.init(() => state, save);
+  const abilityLibrary = window.WBAbilities.init(() => state, save);
   function updateManaKind() {
     const holy = kind() === 'holy';
     const label = holy ? 'Holy Power' : 'Mana';
@@ -4149,6 +4151,7 @@
     $('#mpCur').placeholder = $('#mpMax').value || '—';
     updateManaKind();
     resourceManager.render();
+    abilityLibrary.render();
     updatePool('hp');
     updatePool('mp');
     syncDown();
