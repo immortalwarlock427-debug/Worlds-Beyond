@@ -117,6 +117,8 @@
       (hpState ? '<span class="dm-pill down">' + hpState + '</span>' : '') +
       '</div><div class="dm-actor-meta">' +
       '<span>Initiative <b>' + actor.initiative + '</b></span>' +
+      (actor.initiativeBonus == null ? '' : '<span>Initiative bonus <b>' +
+        (actor.initiativeBonus >= 0 ? '+' : '') + actor.initiativeBonus + '</b></span>') +
       '<span>HP <b class="' + (actor.hp <= 0 ? 'down' : '') + '">' +
       actor.hp + ' / ' + actor.maxHp + '</b></span>' +
       '<span>AR <b>' + actor.ar + '</b></span>' +
@@ -201,7 +203,7 @@
     const warnings = [];
     try {
       for (const file of files.slice(0, 60)) {
-        if (file.size > 2000000) { warnings.push(file.name + ': exceeds 2 MB'); continue; }
+        if (file.size > 12000000) { warnings.push(file.name + ': exceeds 12 MB'); continue; }
         let state;
         try { state = window.WBPersistence.parseCharacterFile(await file.text()); }
         catch (err) { state = null; }
