@@ -198,3 +198,14 @@
   .dm-map-chooser { flex:1 1 100%; }
   .dm-map-choice { flex:1 0 auto; }
 }
+
+
+/* Visual-only confirmed movement. Authoritative coordinates/AP are saved
+   immediately; the overlay travels through each validated route cell. */
+.dm-map-animation {
+  position:absolute;inset:0;z-index:4;pointer-events:none;
+}
+.dm-map-animation .dm-map-token {
+  pointer-events:none;cursor:default;
+  will-change:transform;
+}
