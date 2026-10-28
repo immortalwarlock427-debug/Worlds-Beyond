@@ -180,7 +180,7 @@ test('imported AGL, Movement overrides and ability effects use existing shared s
 test('UI exposes separate free placement and preview-confirmed combat movement',()=>{
  const html=read('dm.html'),js=read('js/dm-map.js'),ctl=read('js/dm.js');
  for(const id of ['dmMapMode','dmMovePreview','dmMoveText','dmMoveConfirm',
-   'dmMoveCancel','dmMapPath','dmMapChoices','dmMapNotice'])assert.ok(html.includes('id="'+id+'"'),id);
+   'dmMoveCancel','dmMapPath','dmMapChoices','dmMapNotice','dmMapAnimation'])assert.ok(html.includes('id="'+id+'"'),id);
  assert.match(js,/movementRoute\(/);
  assert.match(js,/movePlan\(/);
  assert.match(js,/dmMoveConfirm/);
@@ -195,7 +195,7 @@ test('DM map previews movement first and only deducts AP after Confirm',()=>{
  const nodes={},listeners={};
  const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
    'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
-   'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices','dmMapNotice'];
+   'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices','dmMapNotice','dmMapAnimation'];
  for(const name of ids)nodes['#'+name]={
    style:{},value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,
    addEventListener(type,fn){listeners[name+':'+type]=fn;},
@@ -280,7 +280,7 @@ test('map choice buttons work and movement follows active turn with visible loca
   const elements={},listeners={};
   const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
     'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
-    'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices','dmMapNotice'];
+    'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp','dmMapChoices','dmMapNotice','dmMapAnimation'];
   for(const id of ids)elements['#'+id]={
     style:{},value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,
     addEventListener(event,fn){listeners[id+':'+event]=fn;},
