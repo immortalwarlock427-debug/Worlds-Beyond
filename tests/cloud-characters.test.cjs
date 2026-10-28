@@ -114,7 +114,7 @@ test('malformed characters, extra-large payload and invalid revisions are reject
  assert.equal(hero.fields.charName,'Aldrich');
 });
 test('migration enforces owner-only policies for every verb, with grants',()=>{
- const migration=read('supabase/migrations/20261028_private_characters.sql').toLowerCase();
+ const migration=read('supabase/migrations/20261028230000_private_characters.sql').toLowerCase();
  assert.match(migration,/enable row level security/);
  assert.match(migration,/revoke all on public\.wb_characters from anon, authenticated/);
  assert.match(migration,/grant select,insert,update,delete on public\.wb_characters to authenticated/);

@@ -6,7 +6,7 @@ The existing character sheet, JSON import/export, DM room and same-browser playe
 ## Setup (required to activate cloud storage)
 
 1. Create a Supabase project at https://supabase.com/dashboard and enable Email Auth.
-2. Open Supabase **SQL Editor** and run \`supabase/migrations/20261028_private_characters.sql\`. It creates \`public.wb_characters\` and enforces owner-only Row Level Security (RLS) for select, insert, update and delete. **Do not enable cloud writes before the policies are installed and tested.**
+2. Open Supabase **SQL Editor** and run \`supabase/migrations/20261028230000_private_characters.sql\`. It creates \`public.wb_characters\` and enforces owner-only Row Level Security (RLS) for select, insert, update and delete. **Do not enable cloud writes before the policies are installed and tested.**
 3. In **Project Settings → API Keys**, copy the **publishable** key (\`sb_publishable_...\`; older projects may have a public \`anon\` key), **never** a secret key, service_role key or private server credential.
 4. Copy the project HTTPS URL (for example \`https://your-project.supabase.co\`).
 5. Open the Worlds Beyond Deploy Preview (or later the live site) and select **Cloud Saves**. Enter the project URL and publishable key and click **Connect project**. They are saved only in this browser's localStorage. The Supabase browser client downloads from the official documented CDN; a content blocker might need to allow it.
@@ -31,3 +31,7 @@ The existing character sheet, JSON import/export, DM room and same-browser playe
 A real multiplayer session will need server-enforced game ownership/membership, join codes, an action log, authenticated/revisioned combat RPC, redacted player views, and real-time subscriptions. **Do not** share the existing full DM game document with players: it contains hidden enemy mechanics and fog.
 
 Reference: https://supabase.com/docs/guides/database/postgres/row-level-security and https://supabase.com/docs/reference/javascript/installing
+
+## GitHub production deployment
+
+With the Supabase GitHub integration connected to `main`, `supabase/config.toml` binds `[remotes.main]` to the existing production Supabase project and enables migrations. The SQL migration uses a full 14-digit UTC timestamp as required by the Supabase CLI. On merging a new Supabase-file commit to `main`, review **Supabase → Branches → main → View Logs**, then confirm `public.wb_characters` exists and RLS is enabled. Do not also run the migration manually in SQL Editor: mixing deployment and manual schema changes can cause migration-history drift.
