@@ -1,0 +1,9 @@
+# Worlds Beyond local CLI label; not a secret
+project_id = "worlds-beyond"
+
+# Production GitHub branch → existing Supabase project.
+[remotes.main]
+project_id = "bribnpmgptnktvlbhzdm"
+
+[db.migrations]
+enabled = true
