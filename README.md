@@ -50,3 +50,14 @@ AGENTS.md           instructions for AI assistants (CLAUDE.md points to it)
 
 See [docs/CONTEXT.md](docs/CONTEXT.md) for the rules and project context, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 for how the data is stored and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+
+## Offline DM Room (Draft 32)
+
+Open `dm.html` or select **Open DM Room** on the character sheet. This is a same-browser, **offline/local-only** combat tracker built for a DM:
+
+1. Import multiple exported character `.json` files using **Import selected files** (each becomes a compact encounter snapshot). Or create enemies/NPCs manually.
+2. Review each character's Health, maximum Health, Armor Rating, AP, Death Threshold and initiative. Edit any numbers before combat; enter the actual initiative **total** from a roll, not just its modifier.
+3. Select **Start encounter**. The current actor is highlighted. Use **Next turn**, per-actor AP spending, damage, healing, and stabilization controls. AP refresh and 4 Health bleeding at turn start follow `WBCombat` rules.
+4. The encounter saves automatically to the optional `game.encounter` field in `worlds-beyond-game-v1`; player `worlds-beyond-sheet-v1` data and JSON files are not overwritten. **New encounter** clears only the saved encounter after confirmation.
+
+**Important limitations:** The tracker does not synchronize other devices or browser tabs, update the imported player character files, or move tokens on the existing battlemap. It does not automatically roll initiative or attack dice; enter already-rolled raw damage per hit (resistance then Armor Rating is applied automatically). Do not open the sheet and DM room simultaneously in different tabs for active editing: separate tabs may overwrite the game save. Imported advancement data may be incomplete; warnings tell you when to verify Health before combat. There is no account login or secure multiplayer authorization yet.
