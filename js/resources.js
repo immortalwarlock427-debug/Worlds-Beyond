@@ -61,6 +61,9 @@
       }
       list.innerHTML = state.resources.map((r) => {
         const maxNow = effectiveMax(r);
+        // When a temporary maximum expires, excess points cannot remain above
+        // the restored cap. Raising the cap never grants free points.
+        if (r.current > maxNow) r.current = maxNow;
         const percent = Math.min(100, Math.round(100 * r.current / maxNow));
         const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + maxNow;
         return '<div class="custom-resource" data-resource-id="' + escape(r.id) + '">' +
