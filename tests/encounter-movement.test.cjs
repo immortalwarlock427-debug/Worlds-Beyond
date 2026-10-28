@@ -187,3 +187,50 @@ test('UI exposes separate free placement and preview-confirmed combat movement',
  assert.match(js,/options\.command\('MoveToken'/);
  assert.match(ctl,/type === 'PlaceToken' \|\| type === 'MoveToken'/);
 });
+
+test('DM map previews movement first and only deducts AP after Confirm',()=>{
+ const {w,e,map,game}=gameSetup();
+ let state=gameSetup().state;
+ state=apply(e,state,'StartEncounter');
+ const nodes={},listeners={};
+ const ids=['dmMapPick','dmMapActor','dmMapBoard','dmMapTokens','dmMapGrid',
+   'dmMapClear','dmMapStatus','dmMapMode','dmMovePreview','dmMoveText',
+   'dmMoveConfirm','dmMoveCancel','dmMapPath','dmMapHelp'];
+ for(const name of ids)nodes['#'+name]={
+   style:{},value:'',textContent:'',innerHTML:'',hidden:false,disabled:false,
+   addEventListener(type,fn){listeners[name+':'+type]=fn;},
+   getBoundingClientRect(){return {left:0,top:0};}
+ };
+ const ctx={window:{WB_MAPS:w.WB_MAPS,WBEncounterMap:w.WBEncounterMap,WBCombat:w.WBCombat},
+   document:{querySelector(s){if(!nodes[s])throw Error('Missing '+s);return nodes[s];}}};
+ vm.runInNewContext(read('js/dm-map.js'),ctx);
+ let calls=[];
+ const instance=ctx.window.WBDMMap.init({
+   getGame:()=>game,getEncounter:()=>state,
+   command(type,data) {
+     calls.push({type,data});
+     state=apply(e,state,type,data,{...dm,map});
+   },
+   selectMap(id){game.map.id=id;},
+   message(s){throw Error('Unexpected error: '+s);}
+ });
+ instance.render();
+ assert.equal(nodes['#dmMapMode'].value,'move');
+ const old=state.actors.hero.apAvail;
+ listeners['dmMapBoard:click']({
+   clientX:5*36+4,clientY:5*36+4,
+   target:{closest(){return null;}}
+ });
+ assert.equal(calls.length,0,'Preview does not apply a command');
+ assert.equal(nodes['#dmMovePreview'].hidden,false);
+ assert.equal(state.actors.hero.apAvail,old);
+ assert.match(nodes['#dmMoveText'].textContent,/10 ft/);
+ assert.match(nodes['#dmMapPath'].innerHTML,/dm-path-cell/);
+ listeners['dmMoveConfirm:click']();
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].type,'MoveToken');
+ assert.equal(state.actors.hero.apAvail,old-1);
+ assert.equal(nodes['#dmMovePreview'].hidden,true);
+ assert.equal(state.actors.hero.x,5);
+ assert.equal(state.actors.hero.y,5);
+});
