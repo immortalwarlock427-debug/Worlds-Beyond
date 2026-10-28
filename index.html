@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-mech-forms-v7">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-form-resources-v8">
 </head>
 <body>
 <main class="sheet">
@@ -296,8 +296,12 @@
         </div>
         <div class="custom-resources" id="resourceSection">
           <div class="custom-resource-header"><h3>Custom Resources</h3><button type="button" class="btn strong" id="addResource">+ Add resource</button></div>
-          <p class="pool-src">Track Energy, Stamina, Heat or any other character-specific resource. Each has its own current value, maximum, and recovery settings.</p>
-          <label class="resource-mana-toggle"><input type="checkbox" id="showManaPool" checked> Show Mana / Holy Power</label>
+          <p class="pool-src">Track Energy, Stamina, Heat or any other character-specific resource. You can assign each pool to specific ability forms; balances remain unchanged when you switch away.</p>
+          <label class="resource-mana-toggle"><input type="checkbox" id="showManaPool" checked> Show Mana / Holy Power by default (forms can override)</label>
+          <div class="resource-view-options">
+            <span id="resourceSummary" class="resource-form-summary" role="status" aria-live="polite"></span>
+            <label><input id="resourceShowAll" type="checkbox"> Show resources from other forms (organize)</label>
+          </div>
           <div id="resourceList" class="resource-list"></div>
         </div>
         <div class="rest">
@@ -787,10 +791,10 @@
   </div>
 </div>
 
-<script src="js/maps.js?v=20261028-mech-forms-v7"></script>
-<script src="js/resources.js?v=20261028-mech-forms-v7"></script>
-<script src="js/abilities.js?v=20261028-mech-forms-v7"></script>
-<script src="js/status.js?v=20261028-mech-forms-v7"></script>
-<script src="js/app.js?v=20261028-mech-forms-v7"></script>
+<script src="js/maps.js?v=20261028-form-resources-v8"></script>
+<script src="js/resources.js?v=20261028-form-resources-v8"></script>
+<script src="js/abilities.js?v=20261028-form-resources-v8"></script>
+<script src="js/status.js?v=20261028-form-resources-v8"></script>
+<script src="js/app.js?v=20261028-form-resources-v8"></script>
 </body>
 </html>
