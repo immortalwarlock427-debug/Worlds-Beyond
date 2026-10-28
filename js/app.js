@@ -817,7 +817,13 @@
   // ---------- Movement ----------
   // Each AP moves you your Movement in feet. Feet left over from an AP you've started stay yours for the rest of the turn.
   // Surge (AGL 21) gives 2 AP of movement for free each turn, used before your own AP.
-  const speedNow = () => { const v = num($('#speed').value); return isNaN(v) ? 0 : Math.max(0, Math.floor(v)); };
+  // Effective speed is derived from the base/manual movement field and active ability
+  // effects; do not write the temporary effect into a field or gear totals.
+  const speedBase = () => {
+    const v = num(state.over.speed != null ? state.over.speed : AUTO.speed());
+    return isNaN(v) ? 0 : v;
+  };
+  const speedNow = () => window.WBAbilities.effectiveMovement(state, speedBase());
   const surgeOn = () => reached('AGL', 21);
   const moveNow = () => state.move || { ft: 0, left: 0, surge: 0 };
   const surgeLeft = () => (surgeOn() ? Math.max(0, 2 - moveNow().surge) : 0);
@@ -968,6 +974,7 @@
     save();
     resourceManager.turnStart();
     abilityLibrary.turnStart();
+    refreshAll(); // Update movement and the battlemap after timed effects expire.
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
     if (h != null && h <= 0 && !(state.down && state.down.stable) && !isDead()) applyDamage(4, { bleed: true });
@@ -4139,7 +4146,20 @@
       el.classList.toggle('manual', manual);
       el.title = manual ? 'Set by hand. Clear it to go back to the automatic value.' : '';
       if (el === active) return;
-      el.value = manual ? o : AUTO[id]();
+      if (id === 'speed') {
+        const bonus = window.WBAbilities.movementBonus(state);
+        const base = manual ? num(o) : num(AUTO.speed());
+        // Manual overrides remain orange and editable. Automatic effect bonuses
+        // are rendered teal, never stored as manual overrides.
+        el.classList.toggle('ability-adjusted', !manual && (!!bonus || !!gear('move')));
+        el.title = manual
+          ? 'Manually set base Movement. Effective movement: ' + window.WBAbilities.effectiveMovement(state, base) + ' ft/AP.'
+          : bonus ? 'Base: ' + base + ' ft/AP. Abilities: ' + (bonus > 0 ? '+' : '') + bonus + ' ft/AP.' : '';
+        if (el === active) return;
+        el.value = manual ? o : window.WBAbilities.effectiveMovement(state, base);
+      } else {
+        el.value = manual ? o : AUTO[id]();
+      }
     });
     STATS.forEach((s) => {
       const sc = score(s.k);
@@ -4162,7 +4182,11 @@
     $('#evSrc').textContent = '10 + AGL mod' + gearNote('ev');
     $('#armorSrc').textContent = (adamantine() ? 'Half VIT (Adamantine Body)' : 'VIT mod') + ' + worn armor';
     $('#initSrc').textContent = 'WIS mod' + gearNote('init');
-    $('#moveSrc').textContent = '5 ft + 5 per AGL mod' + gearNote('move');
+    const effectSpeed = window.WBAbilities.movementBonus(state);
+    $('#moveSrc').textContent = '5 ft + 5 per AGL mod' + gearNote('move') +
+      (effectSpeed ? ' · ' + (effectSpeed > 0 ? '+' : '') + effectSpeed + ' ft/AP from abilities' +
+        (isSet(state.over.speed) ? ' · effective ' + speedNow() + ' ft/AP' : '') : '');
+    $('#moveSrc').classList.toggle('ability-bonus-label', !!effectSpeed);
     $('#dvSrc').textContent = 'How far you see in the dark' + (gear('sight') ? ', ' + sgn(gear('sight')) + ' ft from gear (' + darkvisionFt() + ' ft)' : '');
     $('#lightSrc').textContent = gear('light') ? 'Your gear sheds ' + gear('light') + ' ft; the larger counts' : 'A torch, lantern or spell';
     $('#hpCur').placeholder = $('#hpMax').value || '—';
@@ -4216,6 +4240,19 @@
     } else if (t.hasAttribute('data-field')) {
       state.fields[t.id] = t.value;
     } else if (t.hasAttribute('data-auto')) {
+      // An automatically buffed Movement field displays the effective value.
+      // Focusing it for editing shows its unbuffed base; only intentional edits
+      // create an orange manual override.
+      if (t.id === 'speed' && t.dataset.editingBase === 'true' && t.value === t.dataset.initialBase) {
+        delete t.dataset.editingBase;
+        delete t.dataset.initialBase;
+        refreshAll();
+        return;
+      }
+      if (t.id === 'speed') {
+        delete t.dataset.editingBase;
+        delete t.dataset.initialBase;
+      }
       if (t.value.trim() === '') delete state.over[t.id]; else state.over[t.id] = t.value;
     } else if (t.dataset && t.dataset.rollLv) {
       const n = t.dataset.rollLv;
@@ -4226,8 +4263,27 @@
     refreshAll();
     save();
   });
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!t || t.id !== 'speed' || !window.WBAbilities.movementBonus(state)) return;
+    const base = speedBase();
+    t.dataset.editingBase = 'true';
+    t.dataset.initialBase = String(base);
+    t.value = String(base);
+  });
   document.addEventListener('focusout', (e) => {
     const t = e.target;
+    if (t && t.id === 'speed' && t.dataset.editingBase === 'true') {
+      const original = t.dataset.initialBase;
+      if (t.value === original) {
+        delete t.dataset.editingBase;
+        delete t.dataset.initialBase;
+        refreshAll();
+        return;
+      }
+      delete t.dataset.editingBase;
+      delete t.dataset.initialBase;
+    }
     if (!t || !t.matches || !t.matches('[data-auto], .score, .roll-in')) return;
     if (t.classList.contains('score')) scoreTarget = null;
     refreshAll();

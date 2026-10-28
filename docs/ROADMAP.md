@@ -9,12 +9,13 @@
 ## Sheet
 - Custom resources: basic manager delivered in Draft 30; later connect resource costs to the universal ability builder, add reusable templates and per-form pools.
 - Ability Library (capacity and quick use in next PR): separate maximum active/held creations from limited ability charges; keep an accessible Use button on collapsed and expanded cards. Future: named creations, bulk effects, and per-instance expiry.
-- Ability Library v1: create, edit, duplicate, delete, favorite, categorize and search abilities; record optional AP/resource costs, cooldowns, durations, uses (blank = unlimited), descriptions and notes without automating activations. Activation prototype: Use button validates/deducts AP or chosen resources, starts cooldown/duration trackers, and spends limited charges; turn start counts down and long rest resets. Next: richer duration rules, triggers, combat reset, and sheet-targeted effects.
+- Ability Library v1: create, edit, duplicate, delete, favorite, categorize and search abilities; record optional AP/resource costs, cooldowns, durations, uses (blank = unlimited), descriptions and notes without automating activations. Activation prototype: Use button validates/deducts AP or chosen resources, starts cooldown/duration trackers, and spends limited charges; turn start counts down and long rest resets. Temporary Movement effects (ft/AP) implemented in draft: activated bonuses add to effective movement for their duration without modifying base stats; expire at turn start. Next: richer duration rules, triggers, combat reset, and further sheet-targeted effects.
 - Spells: a list with level and tier, mana cost from the Magic System table, AP cost 11 − INT or FTH mod
   (minimum 6), damage, area and save (DC 12 + mod), concentration, and a Cast button.
 - Milestone buttons and trackers: Devastate and Singularity as toggles on attacks; pips for Indomitable, Miracle and
   the once-per-round ones; a New combat button.
 - Block scaling and two-handed damage, once decided.
+- A future Status Effects screen listing every current condition, buff, debuff and timed effect together, with remaining durations and sources; keep this separate from the ability editor.
 - A conditions tracker, after the Exhaustion revamp.
 - Character export/import/clear moved to the top, accessible from Sheet and Battlemap. Notes, consumables and currency. Visual polish. Later: set bonuses across slots.
 - Ability Library enhancements after v1: richer filters (type, resource, cost, cooldown, favorites), organization for large collections.
