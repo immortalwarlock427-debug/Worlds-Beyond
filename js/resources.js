@@ -73,14 +73,14 @@
           '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + maxNow + '" aria-valuenow="' + r.current + '">' +
             '<span style="width:' + percent + '%"></span></div>' +
           '<div class="resource-values">' +
-            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + effectiveMax + '" data-resource-prop="current" value="' + r.current + '"></label>' +
+            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + maxNow + '" data-resource-prop="current" value="' + r.current + '"></label>' +
             '<label><span class="foot-label">Base maximum</span><input type="number" inputmode="numeric" min="1" max="' + LIMIT + '" data-resource-prop="max" value="' + r.max + '"></label>' +
             '<label><span class="foot-label">Display</span><select data-resource-prop="display">' +
               '<option value="number"' + (r.display === 'number' ? ' selected' : '') + '>Points</option>' +
               '<option value="percent"' + (r.display === 'percent' ? ' selected' : '') + '>Percent</option>' +
             '</select></label>' +
           '</div>' +
-          (effectiveMax !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + effectiveMax + ' (' + (effectiveMax > r.max ? '+' : '') + (effectiveMax - r.max) + ' from abilities)</span>' : '') +
+          (maxNow !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + maxNow + ' (' + (maxNow > r.max ? '+' : '') + (maxNow - r.max) + ' from abilities)</span>' : '') +
           '<div class="resource-actions">' +
             '<label class="resource-adjust"><span class="foot-label">Amount</span>' +
               '<input type="number" min="1" max="' + LIMIT + '" value="' + r.amount + '" data-resource-amount aria-label="Amount to spend or restore"></label>' +
