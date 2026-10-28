@@ -63,6 +63,9 @@ The browser keeps two things apart, because a character and a game have differen
 ## Mechanical form score and portrait links
 - Each `abilityLoadouts[]` entry may carry `portraitId` and a `statBonuses` object keyed by the eight homebrew stats. `WBAbilities.formStatBonus(state, stat)` is a derived component of `score(stat)` only; do not mutate level-history stats or slot gear. `selectLoadout` switches the selected portrait only if linked, while `selectPortrait` switches the active mechanical form from a selected Overview portrait (or to Base when unlinked). Both use stored ids, and Overview portrait selection calls `refreshAll()` so available abilities and derived values update. Missing portrait references are removed by character normalization.
   
+## Form-specific custom resources
+- `state.resources[].loadoutIds` uses the same stable ability form ids as `state.abilities[].loadoutIds`. Empty is shared. The resource manager only renders available pools unless Show all is enabled; actual ability activation and regen gate independently on availability, so hidden resources cannot be spent via stale UI. Current values do not get reset on form switches. Built-in Mana is controlled by each form's `manaMode` (`inherit`/`show`/`hide`), layered over the original global `showMana` flag. Rest intentionally restores opted-in pools across forms.
+
 ## Ability form loadouts
 - Character state keeps `abilityLoadouts` (stable ids and names), `activeAbilityLoadoutId`, and per-ability `loadoutIds` (empty means shared). Loadout switching doesn't reset trackers or change the underlying character stats and resources; ability availability validation gates activation. Portrait `formId` and `portraits` are intentionally independent.
   
