@@ -118,6 +118,22 @@ test('in-memory repositories isolate state and characters from session data',()=
   assert.equal(repos.games.load().foes[0].name,'Void');
 });
 
+test('concurrent game merge keeps newer untouched sections and applies local changes',()=>{
+  const api=core();
+  const base={map:{id:'blank'},tokens:{hero:{x:1,y:1}},fog:{},foes:[],view:{grid:100}};
+  const local={...base,map:{id:'stone-hall'},view:{grid:45}};
+  const latest={...base,tokens:{hero:{x:2,y:1}},encounter:{id:'newer-dm-encounter'}};
+  const merged=api.mergeGameChanges(base,local,latest);
+  assert.deepEqual(merged.map,{id:'stone-hall'});
+  assert.deepEqual(merged.view,{grid:45});
+  assert.deepEqual(merged.tokens,{hero:{x:2,y:1}},'untouched token data should use the newest save');
+  assert.equal(merged.encounter.id,'newer-dm-encounter');
+  local.map.id='mutated-after-merge';
+  latest.encounter.id='mutated-after-merge';
+  assert.equal(merged.map.id,'stone-hall','merged local sections must not alias the caller');
+  assert.equal(merged.encounter.id,'newer-dm-encounter','newer sections must not alias the caller');
+});
+
 test('site integrates repositories for every load/save/clear/import/export path',()=>{
   const html=read('index.html'),app=read('js/app.js');
   assert.ok(html.indexOf('src="js/persistence.js')<html.indexOf('src="js/app.js'));
@@ -127,4 +143,5 @@ test('site integrates repositories for every load/save/clear/import/export path'
     'WBPersistence.parseCharacterFile(String(reader.result))']) assert.ok(app.includes(term),term);
   assert.doesNotMatch(app,/localStorage\.(?:getItem|setItem|removeItem)\s*\(/);
   assert.match(app,/const saveTimer|let saveTimer/);
+  assert.match(app,/WBPersistence\.mergeGameChanges\(gameSaveBase, localGame, latestGame\)/);
 });

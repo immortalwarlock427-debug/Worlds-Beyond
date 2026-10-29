@@ -140,6 +140,7 @@
   const blankGame = window.WBGameState.blankGame;
   const normalizeGame = window.WBGameState.normalizeGame;
   let game = blankGame();
+  let gameSaveBase = blankGame();
   // Your token: this character's square in the game.
   const myTok = () => game.tokens[state.id] || null;
   function setTok(t) {
@@ -205,6 +206,7 @@
     const savedGame = repositories.games.load();
     if (savedGame) game = normalizeGame(savedGame);
   } catch (e) { /* unavailable storage: start blank */ }
+  gameSaveBase = normalizeGame(game);
   try {
     const savedCharacter = repositories.characters.load();
     if (savedCharacter) state = Object.assign(blank(), savedCharacter);
@@ -331,7 +333,14 @@
     saveTimer = setTimeout(() => {
       try {
         repositories.characters.save(state);
-        repositories.games.save(game);
+        const localGame = normalizeGame(game);
+        if (JSON.stringify(localGame) !== JSON.stringify(gameSaveBase)) {
+          const savedGame = repositories.games.load();
+          const latestGame = savedGame ? normalizeGame(savedGame) : blankGame();
+          game = normalizeGame(window.WBPersistence.mergeGameChanges(gameSaveBase, localGame, latestGame));
+          repositories.games.save(game);
+          gameSaveBase = normalizeGame(game);
+        }
         setStatus(DEFAULT_STATUS);
       } catch (e) {
         setStatus("This browser won't save the sheet. Your entries stay until you close the page.", true);

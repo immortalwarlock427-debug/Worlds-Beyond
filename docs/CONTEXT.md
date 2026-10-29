@@ -32,6 +32,7 @@ The following features **already exist** in the live site:
 - **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware planning uses shared `js/routing.js`.
 - **Offline DM Room:** import player snapshots and NPCs, initiative/rounds/turns, AP, Health, damage/healing, manual token placement and confirmed AP-based path movement with animation. Finishing combat allows **Reuse roster / Edit setup**. DM encounter positions are distinct from sheet Battlemap positions and do not sync to other devices.
 - **Same-browser Player Preview:** `player.html` can display selected player stats/public encounter positions and submit MoveToken/SpendAP/EndTurn in another tab of the **same browser origin**. Seat selection is not authenticated and it **is not** the planned phone-player multiplayer solution.
+- **Independent local autosaves:** ordinary character edits do not rewrite unchanged DM game data. Battlemap edits preserve newer top-level encounter/player updates from another local view; simultaneous edits to the same game section still need the future transactional backend.
 - **Cloud Saves:** `cloud.html` automatically connects to the configured Supabase project; users can sign up/sign in, manually save/list/restore/delete private character copies with revision conflicts and backups. Cross-device character restore has been tested; **automatic saving and live encounters are not implemented**.
 
 ### Known implementation gaps
