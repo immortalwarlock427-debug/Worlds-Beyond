@@ -44,10 +44,59 @@
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
     return form && form.statBonuses ? formAdjustment(form.statBonuses[stat]) : 0;
   }
-  function selectLoadout(state, identifier) {
-    if (identifier && !(state.abilityLoadouts || []).some(x => x.id === identifier)) return false;
-    if (window.WBEquipment) window.WBEquipment.switchForm(state, identifier);
-    state.activeAbilityLoadoutId = identifier || '';
+  // Plan the entire entry payment before any portrait, loadout, equipment or
+  // tracker changes. Returning to Base and selecting the active form are free.
+  function entryCost(state, identifier, controls) {
+    const form=identifier && (state.abilityLoadouts||[]).find(x=>x.id===identifier);
+    if(identifier && !form)return {ok:false,message:'That form no longer exists.'};
+    if(!identifier || state.activeAbilityLoadoutId===identifier)
+      return {ok:true,ap:0,cost:0,form:form||null,resource:null};
+    const ap=optionalNumber(form.entryApCost)||0;
+    const cost=optionalNumber(form.entryResourceCost)||0;
+    const resourceId=form.entryResourceId||'';
+    if(ap && (!controls || typeof controls.getAp!=='function' ||
+        typeof controls.spendAp!=='function'))
+      return {ok:false,message:'The AP tracker is unavailable for this form switch.'};
+    if(ap && controls.getAp()<ap)
+      return {ok:false,message:'Not enough AP to enter '+form.name+' (requires '+ap+' AP).'};
+    let resource=null;
+    if(cost) {
+      if(resourceId==='base-mana') {
+        if(!controls||typeof controls.getMana!=='function'||
+            typeof controls.spendMana!=='function')
+          return {ok:false,message:'Mana / Holy Power is unavailable for this form switch.'};
+        const current=controls.getMana();
+        if(current==null||!Number.isFinite(current))
+          return {ok:false,message:'Set a Mana / Holy Power maximum before entering '+form.name+'.'};
+        if(current<cost)
+          return {ok:false,message:'Not enough Mana / Holy Power to enter '+form.name+' (requires '+cost+').'};
+      } else {
+        resource=(state.resources||[]).find(r=>r.id===resourceId);
+        if(!resource)
+          return {ok:false,message:'Choose an entry resource for '+form.name+'.'};
+        if((Number(resource.current)||0)<cost)
+          return {ok:false,message:'Not enough '+resource.name+' to enter '+form.name+' (requires '+cost+').'};
+      }
+    }
+    return {ok:true,ap,cost,resource,resourceId,form};
+  }
+  function commitFormEntry(state, identifier, controls) {
+    const payment=entryCost(state,identifier,controls);
+    if(!payment.ok)return payment;
+    if(!identifier || state.activeAbilityLoadoutId===identifier)return payment;
+    if(window.WBEquipment && !window.WBEquipment.switchForm(state,identifier))
+      return {ok:false,message:'Could not switch equipment profiles.'};
+    if(payment.ap)controls.spendAp(payment.ap);
+    if(payment.cost) {
+      if(payment.resourceId==='base-mana')controls.spendMana(payment.cost);
+      else payment.resource.current=Math.max(0,Number(payment.resource.current)-payment.cost);
+    }
+    state.activeAbilityLoadoutId=identifier;
+    return payment;
+  }
+  function selectLoadout(state, identifier, controls) {
+    const payment=commitFormEntry(state,identifier,controls);
+    if(!payment.ok)return false;
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
     const portrait = form && (state.portraits || []).find(x => x.id === form.portraitId);
     if (portrait) state.formId = portrait.id;
@@ -56,19 +105,26 @@
   // Choosing a portrait from Overview is the inverse of selectLoadout.
   // Prefer the already selected form when multiple forms share one portrait;
   // otherwise pick the first linked form. Unlinked portraits mean Base.
-  function selectPortrait(state, portraitId) {
+  function selectPortrait(state, portraitId, controls) {
     if (!(state.portraits || []).some(x => x.id === portraitId)) return false;
-    state.formId = portraitId;
     const forms = (state.abilityLoadouts || []).filter(x => x.portraitId === portraitId);
     const current = forms.find(x => x.id === state.activeAbilityLoadoutId);
     const nextFormId = current ? current.id : forms.length ? forms[0].id : '';
-    if (window.WBEquipment) window.WBEquipment.switchForm(state, nextFormId);
-    state.activeAbilityLoadoutId = nextFormId;
+    if(!commitFormEntry(state,nextFormId,controls).ok)return false;
+    state.formId = portraitId;
     return true;
   }
   function configureLoadout(state, identifier, property, value) {
     const form = (state.abilityLoadouts || []).find(x => x.id === identifier);
     if (!form) return false;
+    if (property === 'entryApCost' || property === 'entryResourceCost') {
+      form[property]=optionalNumber(value);return true;
+    }
+    if (property === 'entryResourceId') {
+      form.entryResourceId=value==='base-mana'||(state.resources||[]).some(r=>r.id===value)
+        ?value:'';
+      return true;
+    }
     if (property === 'manaMode') {
       form.manaMode = ['inherit', 'show', 'hide'].includes(value) ? value : 'inherit';
       return true;
@@ -91,7 +147,8 @@
   function createLoadout(state, name) {
     const text = clean(name,60).trim();
     if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
-    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, manaMode: 'inherit' };
+    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, manaMode: 'inherit',
+      entryApCost:'',entryResourceId:'',entryResourceCost:'' };
     state.abilityLoadouts.push(entry);
     if (window.WBEquipment) window.WBEquipment.switchForm(state, entry.id); // New form copies current gear.
     state.activeAbilityLoadoutId = entry.id;
@@ -231,7 +288,9 @@
         });
         return { id:key, name:clean(x.name,60).trim(),
           portraitId: clean(x.portraitId,100), statBonuses,
-          manaMode: ['show', 'hide'].includes(x.manaMode) ? x.manaMode : 'inherit' };
+          manaMode: ['show', 'hide'].includes(x.manaMode) ? x.manaMode : 'inherit',
+          entryApCost:optionalNumber(x.entryApCost), entryResourceId:clean(x.entryResourceId,100),
+          entryResourceCost:optionalNumber(x.entryResourceCost) };
       });
     const valid = new Set(state.abilityLoadouts.map(x => x.id));
     state.activeAbilityLoadoutId = valid.has(state.activeAbilityLoadoutId) ?
@@ -896,7 +955,7 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, selectLoadout, selectPortrait, configureLoadout,
+    formStatBonus, entryCost, selectLoadout, selectPortrait, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
