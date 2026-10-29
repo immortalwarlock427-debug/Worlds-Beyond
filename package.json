@@ -1,0 +1,14 @@
+{
+  "name": "worlds-beyond",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Worlds Beyond local and browser regression checks",
+  "scripts": {
+    "test:unit": "node --test tests/*.test.cjs",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}

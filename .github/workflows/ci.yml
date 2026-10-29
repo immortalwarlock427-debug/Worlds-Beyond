@@ -1,0 +1,50 @@
+name: Worlds Beyond Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit:
+    name: Unit and contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check syntax in every JS module
+        run: |
+          find js -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: Run all unit tests (automatically discovered)
+        run: node --test tests/*.test.cjs
+
+  browser:
+    name: Chromium interaction and mobile layout tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Exercise the actual website in a browser
+        run: npm run test:e2e
+        env:
+          CI: true
+      - name: Upload browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
