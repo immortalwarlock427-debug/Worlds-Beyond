@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Cloud Character Saves · Worlds Beyond</title>
-<link rel="stylesheet" href="css/sheet.css?v=20261028-cloud-v20">
-<link rel="stylesheet" href="css/dm.css?v=20261028-cloud-v20">
-<link rel="stylesheet" href="css/cloud.css?v=20261028-cloud-v20">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-cloud-autoconnect-v21">
+<link rel="stylesheet" href="css/dm.css?v=20261028-cloud-autoconnect-v21">
+<link rel="stylesheet" href="css/cloud.css?v=20261028-cloud-autoconnect-v21">
 </head>
 <body>
 <main class="sheet dm-sheet cloud-sheet">
@@ -24,13 +24,16 @@
     <div><strong>Cloud saves are optional</strong>
       <p>Your existing character sheet and JSON exports keep working without an account. This page stores private character copies only; encounters and multiplayer sessions are not yet cloud-connected.</p>
     </div>
-    <span class="dm-local">Setup required</span>
+    <span class="dm-local">Cloud saves available</span>
   </div>
-  <p id="cloudFeedback" role="status" class="dm-feedback" aria-live="polite">Cloud connection not configured.</p>
+  <p id="cloudFeedback" role="status" class="dm-feedback" aria-live="polite">Connecting to Worlds Beyond cloud…</p>
+  <div class="cloud-advanced">
+    <details id="cloudAdvanced">
+      <summary>Advanced: change cloud connection</summary>
   <section class="cloud-panel" aria-labelledby="cloudSetupHeading">
     <div class="dm-section-title">
-      <h2 id="cloudSetupHeading">Connect Supabase</h2>
-      <p>Requires a project with the Worlds Beyond database migration installed.</p>
+      <h2 id="cloudSetupHeading">Change Supabase connection</h2>
+      <p>Only needed for development or connecting another project.</p>
     </div>
     <form id="cloudConfigForm" class="cloud-form">
       <label>Supabase project URL
@@ -39,10 +42,13 @@
       <label>Publishable / anon key
         <input name="key" type="text" autocomplete="off" placeholder="sb_publishable_..." required>
       </label>
-      <button class="btn strong" type="submit">Connect project</button>
+      <button class="btn strong" type="submit">Use this project</button>
     </form>
-    <p class="dm-help">These are public browser configuration values, saved on this device. <strong>Never enter a service_role key or sb_secret_ key.</strong> Accounts and private characters are protected by Supabase Auth and database row-level security, not by hiding controls in this page.</p>
+    <button id="cloudUseDefault" class="btn" type="button">Use Worlds Beyond default</button>
+    <p class="dm-help">These are public browser configuration values. Custom overrides are saved on this device. <strong>Never enter a service_role key or sb_secret_ key.</strong> Accounts and private characters are protected by Supabase Auth and database row-level security, not by hiding controls in this page.</p>
   </section>
+    </details>
+  </div>
   <section id="cloudAuthSection" class="cloud-panel" aria-labelledby="cloudAuthHeading" hidden>
     <div class="dm-section-title">
       <h2 id="cloudAuthHeading">Your account</h2>
@@ -82,8 +88,9 @@
   </footer>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/persistence.js?v=20261028-cloud-v20"></script>
-<script src="js/cloud-characters.js?v=20261028-cloud-v20"></script>
-<script src="js/cloud.js?v=20261028-cloud-v20"></script>
+<script src="js/persistence.js?v=20261028-cloud-autoconnect-v21"></script>
+<script src="js/cloud-config.js?v=20261028-cloud-autoconnect-v21"></script>
+<script src="js/cloud-characters.js?v=20261028-cloud-autoconnect-v21"></script>
+<script src="js/cloud.js?v=20261028-cloud-autoconnect-v21"></script>
 </body>
 </html>

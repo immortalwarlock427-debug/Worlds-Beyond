@@ -26,3 +26,9 @@
   .cloud-item-actions button {flex:1;}
   .cloud-panel {padding:14px;}
 }
+/* Players see account controls by default; project setup remains accessible
+   for advanced testing without requiring URL/key entry. */
+.cloud-advanced summary {cursor:pointer;color:var(--muted);font:700 14px var(--font-label);padding:10px 0;}
+.cloud-advanced summary:hover {color:var(--brass);}
+.cloud-advanced .cloud-panel {margin-top:8px;}
+.cloud-advanced .cloud-panel > button {justify-self:start;}

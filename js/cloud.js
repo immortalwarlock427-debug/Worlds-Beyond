@@ -1,6 +1,7 @@
 /* Cloud Saves UI – manual private character copies only.
  * NO automatic uploads. Local sheet and all game/DM saves remain separate.
- * Requires user-provided Supabase URL + publishable key + RLS migration.
+ * The site supplies a publishable URL/key by default; an advanced override is
+ * still available for local testing. Owner-only database RLS protects data.
  */
 (function(){
   'use strict';
@@ -10,6 +11,7 @@
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
   const configKey='wb-cloud-public-config-v1';
   const backupKey='wb-cloud-last-local-backup-v1';
+  const siteConfig=window.WBCloudConfig||null;
   const local=window.WBPersistence.createLocalRepositories(()=>window.localStorage).characters;
   let client=null,cloud=null,owner=null,listed=[],busy=false;
   const ui={
@@ -60,7 +62,7 @@
   function safeUrl(url){
     return new URL(url).origin;
   }
-  async function connect(url,key){
+  async function connect(url,key,rememberOverride=false){
     if(!window.WBCloudCharacters.validateConfig(url,key))
       throw new Error('Use an HTTPS Supabase project URL and a publishable/anon key. Never use a service-role key.');
     if(!window.supabase || !window.supabase.createClient)
@@ -72,7 +74,8 @@
         storageKey:'wb-supabase-session-'+new URL(endpoint).hostname}
     });
     cloud=window.WBCloudCharacters.createAdapter(client);
-    window.localStorage.setItem(configKey,JSON.stringify({url:endpoint,key:publishable}));
+    if(rememberOverride)
+      window.localStorage.setItem(configKey,JSON.stringify({url:endpoint,key:publishable}));
     const response=await client.auth.getUser();
     owner=response.data&&response.data.user||null;
     // Auth can asynchronously refresh; protect the UI from exposing a stale
@@ -134,7 +137,11 @@
     event.preventDefault();if(busy)return;
     const data=new FormData(event.currentTarget);
     setBusy(true);
-    try{await connect(text(data.get('url')).trim(),text(data.get('key')).trim());}
+    try{
+      await connect(text(data.get('url')).trim(),text(data.get('key')).trim(),true);
+      $('#cloudAdvanced').open=false;
+      announce('Cloud project connected. Sign in or continue with your account.');
+    }
     catch(error){failure(error);}finally{setBusy(false);updateLocal();}
   });
   $('#cloudAuthForm').addEventListener('submit',async event=>{
@@ -243,15 +250,43 @@
       announce('Previous local character restored. Refresh the Character Sheet to see it.');
     }catch(error){failure(error);}
   });
+  $('#cloudUseDefault').addEventListener('click',async()=>{
+    if(busy)return;
+    if(!siteConfig||!siteConfig.url||!siteConfig.key){
+      announce('Default cloud connection is not available.',true);return;
+    }
+    setBusy(true);
+    try{
+      await connect(siteConfig.url,siteConfig.key,false);
+      window.localStorage.removeItem(configKey);
+      $('#cloudConfigForm').querySelector('[name="url"]').value=siteConfig.url;
+      $('#cloudConfigForm').querySelector('[name="key"]').value=siteConfig.key;
+      $('#cloudAdvanced').open=false;
+      announce(owner?'Connected to Worlds Beyond cloud. Your account is ready.':
+        'Connected to Worlds Beyond cloud. Sign in to continue.');
+    }catch(error){failure(error);}finally{setBusy(false);updateLocal();}
+  });
   (async()=>{
     updateLocal();
     try{
       const saved=JSON.parse(window.localStorage.getItem(configKey)||'null');
-      if(saved&&saved.url&&saved.key){
-        $('#cloudConfigForm').querySelector('[name="url"]').value=saved.url;
-        $('#cloudConfigForm').querySelector('[name="key"]').value=saved.key;
-        await connect(saved.url,saved.key);
+      // Ignore a legacy manual connection when it matches site defaults;
+      // future publishable-key changes should reach existing visitors too.
+      const sameAsDefault=saved&&siteConfig&&saved.url===siteConfig.url&&
+        saved.key===siteConfig.key;
+      if(sameAsDefault)window.localStorage.removeItem(configKey);
+      const chosen=saved&&!sameAsDefault&&saved.url&&saved.key?saved:siteConfig;
+      if(chosen&&chosen.url&&chosen.key){
+        $('#cloudConfigForm').querySelector('[name="url"]').value=chosen.url;
+        $('#cloudConfigForm').querySelector('[name="key"]').value=chosen.key;
+        await connect(chosen.url,chosen.key,false);
+      }else {
+        $('#cloudAdvanced').open=true;
+        announce('No default cloud project is configured. Expand Advanced settings to connect.',true);
       }
-    }catch(error){failure(error);}
+    }catch(error){
+      $('#cloudAdvanced').open=true;
+      failure(error);
+    }
   })();
 })();
