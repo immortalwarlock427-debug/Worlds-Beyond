@@ -5,6 +5,6 @@
   'use strict';
   window.WBCloudConfig = Object.freeze({
     url: 'https://bribnpmgptnktvlbhzdm.supabase.co',
-    key: 'sb_publishable_zWJlrpjloCXo6Cma5vxhHA_8djQB6T3'
+    key: 'sb_publishable_zWJlrpJloCXo6Cma5vxhHA_8djQB6T3'
   });
 })();

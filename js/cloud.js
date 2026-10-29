@@ -272,10 +272,16 @@
       const saved=JSON.parse(window.localStorage.getItem(configKey)||'null');
       // Ignore a legacy manual connection when it matches site defaults;
       // future publishable-key changes should reach existing visitors too.
+      // The first public-key rollout accidentally lowercased one character.
+      // Drop only that known-bad cached override, not arbitrary test projects.
+      const legacyBadKey='sb_publishable_zWJlrpjloCXo6Cma5vxhHA_8djQB6T3';
+      const legacyTypo=saved&&siteConfig&&saved.url===siteConfig.url&&
+        saved.key===legacyBadKey;
       const sameAsDefault=saved&&siteConfig&&saved.url===siteConfig.url&&
         saved.key===siteConfig.key;
-      if(sameAsDefault)window.localStorage.removeItem(configKey);
-      const chosen=saved&&!sameAsDefault&&saved.url&&saved.key?saved:siteConfig;
+      if(sameAsDefault||legacyTypo)window.localStorage.removeItem(configKey);
+      const chosen=saved&&!sameAsDefault&&!legacyTypo&&saved.url&&saved.key
+        ?saved:siteConfig;
       if(chosen&&chosen.url&&chosen.key){
         $('#cloudConfigForm').querySelector('[name="url"]').value=chosen.url;
         $('#cloudConfigForm').querySelector('[name="key"]').value=chosen.key;

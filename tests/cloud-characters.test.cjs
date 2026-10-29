@@ -152,6 +152,7 @@ test('deployed site supplies safe public cloud defaults and retains advanced ove
  const config=context.window.WBCloudConfig;
  const adapter=cloud();
  assert.equal(config.url,'https://bribnpmgptnktvlbhzdm.supabase.co');
+ assert.equal(config.key,'sb_publishable_zWJlrpJloCXo6Cma5vxhHA_8djQB6T3', 'Publishable keys are case-sensitive');
  assert.equal(config.key.startsWith('sb_publishable_'),true);
  assert.equal(adapter.validateConfig(config.url,config.key),true);
  assert.ok(page.includes('id="cloudAdvanced"'));
@@ -162,5 +163,7 @@ test('deployed site supplies safe public cloud defaults and retains advanced ove
  assert.ok(controller.includes('await connect(chosen.url,chosen.key,false)'));
  assert.ok(controller.includes("await connect(text(data.get('url')).trim(),text(data.get('key')).trim(),true)"));
  assert.ok(controller.includes('window.localStorage.removeItem(configKey)'));
+ assert.ok(controller.includes("saved.key===legacyBadKey"));
+ assert.ok(controller.includes("!legacyTypo&&saved.url&&saved.key"));
  assert.doesNotMatch(read('js/cloud-config.js'),/sb_secret_|service_role/);
 });
