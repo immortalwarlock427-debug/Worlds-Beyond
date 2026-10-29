@@ -156,11 +156,11 @@ test('deployed site supplies safe public cloud defaults and retains advanced ove
  assert.equal(adapter.validateConfig(config.url,config.key),true);
  assert.ok(page.includes('id="cloudAdvanced"'));
  assert.ok(page.includes('id="cloudUseDefault"'));
- assert.match(page,/src="js\\/cloud-config\\.js\\?v=/);
+ assert.ok(page.includes('src="js/cloud-config.js?v='));
  assert.ok(page.indexOf('js/cloud-config.js')<page.indexOf('js/cloud.js'));
- assert.match(controller,/const siteConfig=window\\.WBCloudConfig/);
- assert.match(controller,/await connect\\(chosen\\.url,chosen\\.key,false\\)/);
- assert.match(controller,/await connect\\(text\\(data\\.get\\('url'\\)\\)\\.trim\\(\\),text\\(data\\.get\\('key'\\)\\)\\.trim\\(\\),true\\)/);
- assert.match(controller,/window\\.localStorage\\.removeItem\\(configKey\\)/);
+ assert.ok(controller.includes('const siteConfig=window.WBCloudConfig'));
+ assert.ok(controller.includes('await connect(chosen.url,chosen.key,false)'));
+ assert.ok(controller.includes("await connect(text(data.get('url')).trim(),text(data.get('key')).trim(),true)"));
+ assert.ok(controller.includes('window.localStorage.removeItem(configKey)'));
  assert.doesNotMatch(read('js/cloud-config.js'),/sb_secret_|service_role/);
 });
