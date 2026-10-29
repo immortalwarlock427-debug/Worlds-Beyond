@@ -359,10 +359,10 @@ test('when two ability forms share one portrait, clicking it preserves current m
 test('Overview portrait switches call the ability manager and refresh derived sheet values', () => {
   const app=read('js/app.js');
   const abilities=read('js/abilities.js');
-  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form\)/);
+  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
   assert.match(app,/refreshAll\(\); \/\/ Updates stats, defenses, Movement, available abilities and portrait together/);
   assert.match(app,/window\.WBAbilities\.selectPortrait\(state, f\.id\)/);
-  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id\)/);
+  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id, formEntryControls\)/);
   assert.match(abilities,/selectPortrait, configureLoadout/);
 });
 
@@ -508,7 +508,7 @@ test('combined cost is atomic: AP, resources, gear, and portrait remain unchange
   api.configureLoadout(state,dest.id,'portraitId','beast');
   api.configureLoadout(state,dest.id,'entryApCost',7);
   api.configureLoadout(state,dest.id,'entryResourceId','resabcdefg');
-  api.configureLoadout(state,dest.id,'entryResourceCost',99);
+  api.configureLoadout(state,dest.id,'entryResourceCost',199);
   api.selectLoadout(state,'');
   const ref=JSON.stringify(state),apBefore=getAp();
   const withGear={...controls};
@@ -577,6 +577,6 @@ test('cost editor and portrait events use the same form payment path',()=>{
  assert.match(js,/data-loadout-entry-cost="entryResourceCost"/);
  assert.match(js,/data-loadout-entry-resource/);
  assert.match(js,/selectLoadout\(state,loadoutSelect\.value,controls\)/);
- assert.match(app,/selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
+  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
  assert.match(app,/entryCost\(state,dest\?dest\.id:'',formEntryControls\)/);
 });
