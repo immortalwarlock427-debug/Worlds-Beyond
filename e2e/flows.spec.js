@@ -266,6 +266,37 @@ test('form-entry costs charge AP and custom resources through the real selector 
     s?.abilityLoadouts?.[0]?.entryResourceCost===15);
 });
 
+
+test('active resource-maximum buff survives load/re-render, then expires during a real turn',async({page})=>{
+  await page.goto('/index.html');
+  await page.locator('#addResource').click();
+  await settled(page,character,s=>Boolean(s?.resources?.[0]));
+  await page.evaluate(()=>{
+    const storageKey='worlds-beyond-sheet-v1';
+    const s=JSON.parse(localStorage.getItem(storageKey));
+    const pool=s.resources[0];
+    pool.name='Rage';pool.max=100;pool.current=150;
+    s.abilities=[{id:'abilabcdefg',name:'Overcharge',
+      type:'active',duration:2,durationLeft:2,
+      effects:[{id:'effabcdefg',target:'resource-max',resourceId:pool.id,value:100}]}];
+    localStorage.setItem(storageKey,JSON.stringify(s));
+  });
+  await page.reload();
+  const pool=page.locator('#resourceList .custom-resource').first();
+  await expect(pool.locator('[data-resource-prop="current"]')).toHaveValue('150');
+  await expect(pool.locator('[role="progressbar"]')).toHaveAttribute('aria-valuemax','200');
+  await expect(pool.locator('[role="progressbar"]')).toHaveAttribute('aria-valuenow','150');
+  await page.reload();
+  await expect(pool.locator('[data-resource-prop="current"]')).toHaveValue('150');
+  await page.locator('#turnReset').click();
+  await settled(page,character,s=>s?.abilities?.[0]?.durationLeft===1);
+  await expect(pool.locator('[data-resource-prop="current"]')).toHaveValue('150');
+  await page.locator('#turnReset').click();
+  await settled(page,character,s=>s?.abilities?.[0]?.durationLeft===0 && s?.resources?.[0]?.current===100);
+  await expect(pool.locator('[data-resource-prop="current"]')).toHaveValue('100');
+  await expect(pool.locator('[role="progressbar"]')).toHaveAttribute('aria-valuemax','100');
+});
+
 for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/cloud.html']){
   test('390px viewport does not scroll the document sideways: '+path,async({browser})=>{
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});

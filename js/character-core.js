@@ -52,7 +52,7 @@
       Number(command.value)<0))return {ok:false,error:'INVALID_VALUE'};
    if(type==='SpendResource')r.current=Math.max(0,number(r.current)-number(command.amount));
    else if(type==='GainResource')
-     r.current=Math.min(before[r.id].effectiveMax,number(r.current)+number(command.amount));
+     r.current=Math.max(number(r.current),Math.min(before[r.id].effectiveMax,number(r.current)+number(command.amount)));
    else if(type==='FillResource')
      r.current=Math.max(number(r.current),before[r.id].effectiveMax);
    else if(type==='SetResourceCurrent')
