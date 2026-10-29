@@ -297,6 +297,59 @@ test('active resource-maximum buff survives load/re-render, then expires during 
   await expect(pool.locator('[role="progressbar"]')).toHaveAttribute('aria-valuemax','100');
 });
 
+
+test('Rage 100/200 overcharges, Monstrous Form grants +100 max, leaving follows per-resource policy',async({page})=>{
+ await page.goto('/index.html');
+ await page.locator('#addResource').click();
+ const resource=page.locator('#resourceList .custom-resource').first();
+ await resource.locator('[data-resource-prop="name"]').fill('Rage');
+ await resource.locator('[data-resource-prop="name"]').blur();
+ await resource.locator('[data-resource-prop="cap"]').fill('200');
+ await resource.locator('[data-resource-prop="cap"]').blur();
+ await settled(page,character,s=>s?.resources?.[0]?.cap===200);
+ await expect(resource.locator('[role="progressbar"]')).toHaveAttribute('aria-valuemax','200');
+ await tab(page,'abilities');
+ const form=await createForm(page,'Monstrous');
+ await page.locator('#abilityLoadoutConfig details summary').click();
+ await page.locator('[data-form-effect-action="add"]').click();
+ await page.locator('#abilityLoadoutConfig [data-form-effect-prop="target"]').selectOption('resource-max');
+ await page.locator('#abilityLoadoutConfig [data-form-effect-prop="resourceId"]').selectOption({label:'Rage'});
+ await page.locator('#abilityLoadoutConfig [data-form-effect-prop="value"]').fill('100');
+ await page.locator('#abilityLoadoutConfig [data-form-effect-prop="value"]').blur();
+ await settled(page,character,s=>s?.abilityLoadouts?.[0]?.effects?.[0]?.value===100);
+ await page.locator('#abilityLoadoutSelect').selectOption('');
+ await tab(page,'overview');
+ await expect(resource.locator('[role="progressbar"]')).toHaveAttribute('aria-valuemax','200');
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('100');
+ await resource.locator('[data-resource-amount]').fill('20');
+ await resource.locator('[data-resource-action="restore"]').click();
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('120');
+ await expect(resource.locator('.resource-effect-bonus')).toContainText('Overcharged by 20');
+ await tab(page,'abilities');
+ await page.locator('#abilityLoadoutSelect').selectOption(form);
+ await tab(page,'overview');
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('120');
+ await expect(resource.locator('.resource-figure')).toContainText('120 / 200');
+ await tab(page,'abilities');
+ await page.locator('#abilityLoadoutSelect').selectOption('');
+ await tab(page,'overview');
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('100');
+ await resource.locator('[data-resource-prop="overflowPolicy"]').selectOption('keep');
+ await resource.locator('[data-resource-amount]').fill('50');
+ await resource.locator('[data-resource-action="restore"]').click();
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('150');
+ await tab(page,'abilities');
+ await page.locator('#abilityLoadoutSelect').selectOption(form);
+ await page.locator('#abilityLoadoutSelect').selectOption('');
+ await tab(page,'overview');
+ await expect(resource.locator('[data-resource-prop="current"]')).toHaveValue('150');
+ await settled(page,character,s=>s?.resources?.[0]?.current===150 &&
+  s?.resources?.[0]?.overflowPolicy==='keep');
+ await page.reload();
+ await expect(page.locator('#resourceList [data-resource-prop="current"]').first()).toHaveValue('150');
+ await expect(page.locator('#resourceList [data-resource-prop="cap"]').first()).toHaveValue('200');
+});
+
 for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/cloud.html']){
   test('390px viewport does not scroll the document sideways: '+path,async({browser})=>{
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
