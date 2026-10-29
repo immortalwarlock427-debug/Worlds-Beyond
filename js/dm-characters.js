@@ -68,7 +68,7 @@
       'Unnamed character';
     return {
       actor: {
-        id, name, kind: 'pc', ownerId: 'offline',
+        id, name, kind: 'pc', side:'party', ownerId: 'offline',
         hp, maxHp, ar: bounded(armor, 0, 0, 1000000),
         deathThreshold, trauma,
         down: hp > 0 ? null : (state.down && typeof state.down === 'object' ?

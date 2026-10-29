@@ -19,6 +19,7 @@
     const fields = {
       id: value.id, name: value.name.trim(),
       kind: value.kind === 'npc' ? 'npc' : 'pc',
+      side: ['party','enemy'].includes(value.side) ? value.side : (value.kind === 'npc' ? 'enemy' : 'party'),
       ownerId: typeof value.ownerId === 'string' ? value.ownerId.slice(0, 100) : '',
       hp: value.hp === undefined ? 10 : value.hp,
       maxHp: value.maxHp === undefined ? 10 : value.maxHp,
@@ -175,7 +176,7 @@
         if (!actor) return fail('ACTOR_NOT_FOUND');
         if (!isRecord(action.changes) || !Object.keys(action.changes).length ||
             Object.keys(action.changes).some(key =>
-              !['name','hp','maxHp','ar','apMax','initiative','deathThreshold','speedFt','surgeMax'].includes(key)))
+              !['name','side','hp','maxHp','ar','apMax','initiative','deathThreshold','speedFt','surgeMax'].includes(key)))
           return fail('INVALID_ACTOR');
         const updated = actorFrom({
           ...actor, ...action.changes,

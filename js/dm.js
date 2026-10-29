@@ -129,6 +129,7 @@
     const head = '<header class="dm-actor-header"><div class="dm-actor-title">' +
       '<span class="dm-order">' + (index + 1) + '</span><h4>' + quote(actor.name) + '</h4>' +
       '<span class="dm-pill">' + (actor.kind === 'npc' ? 'NPC' : 'Player') + '</span>' +
+      '<span class="dm-pill">' + (actor.side === 'enemy' ? 'Enemy' : 'Party') + '</span>' +
       (current ? '<span class="dm-pill live">Current turn</span>' : '') +
       (hpState ? '<span class="dm-pill down">' + hpState + '</span>' : '') +
       '</div><div class="dm-actor-meta">' +
@@ -149,6 +150,7 @@
     if (editing) {
       body = '<form class="dm-actor-setup" data-dm-action="edit" data-actor="' + quote(actor.id) + '">' +
         '<label class="dm-name">Name<input name="name" maxlength="100" value="' + quote(actor.name) + '" required></label>' +
+        '<label>Side<select name="side"><option value="party"' + (actor.side==='party'?' selected':'') + '>Party</option><option value="enemy"' + (actor.side==='enemy'?' selected':'') + '>Enemy</option></select></label>' +
         '<label>HP<input type="number" name="hp" min="-1000000" max="1000000" value="' + actor.hp + '" required></label>' +
         '<label>Max HP<input type="number" name="maxHp" min="1" max="1000000" value="' + actor.maxHp + '" required></label>' +
         '<label>AR<input type="number" name="ar" min="0" max="1000000" value="' + actor.ar + '" required></label>' +
@@ -256,7 +258,7 @@
     ev.preventDefault();
     const fd = new FormData(ev.currentTarget);
     const actor = {
-      id: newId('npc'), name: String(fd.get('name') || '').trim(), kind: 'npc',
+      id: newId('npc'), name: String(fd.get('name') || '').trim(), kind: 'npc', side:String(fd.get('side')||'enemy'),
       hp: num(fd.get('maxHp')), maxHp: num(fd.get('maxHp')),
       ar: num(fd.get('ar')), apMax: num(fd.get('apMax')), apAvail: num(fd.get('apMax')),
       initiative: num(fd.get('initiative')),
@@ -274,7 +276,7 @@
     const which = form.dataset.dmAction;
     if (which === 'edit') {
       command('UpdateActor', { actorId:id, changes:{
-        name:String(fd.get('name') || '').trim(),
+        name:String(fd.get('name') || '').trim(),side:String(fd.get('side')||'enemy'),
         hp:num(fd.get('hp')), maxHp:num(fd.get('maxHp')),
         ar:num(fd.get('ar')), apMax:num(fd.get('apMax')),
         speedFt:num(fd.get('speedFt')), surgeMax:num(fd.get('surgeMax')),

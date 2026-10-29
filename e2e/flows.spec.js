@@ -181,6 +181,21 @@ test('DM imports an exported character, starts combat, moves token and charges A
   expect(actor.x).toBe(5);
 });
 
+test('DM side is editable in setup and persists through reload',async({page})=>{
+  await page.goto('/dm.html');
+  await page.locator('#dmNpcForm [name="name"]').fill('Friendly Guide');
+  await page.locator('#dmNpcForm [name="side"]').selectOption('party');
+  await page.locator('#dmNpcForm button[type="submit"]').click();
+  const setup=page.locator('#dmActorList form[data-dm-action="edit"]').first();
+  await expect(setup.locator('[name="side"]')).toHaveValue('party');
+  await settled(page,game,g=>Object.values(g?.encounter?.actors||{})[0]?.side==='party');
+  await setup.locator('[name="side"]').selectOption('enemy');
+  await setup.locator('button[type="submit"]').click();
+  await settled(page,game,g=>Object.values(g?.encounter?.actors||{})[0]?.side==='enemy');
+  await page.reload();
+  await expect(page.locator('#dmActorList form[data-dm-action="edit"] [name="side"]').first()).toHaveValue('enemy');
+});
+
 for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/cloud.html']){
   test('390px viewport does not scroll the document sideways: '+path,async({browser})=>{
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});

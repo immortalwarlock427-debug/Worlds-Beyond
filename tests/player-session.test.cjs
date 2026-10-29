@@ -7,7 +7,7 @@ function modules(){
   const ctx={window:{},Math,Number,Object,Map,Set,Date};
   for(const file of ['js/persistence.js','js/combat-core.js',
     'js/encounter-actions.js','js/game-state.js','js/maps.js',
-    'js/encounter-map.js','js/player-session.js'])
+    'js/routing.js','js/encounter-map.js','js/player-session.js'])
     vm.runInNewContext(read(file),ctx);
   return ctx.window;
 }
