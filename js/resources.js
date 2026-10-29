@@ -49,7 +49,12 @@
       id: typeof r.id === 'string' && /^res[a-z0-9]{6,36}$/.test(r.id) ? r.id : id(),
       name: text(r.name) || 'Resource',
       max,
-      current: value(r.current, max), // Loading may not erase a still-active max buff.
+      current: value(r.current, max), // Never clamp while loading or drawing.
+      cap: r.cap == null || String(r.cap).trim()==='' ? '' :
+        Math.max(max,Math.max(1,value(r.cap,max))),
+      overflowPolicy: r.overflowPolicy==='keep'?'keep':'lose',
+      restBehavior: ['fill','empty','unchanged'].includes(r.restBehavior) ?
+        r.restBehavior : (r.refillOnRest===false?'unchanged':'fill'),
       amount: Math.max(1, value(r.amount, 5)),
       display: r.display === 'percent' ? 'percent' : 'number',
       regen: value(r.regen, 0),
@@ -122,12 +127,17 @@
             '<label><input type="checkbox" data-resource-member="' + escape(form.id) + '"' +
             (!shared && r.loadoutIds.includes(form.id) ? ' checked' : '') + '> ' + escape(form.name) + '</label>').join('') +
           '</div></fieldset>' : '';
-        const maxNow = effectiveMax(r);
-        // Rendering must be read-only; loading a 150/200 active-effect pool
-        // cannot destroy valid points. Reconcile only on actual max changes.
-        const excess = Math.max(0,r.current-maxNow);
-        const percent = Math.min(100, Math.round(100 * r.current / maxNow));
-        const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + maxNow;
+        const limits=derive()[r.id];
+        const maxNow=limits.effectiveMax,hardCap=limits.hardCap;
+        // True overcharge: the maximum is 100, the optional absolute cap may
+        // be 200, and a form's max bonus raises the effective maximum to 200.
+        // Rendering is read-only, even for imported values above the hard cap.
+        const excess=Math.max(0,r.current-maxNow);
+        const percent=Math.min(100,Math.round(100*r.current/Math.max(1,hardCap)));
+        const marker=hardCap>maxNow?Math.round(100*maxNow/hardCap):100;
+        const ordinaryPercent=Math.round(100*r.current/maxNow);
+        const currentDisplay=r.display==='percent' ?
+          ordinaryPercent+'% ('+r.current+' / '+maxNow+')' : r.current+' / '+maxNow;
         return '<div class="custom-resource' + (active ? '' : ' resource-inactive') + '" data-resource-id="' + escape(r.id) + '">' +
           (active ? '' : '<p class="resource-inactive-note">Other form · balance preserved; actions disabled</p>') +
           '<div class="resource-top">' +
@@ -136,18 +146,29 @@
             '<strong class="resource-figure" aria-live="polite">' + escape(currentDisplay) + '</strong>' +
             '<button type="button" class="xbtn del" data-resource-action="remove" aria-label="Remove ' + escape(r.name) + '">&times;</button>' +
           '</div>' +
-          (excess ? '<p class="resource-effect-bonus">Above current maximum by ' + excess + ' — preserved until a gameplay change.</p>' : '') +
-          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + Math.max(maxNow,r.current) + '" aria-valuenow="' + r.current + '">' +
-            '<span style="width:' + percent + '%"></span></div>' +
+          (excess ? '<p class="resource-effect-bonus">' +
+            (limits.hasFixedCap?'Overcharged by ':'Above current maximum by ') + excess +
+            (limits.hasFixedCap?' · absolute cap '+hardCap:' — saved points preserved')+'</p>' : '') +
+          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + Math.max(hardCap,r.current) + '" aria-valuenow="' + r.current + '">' +
+            '<span style="width:' + percent + '%"></span>' +
+            (marker<100?'<i class="resource-max-marker" style="left:'+marker+'%" aria-hidden="true"></i>':'')+
+          '</div>' +
           '<div class="resource-values">' +
-            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + maxNow + '" data-resource-prop="current" value="' + r.current + '"></label>' +
+            '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + hardCap + '" data-resource-prop="current" value="' + r.current + '"></label>' +
             '<label><span class="foot-label">Base maximum</span><input type="number" inputmode="numeric" min="1" max="' + LIMIT + '" data-resource-prop="max" value="' + r.max + '"></label>' +
             '<label><span class="foot-label">Display</span><select data-resource-prop="display">' +
               '<option value="number"' + (r.display === 'number' ? ' selected' : '') + '>Points</option>' +
               '<option value="percent"' + (r.display === 'percent' ? ' selected' : '') + '>Percent</option>' +
             '</select></label>' +
           '</div>' +
-          (maxNow !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + maxNow + ' (' + (maxNow > r.max ? '+' : '') + (maxNow - r.max) + ' from abilities)</span>' : '') +
+          (maxNow !== r.max ? '<span class="resource-effect-bonus">Effective maximum: ' + maxNow + ' (' + (maxNow > r.max ? '+' : '') + (maxNow - r.max) + ' from forms and abilities)</span>' : '') +
+          '<div class="resource-cap-settings">' +
+            '<label><span class="foot-label">Absolute cap (blank = effective max)</span>' +
+              '<input type="number" min="1" max="' + LIMIT + '" data-resource-prop="cap" placeholder="No overcharge" value="' + escape(r.cap==null?'':r.cap) + '"></label>' +
+            '<label><span class="foot-label">When effective max decreases</span><select data-resource-prop="overflowPolicy">' +
+              '<option value="lose"' + (r.overflowPolicy!=='keep'?' selected':'') + '>Lose excess (default)</option>' +
+              '<option value="keep"' + (r.overflowPolicy==='keep'?' selected':'') + '>Keep excess</option>' +
+              '</select></label></div>' +
           membership +
           '<div class="resource-actions">' +
             '<label class="resource-adjust"><span class="foot-label">Amount</span>' +
@@ -161,7 +182,11 @@
             '<label><span class="foot-label">Bar color</span><select data-resource-prop="color">' +
               COLORS.map((c) => '<option value="' + c + '"' + (c === r.color ? ' selected' : '') + '>' + c.charAt(0).toUpperCase() + c.slice(1) + '</option>').join('') +
             '</select></label>' +
-            '<label class="resource-refill"><input type="checkbox" data-resource-prop="refillOnRest"' + (r.refillOnRest ? ' checked' : '') + '> Fill on long rest</label>' +
+            '<label><span class="foot-label">On long rest</span><select data-resource-prop="restBehavior">' +
+              '<option value="fill"' + (r.restBehavior==='fill'?' selected':'') + '>Fill to base max</option>' +
+              '<option value="empty"' + (r.restBehavior==='empty'?' selected':'') + '>Empty to zero</option>' +
+              '<option value="unchanged"' + (r.restBehavior==='unchanged'?' selected':'') + '>Unchanged</option>' +
+              '</select></label>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -221,11 +246,18 @@
         applyResource({type:'SetResourceMaximum',resourceId:r.id,value:Math.max(1,value(input.value,r.max))});
       } else if (prop === 'current') {
         applyResource({type:'SetResourceCurrent',resourceId:r.id,value:value(input.value,r.current)});
-      }
-      else if (prop === 'regen') r.regen = value(input.value, r.regen);
+      } else if (prop === 'cap') {
+        applyResource({type:'SetResourceCap',resourceId:r.id,value:input.value});
+      } else if (prop === 'overflowPolicy') {
+        applyResource({type:'SetResourceOverflowPolicy',resourceId:r.id,value:input.value});
+      } else if (prop === 'restBehavior') {
+        applyResource({type:'SetResourceRestBehavior',resourceId:r.id,value:input.value});
+      } else if (prop === 'regen') r.regen = value(input.value, r.regen);
       else if (prop === 'display') r.display = input.value === 'percent' ? 'percent' : 'number';
       else if (prop === 'color') r.color = COLORS.includes(input.value) ? input.value : 'teal';
-      else if (prop === 'refillOnRest') r.refillOnRest = input.checked;
+      else if (prop === 'refillOnRest')
+        applyResource({type:'SetResourceRestBehavior',resourceId:r.id,
+          value:input.checked?'fill':'unchanged'});
       render();
       save();
     });
