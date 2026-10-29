@@ -38,13 +38,13 @@ The following features **already exist** in the live site:
 
 - The sheet Battlemap and DM Room both use pure `WBRouting` for routes; the sheet supplies fog-limited terrain and visible foes, while DM uses full map terrain and its actor roster.
 - DM character imports exclude active temporary ability bonuses from combat stats, retaining current equipment, form bonuses and manual overrides. A visible warning lists each active ability, its bonuses and remaining turns; encounter timers for imported effects are still not implemented.
-- Custom abilities do **not yet** apply stat-based AP discounts, and switching named forms has **no optional cost**.
+- Custom abilities do **not yet** apply stat-based AP discounts. Named form entry can now charge AP and/or Mana/Holy Power or a custom resource; returning to Base remains free.
 - Existing automated tests include many source-text assertions; real browser-click/390px tests need broader coverage.
 - No authenticated cross-device DM game, join codes, server-authorized encounter commands, or live multiplayer synchronization.
 
 ## Confirmed decisions for upcoming work — not implemented yet
 
-- **Form-entry cost:** named forms can optionally charge AP, a resource (Mana/Holy Power or custom pool), or both. Blank defaults to **free** for legacy forms. Switching **into** the form must validate and spend costs atomically through every entry route, including linked portraits; failure spends nothing and changes nothing. **Base is free.** Forms are largely story/class transformations and currently provide free full worn-gear swaps.
+- **Form-entry cost — implemented:** named forms can charge AP, Mana/Holy Power or a custom pool, or AP plus a resource. Blank defaults to **free** for legacy forms. Entering through a selector or linked portrait checks all costs before spending; returning to **Base is free**, and selecting the already active form costs nothing. Switching worn gear profiles happens with the form.
 - **Ability AP discounts:** add `Discounted by: None / STR / DEX / INT / FTH` per ability, default **None**. Effective AP cost is `max(ceil(base AP / 2), base AP − current modifier)`; negative modifiers raise cost. Compute this in pure `WBCombat` and use it for activation, on-card base/effective prices, `Usable now` and AP-cost filters.
 - **Unified movement:** one shared DOM-free route algorithm used by sheet and DM. Preserve the sheet's fog planning (unseen squares assumed open; only visible standing enemies obstruct planning; travel stops when encountering a newly revealed obstacle). **Allies and downed creatures of either side are traversable at normal cost but cannot be destinations; standing enemies block.** Give DM actors editable `Party`/`Enemy` sides; imported PCs default Party, NPCs Enemy. Retain eight-direction movement unless a separate rule decision changes costs.
 - **Temporary effects on DM import — implemented:** only non-temporary combat stats are imported; active ability effects are shown as individual warnings with bonuses and turns remaining, rather than baked into permanent Armor Rating, Movement, Initiative, or stat-derived values.

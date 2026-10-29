@@ -576,7 +576,7 @@
   }
   const manaPool = $('#manaPool');
   const resourceManager = window.WBResources.init(() => state, save);
-  const abilityLibrary = window.WBAbilities.init(() => state, save, {
+  const formEntryControls = {
     getAp: () => apHave(),
     spendAp: (cost) => spendAp(cost),
     getMana: () => {
@@ -592,7 +592,8 @@
       $('#mpCur').value = state.fields.mpCur;
     },
     refresh: () => refreshAll()
-  });
+  };
+  const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
   const statusManager = window.WBStatus.init(() => state, save, { refresh: () => refreshAll() });
   function updateManaKind() {
     const holy = kind() === 'holy';
@@ -2772,7 +2773,14 @@
     if (!t) return;
     if (t.classList.contains('form-add')) { $('#formFile').click(); return; }
     // Clicking a portrait is also a mechanical form switch, not just a picture swap.
-    if (!window.WBAbilities.selectPortrait(state, t.dataset.form)) return;
+    const linked=(state.abilityLoadouts||[]).filter(f=>f.portraitId===t.dataset.form);
+    const dest=linked.find(f=>f.id===state.activeAbilityLoadoutId)||linked[0];
+    const check=window.WBAbilities.entryCost(state,dest?dest.id:'',formEntryControls);
+    if(!check.ok) {
+      showRoll({kind:'notice',title:'Cannot change form',math:check.message});
+      return;
+    }
+    if (!window.WBAbilities.selectPortrait(state, t.dataset.form, formEntryControls)) return;
     refreshAll(); // Updates stats, defenses, Movement, available abilities and portrait together.
     save();
     const again = formStrip.querySelector('.form-thumb[aria-pressed="true"]');
@@ -2789,16 +2797,25 @@
     const f = activeForm();
     if (!f) return;
     const i = state.portraits.indexOf(f);
+    const remaining=state.portraits.filter(p=>p.id!==f.id);
+    const nextCandidate=remaining[Math.max(0,i-1)];
+    const linked=nextCandidate?(state.abilityLoadouts||[]).filter(x=>x.portraitId===nextCandidate.id):[];
+    const dest=linked.find(x=>x.id===state.activeAbilityLoadoutId)||linked[0];
+    const check=window.WBAbilities.entryCost(state,dest?dest.id:'',formEntryControls);
+    if(!check.ok) {
+      showRoll({kind:'notice',title:'Cannot remove portrait',math:check.message});
+      return;
+    }
     state.portraits.splice(i, 1);
     // Do not keep links to deleted pictures on mechanical ability forms.
     state.abilityLoadouts.forEach(loadout => {
       if (loadout.portraitId === f.id) loadout.portraitId = '';
     });
     const next = state.portraits[Math.max(0, i - 1)];
-    if (next) window.WBAbilities.selectPortrait(state, next.id);
+    if (next) window.WBAbilities.selectPortrait(state, next.id, formEntryControls);
     else {
       state.formId = null;
-      window.WBAbilities.selectLoadout(state, '');
+      window.WBAbilities.selectLoadout(state, '', formEntryControls);
     }
     refreshAll();
     save();

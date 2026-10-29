@@ -166,3 +166,7 @@ Keep CONTEXT and ROADMAP accurate in place instead of appending per-PR histories
 ### DM import of temporary ability effects
 
 `WBDMCharacters.fromCharacter` imports current gear and selected form modifiers but deliberately does not include active `ability.durationLeft` effects in VIT/AGL/WIS, Armor Rating, Movement, Surge, or Initiative. Explicit sheet overrides are preserved. The importer never modifies the source character or adds timed effects to the encounter; it returns one warning for each active ability with its numerical targets and remaining turns. `js/dm.js` displays every warning as escaped text in `#dmImportWarnings`, including when more than four are active, and the DM can adjust the snapshot in setup. Duration-aware effects in encounters remain a separate future feature.
+
+### Named form entry costs
+
+Named `abilityLoadouts[]` entries may store `entryApCost`, `entryResourceId` and `entryResourceCost`. Empty/zero costs mean free. `WBAbilities.entryCost` checks AP and the selected built-in Mana/Holy Power or custom resource before changes. `selectLoadout` and `selectPortrait` share the entry payment path before changing active form, linked portrait, equipment or balances. The Ability Library and Overview supply the same AP/Mana callbacks; a failed cost changes nothing. Switching to Base and reselecting the same form are always free. Entry resources are charged even when the destination form normally hides the pool, since the explicit entry charge belongs to the transformation itself.

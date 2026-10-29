@@ -230,6 +230,42 @@ test('import shows every omitted active buff and retains only permanent DM comba
   await expect(warnings).toBeVisible();
 });
 
+
+test('form-entry costs charge AP and custom resources through the real selector without double spending',async({page})=>{
+  await page.goto('/index.html');
+  await page.locator('#charName').fill('Form Cost Tester');
+  await page.locator('#charName').blur();
+  await page.locator('#addResource').click();
+  const resource=page.locator('#resourceList .custom-resource').first();
+  await resource.locator('[data-resource-prop="name"]').fill('Energy');
+  await resource.locator('[data-resource-prop="name"]').blur();
+  const form=await createForm(page,'Overdrive');
+  await page.locator('#abilityLoadoutConfig details summary').click();
+  await page.locator('[data-loadout-entry-cost="entryApCost"]').fill('3');
+  await page.locator('[data-loadout-entry-cost="entryApCost"]').blur();
+  await page.locator('[data-loadout-entry-resource]').selectOption({label:'Energy'});
+  await page.locator('[data-loadout-entry-cost="entryResourceCost"]').fill('15');
+  await page.locator('[data-loadout-entry-cost="entryResourceCost"]').blur();
+  await settled(page,character,s=>s?.abilityLoadouts?.[0]?.entryResourceCost===15);
+  await page.locator('#abilityLoadoutSelect').selectOption('');
+  await tab(page,'overview');
+  await page.locator('#turnReset').click();
+  await tab(page,'abilities');
+  await page.locator('#abilityLoadoutSelect').selectOption(form);
+  await settled(page,character,s=>s?.activeAbilityLoadoutId===form &&
+    s?.resources?.[0]?.current===85 && s?.apAvail===12);
+  await page.locator('#abilityLoadoutSelect').selectOption(form);
+  await settled(page,character,s=>s?.resources?.[0]?.current===85 && s?.apAvail===12);
+  await page.locator('#abilityLoadoutSelect').selectOption('');
+  await settled(page,character,s=>s?.activeAbilityLoadoutId==='');
+  await page.locator('#abilityLoadoutSelect').selectOption(form);
+  await settled(page,character,s=>s?.resources?.[0]?.current===70 && s?.apAvail===9);
+  await page.reload();
+  await expect(page.locator('#abilityLoadoutSelect')).toHaveValue(form);
+  await settled(page,character,s=>s?.abilityLoadouts?.[0]?.entryApCost===3 &&
+    s?.abilityLoadouts?.[0]?.entryResourceCost===15);
+});
+
 for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/cloud.html']){
   test('390px viewport does not scroll the document sideways: '+path,async({browser})=>{
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});

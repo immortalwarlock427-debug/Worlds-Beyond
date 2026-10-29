@@ -359,10 +359,10 @@ test('when two ability forms share one portrait, clicking it preserves current m
 test('Overview portrait switches call the ability manager and refresh derived sheet values', () => {
   const app=read('js/app.js');
   const abilities=read('js/abilities.js');
-  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form\)/);
+  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
   assert.match(app,/refreshAll\(\); \/\/ Updates stats, defenses, Movement, available abilities and portrait together/);
   assert.match(app,/window\.WBAbilities\.selectPortrait\(state, f\.id\)/);
-  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id\)/);
+  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id, formEntryControls\)/);
   assert.match(abilities,/selectPortrait, configureLoadout/);
 });
 
@@ -455,4 +455,128 @@ test('new form-resource controls use the saved character rather than game state'
   assert.match(abilities,/data-loadout-mana-mode/);
   assert.match(css,/\.resource-memberships/);
   assert.match(html,/css\/sheet\.css\?v=[a-z0-9-]+/); // Release token changes when assets change.
+});
+
+test('legacy and new forms have free entry by default; configuration normalizes and saves',()=>{
+  const {api,state}=harness();
+  const f=api.createLoadout(state,'Free Fighter');
+  assert.equal(f.entryApCost,'');
+  assert.equal(f.entryResourceId,'');
+  assert.equal(f.entryResourceCost,'');
+  api.configureLoadout(state,f.id,'entryApCost','4');
+  api.configureLoadout(state,f.id,'entryResourceId','resabcdefg');
+  api.configureLoadout(state,f.id,'entryResourceCost','6');
+  const copy=JSON.parse(JSON.stringify(state));
+  api.normalizeState(copy);
+  const saved=copy.abilityLoadouts[0];
+  assert.equal(saved.entryApCost,4);
+  assert.equal(saved.entryResourceId,'resabcdefg');
+  assert.equal(saved.entryResourceCost,6);
+  const old={abilities:[],abilityLoadouts:[{id:'loadabcdefgh',name:'Legacy'}],resources:[]};
+  api.normalizeState(old);
+  assert.equal(old.abilityLoadouts[0].entryApCost,'');
+  assert.equal(old.abilityLoadouts[0].entryResourceCost,'');
+});
+test('entering a named form charges both AP and a custom resource exactly once, Base remains free',()=>{
+  const {api,state,controls,getAp}=harness();
+  const a=api.createLoadout(state,'Overdrive');
+  api.configureLoadout(state,a.id,'entryApCost',6);
+  api.configureLoadout(state,a.id,'entryResourceId','resabcdefg');
+  api.configureLoadout(state,a.id,'entryResourceCost',25);
+  const beforeAp=getAp(),beforeResource=state.resources[0].current;
+  assert.equal(api.selectLoadout(state,''),true,'base exit is free');
+  assert.equal(api.selectLoadout(state,a.id,controls),true);
+  assert.equal(getAp(),beforeAp-6);
+  assert.equal(state.resources[0].current,beforeResource-25);
+  assert.equal(api.selectLoadout(state,a.id,controls),true,'already active form costs nothing');
+  assert.equal(getAp(),beforeAp-6);
+  assert.equal(state.resources[0].current,beforeResource-25);
+  assert.equal(api.selectLoadout(state,''),true);
+  assert.equal(state.activeAbilityLoadoutId,'');
+  assert.equal(getAp(),beforeAp-6);
+  assert.equal(api.selectLoadout(state,a.id,controls),true);
+  assert.equal(getAp(),beforeAp-12);
+  assert.equal(state.resources[0].current,beforeResource-50);
+});
+test('combined cost is atomic: AP, resources, gear, and portrait remain unchanged when unaffordable',()=>{
+  const {api,state,controls,getAp}=harness();
+  const changes=[];
+  state.portraits=[{id:'human',src:'data:image/png;base64,a'},{id:'beast',src:'data:image/png;base64,b'}];
+  state.formId='human';
+  state.equip={head:'original'};
+  const dest=api.createLoadout(state,'Beast');
+  api.configureLoadout(state,dest.id,'portraitId','beast');
+  api.configureLoadout(state,dest.id,'entryApCost',7);
+  api.configureLoadout(state,dest.id,'entryResourceId','resabcdefg');
+  api.configureLoadout(state,dest.id,'entryResourceCost',199);
+  api.selectLoadout(state,'');
+  const ref=JSON.stringify(state),apBefore=getAp();
+  const withGear={...controls};
+  // No payment can go through if the second cost is too high.
+  assert.match(api.entryCost(state,dest.id,withGear).message,/Not enough Energy/);
+  assert.equal(api.selectLoadout(state,dest.id,withGear),false);
+  assert.equal(api.selectPortrait(state,'beast',withGear),false);
+  assert.equal(getAp(),apBefore);
+  assert.equal(JSON.stringify(state),ref);
+  assert.equal(changes.length,0);
+  api.configureLoadout(state,dest.id,'entryResourceCost',10);
+  api.configureLoadout(state,dest.id,'entryApCost',999);
+  const noAp=JSON.stringify(state);
+  assert.match(api.entryCost(state,dest.id,withGear).message,/Not enough AP/);
+  assert.equal(api.selectPortrait(state,'beast',withGear),false);
+  assert.equal(JSON.stringify(state),noAp);
+  assert.equal(getAp(),apBefore);
+});
+test('entering a linked portrait spends Mana once and rejecting low Mana leaves portrait and form intact',()=>{
+  const {api,state,controls,getAp}=harness();
+  state.portraits=[{id:'basepic',src:'data:image/png;base64,a'},{id:'godpic',src:'data:image/png;base64,b'}];
+  state.formId='basepic';
+  const f=api.createLoadout(state,'Divine');
+  api.configureLoadout(state,f.id,'portraitId','godpic');
+  api.configureLoadout(state,f.id,'entryApCost',2);
+  api.configureLoadout(state,f.id,'entryResourceId','base-mana');
+  api.configureLoadout(state,f.id,'entryResourceCost',8);
+  api.selectLoadout(state,'');
+  let mana=7;
+  const paid={...controls,getMana:()=>mana,spendMana:n=>{mana-=n;}};
+  const baseline=JSON.stringify(state),before=getAp();
+  assert.equal(api.selectPortrait(state,'godpic',paid),false);
+  assert.equal(JSON.stringify(state),baseline);
+  assert.equal(getAp(),before);
+  assert.equal(mana,7);
+  mana=20;
+  assert.equal(api.selectPortrait(state,'godpic',paid),true);
+  assert.equal(state.formId,'godpic');
+  assert.equal(state.activeAbilityLoadoutId,f.id);
+  assert.equal(mana,12);
+  assert.equal(getAp(),before-2);
+  assert.equal(api.selectPortrait(state,'godpic',paid),true);
+  assert.equal(mana,12);
+  assert.equal(api.selectPortrait(state,'basepic',paid),true);
+  assert.equal(state.activeAbilityLoadoutId,'');
+  assert.equal(mana,12);
+});
+test('Base always restores its equipment profile and unavailable entry costs do not touch gear',()=>{
+  const {api,state,controls}=harness();
+  const original={main:'sword'};
+  state.equip={...original};
+  const changes=[];
+  const {window:wb}=harness();
+  // Existing equipment adapter stays the sole owner of per-form gear profiles.
+  assert.match(read('js/abilities.js'),/WBEquipment\.switchForm\(state,identifier\)/);
+  const a=api.createLoadout(state,'Armored');
+  api.configureLoadout(state,a.id,'entryApCost',100);
+  api.selectLoadout(state,'');
+  const oldEquip=JSON.stringify(state.equip);
+  assert.equal(api.selectLoadout(state,a.id,controls),false);
+  assert.equal(JSON.stringify(state.equip),oldEquip);
+});
+test('cost editor and portrait events use the same form payment path',()=>{
+ const js=read('js/abilities.js'),app=read('js/app.js');
+ assert.match(js,/data-loadout-entry-cost="entryApCost"/);
+ assert.match(js,/data-loadout-entry-cost="entryResourceCost"/);
+ assert.match(js,/data-loadout-entry-resource/);
+ assert.match(js,/selectLoadout\(state,loadoutSelect\.value,controls\)/);
+  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
+ assert.match(app,/entryCost\(state,dest\?dest\.id:'',formEntryControls\)/);
 });

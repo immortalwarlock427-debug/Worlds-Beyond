@@ -15,7 +15,7 @@ This is a **future-work plan**, not a record of pull requests. For what works to
 2. **Browser integration testing:** Playwright in GitHub Actions on every PR. Test custom resources, ability AP/cooldown decrement, timed statuses, multiple forms/gear/resources, export/import, DM import/start/move, and every page at 390px without horizontal scrolling. Discover all tests under `tests/` instead of a fixed list; rename the legacy Resource Manager workflow and remove old triggers.
 3. **Unified sheet/DM movement — implemented:** shared pure routing, fog-aware sheet planning, traversable allies/downed actors and legal stopping squares.
 4. **DM temporary-effect import safety — implemented:** retain equipment and selected form bonuses; omit active timed ability bonuses and list all active effects and remaining turns as warnings.
-5. **Optional form-switch costs:** default free; AP, Mana/Holy Power or custom resource, or both; full validation on portrait and form selectors; Base remains free.
+5. **Optional form-entry costs — implemented:** AP/resource/both, free by default and free to Base. Linked portrait and ability form switches share validation; unaffordable transitions leave state unchanged.
 6. **Stat discounts for custom ability AP:** None/STR/DEX/INT/FTH, pure `WBCombat` formula with half-cost floor; update cards, availability and filters.
 7. **Cloud operation and live-session planning only:** confirm player account onboarding/privacy and invitations (disable open signups if appropriate; configure reliable email delivery). Write the in-person DM-computer/phone, player-phone join-code design with secure memberships, redacted views and revision-safe actions. **Await DM approval before implementing actual multiplayer.**
 
