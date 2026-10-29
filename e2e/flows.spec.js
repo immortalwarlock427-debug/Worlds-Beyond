@@ -61,8 +61,11 @@ test('custom resource: add, spend, restore, and save after a refresh',async({pag
 
 test('ability: editing AP and cooldown, Use spends AP, start turn decrements cooldown',async({page})=>{
   await page.goto('/index.html');
+  await page.locator('#charName').fill('Ability Tester');
+  await page.locator('#charName').blur();
   await addAbility(page,'Meteor Barrage',3,2);
   await expect(page.locator('#abilityList')).toContainText('Meteor Barrage');
+  await settled(page,character,s=>Boolean(s&&s.abilities&&s.abilities.length===1));
   const before=await character(page);
   const apBefore=before.apAvail;
   await page.locator('#abilityList .ability-item').first().locator('[data-ability-action="use"]').first().click();
@@ -104,6 +107,10 @@ test('two forms retain distinct ability, resource and worn gear profiles',async(
   await expect(page.locator('#abilityList')).toContainText('Arcane Spark');
   await expect(page.locator('#abilityList')).not.toContainText('Shield Bash');
   await tab(page,'equipment');
+  // New forms deliberately inherit the currently worn gear. Explicitly
+  // unequip Mage's gear to verify independent form profiles.
+  await page.locator('#equipmentClearForm').click();
+  await settled(page,character,s=>!s?.equip?.head);
   expect((await character(page)).equip.head||'').not.toBe(warriorGear);
   await tab(page,'abilities');
   await page.locator('#abilityLoadoutSelect').selectOption(warrior);
