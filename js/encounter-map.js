@@ -55,7 +55,7 @@
     const others=tokenActors(encounter,map).filter(a=>a.id!==actorId);
     return window.WBRouting.findPaths({
       cols:map.cols,rows:map.rows,start:{x:actor.x,y:actor.y},
-      terrain:map.def&&map.def.terrain||[],side:actor.side,
+      terrain:map.def&&map.def.terrain||[],side:actor.side || (actor.kind==='npc'?'enemy':'party'),
       occupants:others,goal:{x:toX,y:toY}
     }).to(toX,toY);
   }

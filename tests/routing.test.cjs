@@ -51,7 +51,7 @@ test('fog assumes unseen terrain is open, without exposing an unknown enemy',()=
   const discovered=Array(25).fill(1);
   const real=plan(hidden,{x:1,y:1},[guest('enemy')],'party',{x:3,y:1},discovered).to(3,1);
   assert.equal(real.ok,true,'the route can detour around the now visible obstruction');
-  assert.ok(real.ft>10);
+  assert.equal(real.ft,10,'two legal diagonals cost the same as two straight steps');
   assert.ok(!real.path.some(c=>c.x===2&&c.y===1));
 });
 test('no diagonal squeezing through two walls; rough terrain costs 10 feet',()=>{
