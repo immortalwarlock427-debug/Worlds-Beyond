@@ -1,35 +1,37 @@
 # Roadmap
 
-This is a **future-work plan**, not a record of pull requests. For what works today, read [CONTEXT.md](CONTEXT.md); for APIs and persistence, read [ARCHITECTURE.md](ARCHITECTURE.md).
+Future-facing development priorities for Worlds Beyond. Current shipped behavior is in [CONTEXT.md](CONTEXT.md), implementation boundaries in [ARCHITECTURE.md](ARCHITECTURE.md), and the detailed character automation sequence in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md). For a new coding agent, begin with [CODEX_START_HERE.md](CODEX_START_HERE.md).
 
-## Current baseline
+## Current baseline (merged)
 
-- GitHub Pages serves the fully featured Character Sheet, custom resources, Ability Library, forms, Status Effects, Battlemap, offline DM Room, and same-browser Player Preview.
-- `WBCombat` and `WBEncounter` share deterministic combat logic and revision-checked offline encounter actions. Sheet and DM movement pathfinding now use the same pure route engine.
-- Supabase Auth and private character cloud Save/Restore now work across devices. The production site auto-connects through a **public publishable** key. **Cloud saves remain manual**; the DM game is not online.
-- The same-browser Player Preview is useful for local testing but **will not be extended as the multiplayer architecture**.
+- Character Sheet with custom resources, Ability Library, forms/portraits/equipment profiles and Status Effects; character Battlemap, offline DM Room and same-browser Player Preview.
+- Shared deterministic combat and offline encounter commands; shared DM/sheet movement routes, side-aware occupancy, and DM warnings when imported temporary character buffs cannot be tracked.
+- Optional AP and resource costs when entering forms, free-to-Base and linked portrait switching.
+- Supabase Auth and owner-only **manual** private cloud character Save/Restore across devices. No live multiplayer session.
+- GitHub CI with Node tests, Playwright browser interactions and 390px layout checks.
+- **PR #35 merged:** first pure `WBCharacter.derive/apply` resource-command slice, resource UI migration, and boosted resource-current preservation across reload. **Only resources are migrated so far**.
 
-## Ordered priorities — one branch/PR per item
+## Development queue — one narrow Codex PR per task
 
-1. **Documentation cleanup (this task):** accurate current capability summary, rule decisions and undecided questions; stop per-PR sections and move engineering detail from AGENTS to ARCHITECTURE.
-2. **Browser integration testing:** Playwright in GitHub Actions on every PR. Test custom resources, ability AP/cooldown decrement, timed statuses, multiple forms/gear/resources, export/import, DM import/start/move, and every page at 390px without horizontal scrolling. Discover all tests under `tests/` instead of a fixed list; rename the legacy Resource Manager workflow and remove old triggers.
-3. **Unified sheet/DM movement — implemented:** shared pure routing, fog-aware sheet planning, traversable allies/downed actors and legal stopping squares.
-4. **DM temporary-effect import safety — implemented:** retain equipment and selected form bonuses; omit active timed ability bonuses and list all active effects and remaining turns as warnings.
-5. **Optional form-entry costs — implemented:** AP/resource/both, free by default and free to Base. Linked portrait and ability form switches share validation; unaffordable transitions leave state unchanged.
-6. **Stat discounts for custom ability AP:** None/STR/DEX/INT/FTH, pure `WBCombat` formula with half-cost floor; update cards, availability and filters.
-7. **Cloud operation and live-session planning only:** confirm player account onboarding/privacy and invitations (disable open signups if appropriate; configure reliable email delivery). Write the in-person DM-computer/phone, player-phone join-code design with secure memberships, redacted views and revision-safe actions. **Await DM approval before implementing actual multiplayer.**
+1. **B1 — Next:** extend pure character derivation/commands for AP and Mana/Holy Power, migrate the appropriate existing UI callbacks, retain Command AP and form-entry semantics, add Node and browser tests. **Can begin without unanswered Rage decisions.** Use [CODEX_START_HERE.md](CODEX_START_HERE.md).
+2. **B2 — After B1:** migrate combined ability/form costs and activations through the same command path, then Health/damage/healing, turn/rest orchestration, emitted gameplay events, and transaction-level Undo in focused PRs. Avoid duplicated cost formulas or changing trust-based editability.
+3. **Stat discounts for custom ability AP (decided but not built):** None/STR/DEX/INT/FTH; effective cost `max(ceil(base AP/2), base AP − current effective mod)`, including negative modifiers. Implement alongside or immediately following ability command integration; cards, Use, Usable now and filters must agree.
+4. **B3 — Needs DM resource choices:** derive general `effects` on named forms, configure absolute hard cap and excess policy per resource, expand long-rest policy while preserving legacy defaults, display overflow/thresholds and protect unknown newer save fields. This is **not a Rage-specific feature**.
+5. **C — Automation engine:** ability-owned automatic/manual rules with genuine state-crossing or event triggers, AND requirements, own-character commands, deterministic FIFO event processing, cycle guard, rejection logs and tests.
+6. **D — Ability rule editor:** human-readable rule configuration, activation selector, Test/dry-run, enable/disable and activity log; robust mobile layout and persistence. Coordinate C/D to become usable together.
+7. **Cloud operation and live-session design (plan only):** account onboarding/SMTP, DM room membership and role-based filtered data, safe sessions/commands/revisions, each player on their own phone. Do not build online multiplayer without specific DM approval.
+
+See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md) for acceptance criteria, sample rules, action/event scope, dependencies and open design questions.
 
 ## Later improvements
 
-- More maps, ally tokens, doors and the Barrow puzzle; user-uploaded map images and terrain/light/darkness brushes.
-- Richer status presets, consumables, currency, gear sets, custom resource/ability templates and dice animations.
-- DM encounter history/export and optional battlemap UI polish.
-- Cloud portrait object storage and automatic sync only after safe ownership/conflict design.
+- Larger map library, doors, the Barrow puzzle, ally tokens, uploaded map art and terrain/light brushes.
+- Richer statuses, inventory/consumables, currency, gear sets, reusable templates and dice/DM encounter presentation.
+- Cloud portrait object storage and carefully designed optional synchronization after secure ownership/conflict handling.
+- Advanced automation: OR logic, reaction suggestions, hit/crit/kill triggers, other-character actions, shared rule templates and additional formulas.
 
-## Undecided — do not build
+## Unresolved gameplay rules — no implementation without a decision
 
-AP growth by level; Block dice scaling by level and shield sizes; two-handed versus dual-wield damage; AP costs for smaller actions; WIS actions; Exhaustion redesign. Proposals in CONTEXT.md are not decisions.
-
-## Automation engine (new staged direction)
-
-See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md) for the agreed Manual/Automatic choice and Claude's reviewed foundation. First resource-command slice is in progress; next, migrate other character commands (including ability activations and AP), define form effects and overflow policies, then add state/event triggers and the ability editor in independently tested PRs. Stat-based ability AP discounts remain planned and should share the eventual activation command path.
+- Rage model: genuine 100 → 200 overcharge or full-200 maximum with threshold marker.
+- Whether excess survives maximum drop; typed corrections trigger automation; automatic form-entry cost default; simultaneous Manual + Automatic mode. See the exact distinctions in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md).
+- AP growth per level; Block dice and shield scaling; two-handed/dual-wield balance; small action AP costs; WIS actions; Exhaustion redesign. See [CONTEXT.md](CONTEXT.md) for those proposed mechanics.

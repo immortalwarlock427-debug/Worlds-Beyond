@@ -274,6 +274,6 @@ tuning together.
 
 See [ROADMAP.md](ROADMAP.md) for pending items and [ARCHITECTURE.md](ARCHITECTURE.md) for engineering detail.
 
-## Character command foundation (in progress)
+## Character command foundation (merged PR #35)
 
-The first slice of `WBCharacter.derive/apply` now provides DOM-free custom resource math and typed adjustments. The resource UI routes manual Spend/Restore/Fill, maximum edits, turn regeneration and rest through that foundation. Loading, importing and rendering no longer erase a legitimate current value above base maximum; effect expiry reconciles a maximum drop during the turn command. **Automatic triggers, hard overflow caps and the general rule editor are not implemented yet.** See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md). This stage does not change other character mutation paths.
+`WBCharacter.derive/apply` now provides pure, DOM-free **custom resource** derivation and typed adjustments. The resource UI routes Spend/Restore/Fill, current/max edits, regeneration and long rest through it. Loading, importing and rendering no longer truncate a valid above-base resource when a temporary max modifier is running; an actual max decrease is reconciled through a gameplay transition. **AP, built-in Mana, Health, forms and ability activations are not yet fully migrated. Automatic triggers, configurable hard overflow caps and the general rule editor do not exist yet.** The details and unresolved choices are in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md); the immediate Codex task is in [CODEX_START_HERE.md](CODEX_START_HERE.md).

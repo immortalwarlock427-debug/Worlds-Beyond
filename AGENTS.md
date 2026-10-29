@@ -2,6 +2,8 @@
 
 For Claude, Codex and other assistants. Read `docs/CONTEXT.md` **first** for current features, confirmed mechanics and in-person play, then `docs/ARCHITECTURE.md`, `README.md` and `docs/ROADMAP.md`. Full gameplay rules live in Notion → D&D > Game Systems. Weavecasting is separate.
 
+**Automation work:** read `docs/CODEX_START_HERE.md` and `docs/AUTOMATION_PLAN.md` **before coding**. PR #35's resource-only command foundation is merged; do not recreate it. Follow the one-PR-per-stage plan, do not hardcode unresolved Rage/overcharge decisions, and never treat planning examples as approved mechanics.
+
 - **Trust-based character sheet:** players may customize and correct values; don't add anti-cheat or unsolicited gameplay restrictions. Account privacy and safe shared writes still matter.
 - Reflect actual rules in Notion, site and CONTEXT. Critically evaluate changes; explain contradictions and consequences. Use 1.5× or 150% notation.
 - Keep local character and DM game repositories separate, preserving existing storage keys and v1 exports unless an explicit migration is approved.
