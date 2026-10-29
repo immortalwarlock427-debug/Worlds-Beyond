@@ -69,10 +69,11 @@ test('ability: editing AP and cooldown, Use spends AP, start turn decrements coo
   // The AP tracker belongs to Overview, so navigate there for the real click.
   await tab(page,'overview');
   await page.locator('#turnReset').click();
-  await settled(page,character,s=>s?.apAvail===15);
+  await settled(page,character,s=>s&&s.apAvail===null);
   await tab(page,'abilities');
   const before=await character(page);
-  const apBefore=before.apAvail;
+  // A null apAvail means the full pool; default maximum is 15.
+  const apBefore=before.apAvail == null ? Number(before.fields?.apMax||15) : before.apAvail;
   await page.locator('#abilityList .ability-item').first().locator('[data-ability-action="use"]').first().click();
   await settled(page,character,s=>s?.abilities?.[0]?.cooldownLeft===2);
   const used=await character(page);
@@ -127,6 +128,8 @@ test('two forms retain distinct ability, resource and worn gear profiles',async(
   await expect(visibleResource).toHaveCount(1);
   await expect(visibleResource).toHaveValue('Guard Points');
   await tab(page,'equipment');
+  await settled(page,character,s=>s?.activeAbilityLoadoutId===warrior &&
+    s?.equip?.head===warriorGear);
   expect((await character(page)).equip.head).toBe(warriorGear);
   await tab(page,'abilities');
   await expect(page.locator('#abilityList')).toContainText('Shield Bash');
