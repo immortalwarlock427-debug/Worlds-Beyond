@@ -5,7 +5,7 @@ This is a **future-work plan**, not a record of pull requests. For what works to
 ## Current baseline
 
 - GitHub Pages serves the fully featured Character Sheet, custom resources, Ability Library, forms, Status Effects, Battlemap, offline DM Room, and same-browser Player Preview.
-- `WBCombat` and `WBEncounter` share deterministic combat logic and revision-checked offline encounter actions. Sheet and DM movement pathfinding now differ.
+- `WBCombat` and `WBEncounter` share deterministic combat logic and revision-checked offline encounter actions. Sheet and DM movement pathfinding now use the same pure route engine.
 - Supabase Auth and private character cloud Save/Restore now work across devices. The production site auto-connects through a **public publishable** key. **Cloud saves remain manual**; the DM game is not online.
 - The same-browser Player Preview is useful for local testing but **will not be extended as the multiplayer architecture**.
 
