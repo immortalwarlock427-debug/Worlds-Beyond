@@ -162,3 +162,7 @@ The same-browser player page `player.html` uses `js/player.js`, `css/player.css`
 ### Documentation rules
 
 Keep CONTEXT and ROADMAP accurate in place instead of appending per-PR histories. Keep AGENTS short and store technical invariants here. Rules and site changes should be reconciled with Notion where appropriate.
+
+### DM import of temporary ability effects
+
+`WBDMCharacters.fromCharacter` imports current gear and selected form modifiers but deliberately does not include active `ability.durationLeft` effects in VIT/AGL/WIS, Armor Rating, Movement, Surge, or Initiative. Explicit sheet overrides are preserved. The importer never modifies the source character or adds timed effects to the encounter; it returns one warning for each active ability with its numerical targets and remaining turns. `js/dm.js` displays every warning as escaped text in `#dmImportWarnings`, including when more than four are active, and the DM can adjust the snapshot in setup. Duration-aware effects in encounters remain a separate future feature.

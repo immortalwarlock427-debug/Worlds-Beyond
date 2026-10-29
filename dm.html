@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-routing-v23">
-<link rel="stylesheet" href="css/dm.css?v=20261028-routing-v23">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-dm-import-v24">
+<link rel="stylesheet" href="css/dm.css?v=20261028-dm-import-v24">
 </head>
 <body>
 <main class="sheet dm-sheet">
@@ -42,6 +42,11 @@
     <button class="btn" id="newEncounter" type="button">New empty roster</button>
   </div>
   <p class="dm-feedback" id="dmFeedback" role="status" aria-live="polite">Preparing the DM room…</p>
+  <section id="dmImportWarnings" class="dm-import-warnings" aria-labelledby="dmImportWarningsTitle" hidden>
+    <h3 id="dmImportWarningsTitle">Import warnings — temporary effects excluded</h3>
+    <p>Current gear and form bonuses are retained. Active temporary ability effects are excluded from the DM snapshot; adjust setup values manually if desired.</p>
+    <ul id="dmImportWarningList"></ul>
+  </section>
 
   <section class="dm-setup" id="setupSection" aria-labelledby="setupHeading">
     <div class="dm-section-title">
@@ -54,7 +59,7 @@
         <label for="dmCharacterFiles" class="dm-field-label">Character export files (.json)</label>
         <input id="dmCharacterFiles" type="file" accept=".json,application/json" multiple>
         <button id="dmImport" class="btn strong" type="button">Import selected files</button>
-        <p class="dm-help">Imports only name and combat snapshot values. Ability profiles, portraits, and full sheets stay in the player's own file.</p>
+        <p class="dm-help">Imports combat snapshot values, current gear and form bonuses. Active temporary ability effects are excluded and shown with bonuses and turns remaining in import warnings. Full character sheets remain in player files.</p>
       </div>
       <form id="dmNpcForm" class="dm-panel" autocomplete="off">
         <h4>Add enemy or NPC</h4>
@@ -145,16 +150,16 @@
     <p>Damage inputs are already-rolled damage before resistance and Armor Rating. Each hit is applied separately. Turn starts handle AP resets and bleeding automatically. This DM view uses validated movement within the encounter. The character-sheet Battlemap and online multiplayer are not synchronized yet.</p>
   </footer>
 </main>
-<script src="js/persistence.js?v=20261028-routing-v23"></script>
-<script src="js/combat-core.js?v=20261028-routing-v23"></script>
-<script src="js/encounter-actions.js?v=20261028-routing-v23"></script>
-<script src="js/game-state.js?v=20261028-routing-v23"></script>
-<script src="js/abilities.js?v=20261028-routing-v23"></script>
-<script src="js/dm-characters.js?v=20261028-routing-v23"></script>
-<script src="js/maps.js?v=20261028-routing-v23"></script>
-<script src="js/routing.js?v=20261028-routing-v23"></script>
-<script src="js/encounter-map.js?v=20261028-routing-v23"></script>
-<script src="js/dm-map.js?v=20261028-routing-v23"></script>
-<script src="js/dm.js?v=20261028-routing-v23"></script>
+<script src="js/persistence.js?v=20261028-dm-import-v24"></script>
+<script src="js/combat-core.js?v=20261028-dm-import-v24"></script>
+<script src="js/encounter-actions.js?v=20261028-dm-import-v24"></script>
+<script src="js/game-state.js?v=20261028-dm-import-v24"></script>
+<script src="js/abilities.js?v=20261028-dm-import-v24"></script>
+<script src="js/dm-characters.js?v=20261028-dm-import-v24"></script>
+<script src="js/maps.js?v=20261028-dm-import-v24"></script>
+<script src="js/routing.js?v=20261028-dm-import-v24"></script>
+<script src="js/encounter-map.js?v=20261028-dm-import-v24"></script>
+<script src="js/dm-map.js?v=20261028-dm-import-v24"></script>
+<script src="js/dm.js?v=20261028-dm-import-v24"></script>
 </body>
 </html>

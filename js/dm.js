@@ -219,11 +219,22 @@
       active ? 'The highlighted combatant is taking their turn.' : 'Completed roster';
     if (dmMap) dmMap.render();
   }
+  function showImportWarnings(warnings) {
+    const region=$('#dmImportWarnings'),list=$('#dmImportWarningList');
+    list.replaceChildren();
+    for(const warning of warnings) {
+      const li=document.createElement('li');
+      li.textContent=warning;
+      list.appendChild(li);
+    }
+    region.hidden=warnings.length===0;
+  }
   $('#dmImport').addEventListener('click', async () => {
     if (encounter.phase !== 'setup') return;
     const input = $('#dmCharacterFiles');
     const files = Array.from(input.files || []);
     if (!files.length) { message('Select one or more exported character JSON files first.', true); return; }
+    showImportWarnings([]);
     const btn = $('#dmImport');
     btn.disabled = true;
     let imported = 0;
@@ -243,15 +254,16 @@
         }
         imported++;
         if (converted.warnings.length)
-          warnings.push(converted.actor.name + ': ' + converted.warnings.join(' '));
+          converted.warnings.forEach(warning => warnings.push(converted.actor.name + ': ' + warning));
       }
     } finally {
       btn.disabled = false;
       input.value = '';
     }
+    showImportWarnings(warnings);
     message('Imported ' + imported + ' character' + (imported === 1 ? '' : 's') + '.' +
-      (warnings.length ? ' Review: ' + warnings.slice(0, 4).join(' | ') +
-        (warnings.length > 4 ? ' (and ' + (warnings.length - 4) + ' more)' : '') : '') ,
+      (warnings.length ? ' Review all ' + warnings.length +
+        ' import warning' + (warnings.length === 1 ? '' : 's') + ' below.' : ''),
       warnings.length > 0 || !imported);
   });
   $('#dmNpcForm').addEventListener('submit', ev => {
@@ -332,6 +344,7 @@
       const next = core.createEncounter(newId('encounter'));
       repository.save({ ...game, encounter: next });
       encounter = next;
+      showImportWarnings([]);
       render();
       message('New encounter ready. Your character and battlemap saves are untouched.');
       saveMessage('New encounter saved on this device');
