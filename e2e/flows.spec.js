@@ -66,6 +66,9 @@ test('ability: editing AP and cooldown, Use spends AP, start turn decrements coo
   await addAbility(page,'Meteor Barrage',3,2);
   await expect(page.locator('#abilityList')).toContainText('Meteor Barrage');
   await settled(page,character,s=>Boolean(s&&s.abilities&&s.abilities.length===1));
+  // A new character's default displayed AP is initialized by Start of turn.
+  await page.locator('#turnReset').click();
+  await settled(page,character,s=>s?.apAvail===15);
   const before=await character(page);
   const apBefore=before.apAvail;
   await page.locator('#abilityList .ability-item').first().locator('[data-ability-action="use"]').first().click();
@@ -109,6 +112,7 @@ test('two forms retain distinct ability, resource and worn gear profiles',async(
   await tab(page,'equipment');
   // New forms deliberately inherit the currently worn gear. Explicitly
   // unequip Mage's gear to verify independent form profiles.
+  page.once('dialog',dialog=>dialog.accept());
   await page.locator('#equipmentClearForm').click();
   await settled(page,character,s=>!s?.equip?.head);
   expect((await character(page)).equip.head||'').not.toBe(warriorGear);
