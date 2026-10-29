@@ -209,3 +209,11 @@
   pointer-events:none;cursor:default;
   will-change:transform;
 }
+
+/* Keep all import effect warnings visible, even for many active abilities. */
+.dm-import-warnings {border:1px solid var(--brass);background:var(--brass-soft);
+  border-radius:5px;padding:16px 19px;display:grid;gap:8px;}
+.dm-import-warnings[hidden] {display:none!important;}
+.dm-import-warnings h3 {font-family:var(--font-display);font-size:18px;margin:0;}
+.dm-import-warnings p {margin:0;font-size:14px;color:var(--muted);}
+.dm-import-warnings ul {margin:0;padding-left:23px;display:grid;gap:6px;overflow-wrap:anywhere;}
