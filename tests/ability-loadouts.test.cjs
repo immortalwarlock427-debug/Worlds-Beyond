@@ -186,7 +186,8 @@ test('selecting Shared clears all specific forms without resetting ability track
 test('form membership checkboxes are interactive even when Shared is selected', () => {
   const js=read('js/abilities.js');
   const start=js.indexOf('function memberships(ability)');
-  const end=js.indexOf('function renderLoadouts()',start);
+  // Test the membership markup itself; unrelated form effect buttons may be disabled.
+  const end=js.indexOf('function renderLoadoutConfig()',start);
   assert.ok(start>0 && end>start);
   const markup=js.slice(start,end);
   assert.match(markup,/data-loadout-member/);
