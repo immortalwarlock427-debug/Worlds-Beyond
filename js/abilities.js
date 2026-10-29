@@ -548,6 +548,23 @@
               '<option value="hide"' + (form.manaMode === 'hide' ? ' selected' : '') + '>Hide and disable Mana</option>' +
             '</select></label>' +
           '<p class="ability-effect-hint">Custom resources are assigned individually on Overview. Hidden pools keep their balances; this setting only controls the built-in Mana/Holy Power pool.</p>' +
+          '<fieldset class="form-entry-costs"><legend>Cost to enter this form (optional)</legend>' +
+            '<p class="ability-effect-hint">Blank means free. Combine AP and one resource if desired. Base is always free; failed switches spend nothing.</p>' +
+            '<label class="ability-field"><span class="foot-label">AP to enter</span>' +
+              '<input data-loadout-entry-cost="entryApCost" type="number" min="0" max="999999" step="1" inputmode="numeric" placeholder="Free" value="' + esc(form.entryApCost) + '"></label>' +
+            '<label class="ability-field"><span class="foot-label">Resource to spend</span>' +
+              '<select data-loadout-entry-resource><option value="">None</option>' +
+              '<option value="base-mana"' + (form.entryResourceId==='base-mana'?' selected':'') + '>' +
+              (state.fields && state.fields.manaKind==='holy'?'Holy Power':'Mana') + '</option>' +
+              (state.resources||[]).map(r=>'<option value="' + esc(r.id) + '"' +
+                (form.entryResourceId===r.id?' selected':'') + '>' + esc(r.name) + '</option>').join('') +
+              (form.entryResourceId && form.entryResourceId!=='base-mana' &&
+                !(state.resources||[]).some(r=>r.id===form.entryResourceId) ?
+                '<option value="' + esc(form.entryResourceId) + '" selected>Missing resource</option>' : '') +
+              '</select></label>' +
+            '<label class="ability-field"><span class="foot-label">Resource amount to enter</span>' +
+              '<input data-loadout-entry-cost="entryResourceCost" type="number" min="0" max="999999" step="1" inputmode="numeric" placeholder="Free" value="' + esc(form.entryResourceCost) + '"></label>' +
+          '</fieldset>' +
           '<p class="ability-effect-hint">Temporary form score adjustments (not permanent stat points). Bonuses and penalties apply while this form is selected.</p>' +
           '<div class="loadout-stat-grid">' + STATS.map(k =>
             '<label class="ability-field"><span class="foot-label">' + k + '</span>' +
@@ -746,19 +763,28 @@
     clearFilters.addEventListener('click', () => { resetFilters(); render(); });
     showAllLoadouts.addEventListener('change', render);
     loadoutConfig.addEventListener('change', e => {
-      const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat], [data-loadout-mana-mode]');
+      const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat], [data-loadout-mana-mode], [data-loadout-entry-cost], [data-loadout-entry-resource]');
       if (!el) return;
       const state = getState();
       const identifier = state.activeAbilityLoadoutId;
       const property = el.hasAttribute('data-loadout-portrait') ? 'portraitId' :
-        el.hasAttribute('data-loadout-mana-mode') ? 'manaMode' : el.dataset.loadoutStat;
+        el.hasAttribute('data-loadout-mana-mode') ? 'manaMode' :
+        el.hasAttribute('data-loadout-entry-resource') ? 'entryResourceId' :
+        el.dataset.loadoutEntryCost || el.dataset.loadoutStat;
       if (!configureLoadout(state, identifier, property, el.value)) return;
       if (controls.refresh) controls.refresh();
       render();
       save();
     });
     loadoutSelect.addEventListener('change', () => {
-      selectLoadout(getState(), loadoutSelect.value);
+      const state=getState();
+      const check=entryCost(state,loadoutSelect.value,controls);
+      if(!check.ok) {
+        loadoutFeedback.textContent=check.message;
+        renderLoadouts(); // Reset a failed selection without losing the form or portrait.
+        return;
+      }
+      if(!selectLoadout(state,loadoutSelect.value,controls))return;
       resetFilters();
       render();
       save();
