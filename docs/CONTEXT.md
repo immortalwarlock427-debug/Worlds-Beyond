@@ -1,99 +1,60 @@
 # Worlds Beyond: Context
 
-Everything a new chat or AI assistant needs to work on Worlds Beyond, in one place. Worlds Beyond is my homebrew
-D&D combat framework built on 8 stats and Action Points. **This file is the main copy of the project context**:
-when a rule or the site changes, update Notion, the site and this file to match.
+The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D character sheet and combat system. **Implemented** features, **decided but unbuilt** mechanics and **undecided** ideas must be kept separate. Update these sections in place; git history already records individual PRs.
 
 ## Where things live
 
-- **Rules:** Notion, [D&D > Game Systems](https://app.notion.com/p/351c72092efb8089812cd231debc3e74). Pages: Stats
-  (each stat has its own page with milestone text), Ability Scores, Action Points, Defenses, Magic System, Status
-  Effects Explained, Exhaustion Effects Explained, Armor Types, Weapons Explained, Metals Explained, and
-  [Death and Dying](https://app.notion.com/p/707a548ff2354d0ba02e7979ca9bda1c). This file summarizes them below.
-- **The site:** this repository, served by GitHub Pages at https://immortalwarlock427-debug.github.io/Worlds-Beyond/.
-  Plain HTML, CSS and JavaScript with no build step. `README.md` is the overview, `docs/ARCHITECTURE.md` explains the
-  code and the saves, `docs/ROADMAP.md` is what's next, and `AGENTS.md` (also read through `CLAUDE.md`) has the
-  working instructions.
-- **Two saves:** the character (localStorage `worlds-beyond-sheet-v1`) and the game (`worlds-beyond-game-v1`: map,
-  every character's token by character id, enemies, explored fog) are saved separately. Export/Import moves a
-  character between browsers as a `.json` file and never carries the battlemap.
-- **The Claude artifact:** a one-file copy of the site published on claude.ai, pinned in my sidebar. Build it from
-  this repo with `python3 tools/build_single.py` and publish to the same artifact; don't start a new one.
-- **Commits** use the GitHub no-reply email (`immortalwarlock427-debug@users.noreply.github.com`), because GitHub
-  blocks pushes that would publish a private email.
-- **Weavecasting** is a separate magic system. Don't mix its rules in.
+- **Rules:** Notion → [D&D > Game Systems](https://app.notion.com/p/351c72092efb8089812cd231debc3e74), including Stats, Action Points, Defenses, Magic, Status Effects, Equipment and [Death and Dying](https://app.notion.com/p/707a548ff2354d0ba02e7979ca9bda1c). Weavecasting is a separate system; don't mix it in.
+- **Live site:** [Worlds Beyond on GitHub Pages](https://immortalwarlock427-debug.github.io/Worlds-Beyond/). Plain HTML/CSS/JS without a build step. README covers navigation; ARCHITECTURE describes modules/saves; ROADMAP tracks future work; AGENTS gives collaboration rules.
+- **Local saves:** separate character (`worlds-beyond-sheet-v1`) and DM game (`worlds-beyond-game-v1`) records. v1 character JSON exports exclude map, fog and encounter data. The game holds map, fog, legacy tokens/foes and optional offline encounter.
+- **Cloud character copies:** Supabase Auth and `wb_characters` owner-only RLS. The site auto-connects using the **public publishable** configuration; manual Save and Restore are separate from local character data. No cloud game/encounter sync.
+- **Claude artifact:** build from merged `main` with `python3 tools/build_single.py`.
 
-## How I want you to work
+## How we play and work
 
-- Critically evaluate my ideas: flag contradictions, redundancies, exploits, unnecessary rules and knock-on effects.
-- Don't invent extra restrictions unless they're actually necessary.
-- Write multipliers as 1.5× or 150%, never "half again".
-- I level characters up at story milestones and don't allow metagaming.
-- The sheet should follow the rules, but everything should still be resettable or changeable in case someone messes up.
-- When rules change, update Notion, the site and this file to match.
+- **In person:** each player has **their own phone** and character sheet. The DM uses a **computer and a phone**. All live-session designs must support separate devices, not assume shared browser storage.
+- **Trust-based sheet:** players can customize and correct stats, resources and abilities. **Do not add anti-cheat or restrictive gameplay validation unless explicitly asked.** Account privacy, server access control and preventing accidental shared-data overwrites are separate security requirements.
+- The DM levels characters at story milestones and discourages metagaming. Keep the interface editable/resettable for mistakes.
+- Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
+- When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## Ability effect expansion (proposed next PR)
-- One ability may apply multiple additive temporary effects to Movement (ft/AP), Armor Rating, Evasion, any of the eight stat scores, and custom resource maximums.
-- Effects contribute to effective values while active; permanent base scores, gear, and resource maximums remain unchanged. Resource capacity bonuses do not refill current points. Editing active effects cancels their duration. Existing single Movement effects migrate to the multiple-effect format.
+## What the site does (Draft 36)
 
-## Navigation update (next PR)
-- Separate top-level destinations for Character Sheet and Battlemap. Character has five sticky sub-tabs: Overview (identity, vitals, defenses), Attributes (stats and advancement), Equipment (including forging), Abilities, and Status Effects. Sections are hidden rather than destroyed so existing controls, state, calculations and save format remain unchanged.
-- Deep links: #map stays Battlemap, #sheet and no hash default to Overview, #status still opens Status Effects, and #sheet/{overview|attributes|equipment|abilities|statuses} selects a character sub-tab. Switching out to Battlemap and back preserves the current character sub-tab within the session.
-- Export, Import and Clear remain in the shared top controls. Battlemap/game data remain separate from character saves.
+The following features **already exist** in the live site:
 
-## Status Effects view (next PR)
-- A third Sheet / Status Effects / Battlemap navigation tab uses #status and is part of the same website; it does not create a separate game state. The status view shows active ability effects, their numerical bonus details and remaining duration, and can end an ability's active effect early (without refunding AP/resources or removing its cooldown).
-- Players can also add manual status entries (Buff, Debuff, Condition or Other), with a source, notes, and optional turn timer. These are descriptive only and do not silently alter combat math. Timed entries expire when the player starts a turn; blank duration persists until removed. Manual statuses are retained across long rests until explicitly removed or expired. All entries save with the character and migrate from older character files as an empty list.
-- Future integration: automatic conditions from the defense/health system, treatment and recovery rules, richer effect sources and filters.
+- **Character interface:** Overview, Attributes, Equipment, Abilities and Status Effects sub-tabs, plus separate Battlemap; portraits, vitals, Death Threshold/Trauma, Mana/Holy Power, AP, reactions, Wonder, concentration, manual overrides, rests, advancement, export/import and clearing the sheet.
+- **Shared combat core:** `WBCombat` handles effective stats, gear, Armor Rating, AP, Surge, attacks, dual hits/criticals, resistance, defenses and death calculations. Character progression and shared combat formulas are reusable; dice UI is separate.
+- **Equipment:** Pack, Forge, worn slots, weapon actions and bonuses. Named forms use one shared inventory but may wear different equipment profiles.
+- **Custom Ability Library:** create/edit/duplicate/delete/favorite, categories, search/sort/filters, compact display, optional AP/Mana/Holy Power/custom-resource costs, Use action, limited uses, held creations, cooldown, duration, ongoing numerical effects and turn/long-rest processing. Active effects support movement, Armor Rating, Evasion, stat scores and custom-resource maximums.
+- **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Currently switching forms is free.** Effective scores may exceed 28 and unlock milestones.
+- **Custom resources:** independent named pools with current/max, colors/display, manual spend/restore, turn regeneration, long-rest refill, ability costs and form availability.
+- **Status Effects:** shows active timed ability effects and their bonuses, plus manually added Buff, Debuff, Condition and Other entries with optional expiration timers. Manual statuses are descriptive until an actual rule applies.
+- **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware route algorithm currently lives in `js/app.js`.
+- **Offline DM Room:** import player snapshots and NPCs, initiative/rounds/turns, AP, Health, damage/healing, manual token placement and confirmed AP-based path movement with animation. Finishing combat allows **Reuse roster / Edit setup**. DM encounter positions are distinct from sheet Battlemap positions and do not sync to other devices.
+- **Same-browser Player Preview:** `player.html` can display selected player stats/public encounter positions and submit MoveToken/SpendAP/EndTurn in another tab of the **same browser origin**. Seat selection is not authenticated and it **is not** the planned phone-player multiplayer solution.
+- **Cloud Saves:** `cloud.html` automatically connects to the configured Supabase project; users can sign up/sign in, manually save/list/restore/delete private character copies with revision conflicts and backups. Cross-device character restore has been tested; **automatic saving and live encounters are not implemented**.
 
-## Ability Library filtering and compact mode (next PR)
-- Ability sub-tab offers search, custom category, type (Active/Passive/Reaction/Other), resource paid with (including Mana/Holy Power and custom pools), AP-cost band, availability (Usable now / Cooling down / Out of uses / Effect active / Passive), favorites, and sorting. Compact view reduces scrolling while preserving the quick Use button and ability editor.
-- The Usable now filter invokes the same validation as activation, including current AP, resources, cooldowns, remaining uses, and capacity; it does not spend anything. Filters do not mutate or delete stored abilities and reset to all when creating or duplicating one. UI presentation preferences are not part of exported character data.
-- CSS and JS assets share a cache-busting release token in index.html, following docs/ARCHITECTURE.md, to prevent the live GitHub Pages site mixing old cached files.
-  
-## Ability Forms / Loadouts v1 (proposed PR)
-- Named ability forms are independent from portrait-image forms. Selecting Warrior, Mage, or another specific form while Shared is checked immediately turns Shared off; clearing the last selected form restores Shared. The shared checkbox can also clear specific selections with one click. A player can create forms (e.g. seven character classes), assign an ability to any combination of forms, or leave it shared for all. Default old abilities are shared. Base mode shows shared abilities only once forms exist; with no forms the current ability library is unchanged.
-- Switching the active ability form only changes which abilities can be activated; it does not change AP, resources, equipment, stats, portrait, or active effects. **Cooldowns, charges, held-creation counts, and timed effect durations carry between forms** and continue to decrement normally, avoiding reset exploits.
-- A Show all option exposes other-form abilities for editing but does not permit their activation. Deleting a form removes its references; if it was the only assigned form, the ability becomes shared. Ability loadouts and active selection are saved/exported with character JSON, never the game save.
-- Future: real transformations with separate resource sets and optional gear/stat profiles must explicitly define how active effects behave.
-  
-## Mechanical Forms phase two (next PR)
-- Each named Ability Form can optionally link to one existing portrait from Overview. **Switching forms selects its linked portrait, and clicking a portrait thumbnail on Overview also activates its linked ability form**, updating available skills and derived stats. An unlinked portrait selects Base/shared abilities. When multiple forms link to one portrait, keep the current form if it matches; otherwise select the first matching form. Unlinked forms and selecting Base in the ability manager leave the current portrait alone. Deleting a portrait clears links without deleting its form and selects the next portrait's linked form (or Base).
-- Each form can configure temporary signed score adjustments for the eight stats (bounded -28..+28). These add to effective scores, alongside equipment and active ability effects, and therefore feed normal derived modifiers and defenses. They never rewrite purchased points, level history, equipment or an explicit manual modifier override.
-- Switching to a different form replaces the previous form's modifiers instead of stacking. Switching to Base removes all form-specific modifiers. Ability cooldowns, duration effects, capacity and resource balances still carry across form changes.
-- Mechanical settings are in a collapsible editor in the Abilities tab so routine switching stays compact. No AP cost or cooldown for switching in phase two, and this is not yet a full resource/gear transformation system.
-  
-## Form-specific resources (next PR)
-- Each custom resource now stores optional `loadoutIds`; empty means shared across forms. The resource manager on Overview assigns resources to one or more ability forms. A player can show pools from other forms for editing, but those are unavailable for Spend/Restore/Fill or ability activation until their form is active. Hidden pools keep their current balance, capacity, regeneration setting and name. Switching forms never refills or resets them.
-- Resources regenerate at start of turn **only while their form is available**, avoiding hidden-pool free regeneration during another form. Long rest refills all opted-in custom resources, including inactive pools. Deleting a form removes its resource assignment; a pool with no remaining assignments becomes shared. Legacy resources are shared by default.
-- Existing built-in Mana/Holy Power is one shared balance, not copied per form. Each form can choose to follow the global Mana visibility toggle, force Mana visible, or hide/disable it. Costs are validated against the effective visibility before spending AP, including the Ability Library's Usable Now filter. Future: separate Mana balances or entirely independent per-form resources, if needed.
-- All state is saved in the character JSON; game/map storage remains separate.
-  
-## Form-specific worn equipment (next PR)
-- The Equipment tab shows the active form's worn-slot profile (Base or a named ability form). All forms share one inventory and item identities, but each form can save distinct worn slots and hence different armor, weapons, gear bonuses and attack options. Switching forms or linked portraits swaps worn slots without touching AP, cooldowns, resource balances, item charges, long-rest settled history or ability effects.
-- New forms start wearing the current gear, then can diverge. The Equipment tab offers Copy Base and Unequip All for this form; both retain the shared inventory. Deleting an item removes it from every profile. Deleting the active form restores Base gear. Legacy characters migrate existing equipment safely; character export/import preserves all profiles.
-- This stage does not copy gear into separate inventories, enforce transformation AP costs, or reset gear progression on every switch.
-- The cloud/DM/multiplayer migration plan lives in `docs/CLOUD_MULTIPLAYER_PLAN.md`: reusable rules modules, versioned state migrations, account-owned characters, DM-owned sessions, backend permissions, local-first sync and later online sessions.
+### Known implementation gaps
 
-## Multiplayer-ready foundation refactor (current PR)
-- First safe step: `js/persistence.js` owns existing character export/import (format/version 1), browser storage with original character/game keys, and a testable in-memory adapter. `js/app.js` uses it for load, save, clear, portrait upload, import/export; there are no direct localStorage get/set/remove calls left in app. Bad JSON and unsupported future-format imports are rejected. No cloud accounts or network requests yet.
-- `js/game-state.js` extracts the existing pure blank/normalize game state logic for maps, fog, tokens and foes so the future local DM screen can reuse it. The main UI retains its current rules and renderers. Next: extract pure stat/gear/AP movement actions and add versioned migrations, then implement local DM screen before live sessions.
-- Strict ownership: individual characters belong to players, game session map/fog/enemies belong to DM/session; preserve existing separate save formats. Cloud sync later needs authenticated owners, revision/conflict checks, offline queues, and server-side permissions. Full plan: `docs/CLOUD_MULTIPLAYER_PLAN.md`.
-  
-## Shared Combat Core phase one (current PR)
-- `js/combat-core.js` is browser-independent and deterministic, carrying exact current rules for level score history, ASI increases, STR/DEX and general stat modifiers, worn gear bonuses and Armor Rating, AP spending and refunds (Command AP first), and movement cost with leftover feet and free Surge AP. `js/app.js` uses these functions directly; this is not a parallel second rules implementation.
-- Existing manual modifier overrides, active ability bonuses, form bonuses, item-settled gear progression and character/game saving remain unchanged. Tests exercise form/ability buffs, Command AP, movement/AP accounting and stat history.
-- Remaining refactor: attack and damage resolution, defense and resistances, then DM encounter screen. No networking, player permissions or online saves are introduced by this PR.
+- The sheet's Battlemap route planner and `WBEncounterMap.movementRoute` use different pathfinding/occupancy rules.
+- DM character import can treat an active temporary ability Movement/Armor Rating buff as permanent because the DM snapshot does not track the effect's remaining turns.
+- Custom abilities do **not yet** apply stat-based AP discounts, and switching named forms has **no optional cost**.
+- Existing automated tests include many source-text assertions; real browser-click/390px tests need broader coverage.
+- No authenticated cross-device DM game, join codes, server-authorized encounter commands, or live multiplayer synchronization.
 
-## Shared Combat Core phase two (current PR)
-- The shared DOM-free combat module handles hit determination (natural 20; separate dual-wield hits), weapon and crit damage packets, off-hand halving, per-hit Armor Rating, resistance, Overwhelming Force floors, Block/Dodge/Parry and area saves, Death Threshold and Death's Mercy. The current character-sheet UI **uses the pure calculations directly** instead of maintaining different combat rules for future DM/players.
-- Preserve current game mechanics, even where an additional game design decision may eventually be needed: natural 1 is not automatically a miss; the current Overwhelming Force behavior still applies to successful area saves/parries. Dice rolling and UI remain on the client. No session authority, permissions or cloud sync yet.
-- Next architectural stage: typed validated combat actions and local DM encounter tracker, then authenticated live sessions.
+## Confirmed decisions for upcoming work — not implemented yet
+
+- **Form-entry cost:** named forms can optionally charge AP, a resource (Mana/Holy Power or custom pool), or both. Blank defaults to **free** for legacy forms. Switching **into** the form must validate and spend costs atomically through every entry route, including linked portraits; failure spends nothing and changes nothing. **Base is free.** Forms are largely story/class transformations and currently provide free full worn-gear swaps.
+- **Ability AP discounts:** add `Discounted by: None / STR / DEX / INT / FTH` per ability, default **None**. Effective AP cost is `max(ceil(base AP / 2), base AP − current modifier)`; negative modifiers raise cost. Compute this in pure `WBCombat` and use it for activation, on-card base/effective prices, `Usable now` and AP-cost filters.
+- **Unified movement:** one shared DOM-free route algorithm used by sheet and DM. Preserve the sheet's fog planning (unseen squares assumed open; only visible standing enemies obstruct planning; travel stops when encountering a newly revealed obstacle). **Allies and downed creatures of either side are traversable at normal cost but cannot be destinations; standing enemies block.** Give DM actors editable `Party`/`Enemy` sides; imported PCs default Party, NPCs Enemy. Retain eight-direction movement unless a separate rule decision changes costs.
+- **Temporary effects on DM import:** keep gear/current form but omit active short-lived ability bonuses from permanent snapshot stats. Display a warning listing each excluded effect, bonuses and turns left.
+- **Browser tests:** Playwright scenarios for resource spend/restore, ability AP/cooldown/turn progression, separate forms/gear/resources, timed statuses, export/import, DM import/combat/movement/AP and no sideways scrolling at 390px. CI should run every `tests/` file.
+- **Live multiplayer:** prepare a **plan only**, awaiting DM approval. DM hosts from computer/phone; each player joins from their own phone with an account, join code and cloud character, sees the permitted map and moves their token on their turn. Use backend membership, secure per-player reads and safe shared revisions; **do not** add anti-cheat restrictions to customizable sheets.
 
 ## Core rules
 
 - **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
-  which is fine for player characters; 12 is the base 0 and the average adventurer. 28 is the mortal limit.
+  which is fine for player characters; 12 is the base 0 and the average adventurer. 28 is the natural/mortal limit; effective scores **may exceed 28** through gear, forms and ability effects. Scores above 28 still unlock 21/28 milestones.
 - **Modifiers:** +1 per 3 points from 12 (13–15 is +1, 16–18 is +2, 9–11 is −1). STR and DEX use (score − 12) ÷ 2,
   rounded down. Them falling behind at 13 is intended.
 - **Milestones** at 21 and 28 go by your current score, gear included: gear can unlock one and dropping below loses
@@ -143,7 +104,7 @@ when a rule or the site changes, update Notion, the site and this file to match.
 - **Costs:** a standard action is 10 AP and a spell is 11 AP. A stat's mod lowers the cost of actions in its area:
   STR weapon attacks, shoves and grapples; DEX finesse attacks and hand actions; INT arcane spells and tactical
   actions; FTH holy spells and prayers. The floor is half the normal cost, rounded up (weapon attack minimum 5,
-  spell minimum 6). VIT and AGL give no discounts; AGL sets movement.
+  spell minimum 6). **Custom abilities currently have flat AP costs, pending the decided stat discount field.** VIT and AGL give no discounts; AGL sets movement.
 - **Weapon attack** = 10 − STR or DEX mod, minimum 5. One- and two-handed attacks cost the same.
 - **Dual wielding:** with a one-handed weapon in each hand you choose a main-hand attack, an off-hand attack or a
   both-hands attack, all at the same AP. A one-hand attack does full damage, so an off-hand axe can be thrown on its
@@ -210,68 +171,6 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
   Anything more complex is handled at the table.
 
-## What the site does (Draft 35)
-
-- **Identity:** fields, and portrait forms: several pictures per character for transformations, each named, switched
-  by tapping a thumbnail.
-- **Status screen (future):** one place to review active status effects, buffs and debuffs, their sources and remaining duration; not implemented yet.
-- **Temporary ability effects (next PR):** initial automatic Movement modifier in feet/AP, additive across active abilities. Activation needs a positive duration. Effective Movement is shown in teal for automatic ability bonuses (including the signed bonus in its source label); explicit manual Movement overrides stay orange and are edited as the unbuffed base. No permanent change to Movement or equipment. Turn start and manual End Effect remove temporary bonuses; battlemap movement uses the same effective speed.
-- **Ability capacity and quick activation (next PR):** optional maximum active/held creations per ability, independent of limited uses and cooldowns. Successful activation increments held count by one until the configured maximum; a manual Release control lowers it. This count persists through rests and is not automatically changed by duration expiration. A compact Use action remains available while the card is collapsed or expanded.
-- **Ability Library:** custom homebrew abilities with types, categories, favorites, text descriptions and notes, optional AP/resource costs, cooldown, duration and charge metadata (blank uses = unlimited; 0 uses = explicitly none available). Saved with character export/import, separate from the game; activation now supports spending AP/resource costs and tracking uses/cooldowns/durations; applying automatic effects remains future work. Export/Import/Clear character actions are accessible at the top of Sheet and Battlemap.
-- **Custom resources:** characters can keep or hide the legacy Mana/Holy Power pool and add multiple independent named resources with stable IDs, maximum/current values, point or percent display, colors, turn recovery, long-rest refill toggles, and manual spending/restoring. Resource data stays in the character export. Ability cost integration is future work.
-- **Health and Mana/Holy Power:** a Heal box, Death Threshold with a Trauma counter, and a dying panel (bleeding,
-  Stabilized toggle, Indomitable roll, "Treated after combat"). Long rest refills everything, clears Trauma and has
-  an undo.
-- **Vitals:** Natural Evasion, Armor Rating, Initiative, Movement, Darkvision and Light carried, filled in from stats
-  and gear; any can be typed over by hand.
-- **Trackers:** AP, Reactions and Wonder, a "Start of my turn" button (refills AP and reactions, applies bleeding),
-  Stabilize someone, Command an ally and Receive buttons (AP from a Command shows as its own green pips), and a
-  Concentration toggle. A Movement panel spends AP on feet, keeps leftover feet and Surge's 2 free AP, and resets
-  with Start of my turn.
-- **Battlemap:** a second view (Sheet / Battlemap switch, link ends in `#map`). A grid of 5 ft squares labelled A1
-  onward, 20 × 15 by default, resizable from 5 to 60 each way. Your token uses your portrait (initials without one).
-  Drag it, tap a square twice, or use the arrow keys and Enter; moves spend AP through the Movement rules, with an
-  Undo under the grid. Green shading shows squares you can reach without AP (leftover feet and Surge), brass the ones
-  you can reach with your AP; a **Show where you can reach** checkbox turns the shading off. **Free placement** moves
-  the token without spending AP, for setting up. The map is drawn in layers (map picture, terrain, grid lines with a
-  strength slider, fog, shading), so no lines are baked into pictures.
-  - **Maps:** Blank grid and a two-level sample ruin. Stone Hall (30 × 15, lit) has a pillared hall, a pool, a south
-    entrance, an open door west into a ruined antechamber, and stairs going down. The Barrow under it (26 × 18, dark)
-    has a burial hall with sarcophagi, a jarl's tomb on a dais, braziers, a sealed ring door, a corridor of burial
-    niches (two of the dead have glowing eyes) and a flooded side crypt with glowing fungus. Standing on stairs pops
-    up a prompt (Go down / Go up) that switches level. Terrain letters: # wall, O pillar, B broken pillar, r rubble,
-    w water, b bones, s stairs, d open door, x sealed door, c sarcophagus, n burial niche, f brazier, u urns.
-    **Show walls and terrain** reveals that layer. Map data and lighting live in `js/maps.js`; the pictures are drawn
-    by the Python scripts in `maptools/`, not image generation, with lighting that walls block.
-  - **Fog of war** (on by default for maps with walls): you see the squares next to you plus anything in a straight
-    line of sight that's lit or within your sight in the dark (Darkvision and Light carried are on the sheet, and the
-    map has a Light picker). Walls, pillars, sealed doors and burial niches block sight; sarcophagi, braziers, urns,
-    rubble and broken pillars don't. Squares you've seen stay dimmed and are saved per map; "Hide explored areas
-    again" resets them.
-  - **Moving:** moves are planned on what you know: squares you haven't seen count as open floor and only enemies you
-    can see are in the way. The token walks square by square (about 0.13 s a square) with the fog clearing and the
-    view centered on it; if something turns up on the way, you stop next to it and only pay for the distance walked.
-    The note under the map says when an enemy comes into view.
-  - **Enemies:** Add enemy (name, Health, Evasion, Armor Rating), then tap squares to place them (the fog lifts while
-    placing; repeats are numbered, like Draugr 1 and Draugr 2). A roster under the map edits or removes them, and
-    dragging an enemy moves it for free. Tapping one targets it: a panel shows distance, Health, Evasion and Armor
-    Rating, with an attack button per weapon (and one for both) at the sheet's AP cost; out of reach, it points to
-    the nearest square to attack from. The roll is checked against Evasion, and damage minus Armor Rating can be
-    taken off their Health, with Undo.
-- **Dice mode:** a Disadvantage / Normal / Advantage toggle fixed at the bottom of the screen; every d20 uses it,
-  Wonder rerolls included.
-- **Defenses:** all damage comes in here. "Take the hit" applies resistance and Armor Rating with no reaction;
-  "Armor doesn't apply" skips it; "Protecting an ally" (shield or Parry) lets you Block or Parry for them; "Natural
-  20" turns Dodge off. Rolls with a known DC (Stabilize, Indomitable, Concentration) show success or failure.
-- **Stats:** roller (drag or tap rolls onto stats), tap a stat to roll it, milestone popups, brass highlight at 28,
-  gear shown in green. At levels 4, 8, 12, 16 and 19, + and − buttons spend the 4 points (max 2 per stat), with a
-  reset.
-- **Equipment:** Diablo-style paper doll, Forge, Equipped list and Pack. Attack cards per weapon (Attack, Damage,
-  Opportunity attack, with Range) and a Dual wield card when both hands hold one-handers. Arm, leg and ring pieces
-  can be forged as a set.
-- **Advancement:** per-level table, plus a record of each level-up's stat increases with Change, Reset and Reset all.
-- **Footer:** Export character, Import character, Clear sheet.
-
 ## Assumptions on the sheet (confirm or change)
 
 - On an area Dodge, meeting the save DC counts as a success.
@@ -293,8 +192,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   next turn. It's gone at the start of the turn after.
 - A set counts its armor once for the whole pair.
 - Reach shading only shows on squares you've seen, so it doesn't give the layout away. Free placement ignores the fog.
-- Standing enemies block movement through and onto their square, as in D&D. Downed ones can be walked past but not
-  stood on.
+- **Decided occupancy rule:** standing enemies block; allies and downed creatures of either side can be crossed but never used as the destination. The DM and character-sheet pathfinders do not consistently implement this yet.
 - A weapon reaches 5 ft unless its Range says otherwise, and needs line of sight; the square next to you always
   counts as in sight. A both-hands attack needs the target in reach of both weapons.
 - Against an enemy on the map, Armor Rating comes off each hit separately (the off-hand after halving).
@@ -305,7 +203,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
 
 ## Direction: customizable characters
 
-The eight stats, AP and homebrew combat framework remain the default. The site should support unique character resources and abilities rather than require standard D&D classes and spells. The future ability builder will support cooldowns, duration, optional resource/AP costs, multiple forms, and eventual targeted sheet effects. These are not implemented yet.
+Eight stats, AP and the homebrew combat system are the core, while character resources, abilities, statuses, forms and transformations stay customizable. Those editors and automatic ability effects **are already implemented**; the unbuilt refinements are above.
 
 ## Open design questions
 
@@ -371,59 +269,7 @@ tuning together.
 - If you ever want stat rolls to average 12: 1d10 + 1d12 (flat, more extremes) or 4d6 − 2 (bell-shaped). Currently
   keeping 2d6 + 1d12.
 
+
 ## Roadmap and website plan
 
-See [ROADMAP.md](ROADMAP.md).
-
-## Offline encounter command foundation (Draft 31)
-
-- `js/encounter-actions.js` exposes `WBEncounter` for a future multi-character DM screen. Commands for adding actors, initiative, turn order, Action Point spending, DM-applied damage/healing, manual placement and ending an encounter are validated against a revisioned snapshot; duplicate action IDs are recognized. All mutations return a new encounter rather than modifying the caller's object.
-- Shared formulas continue to live in `WBCombat`. Turn starts restore AP and apply existing 4-Health bleeding; resistance before Armor Rating and first-hit Death's Mercy are preserved. Healing from 0 or below above 0 adds a Trauma.
-- The optional encounter lives in the separate game save, not the character export. No DM screen, player movement authority, account/cloud sync, secure role enforcement or random-dice verification exists yet. A dice icon or animated dice overlay is future UI polish; the roll must be computed independently of its animation.
-
-## Offline DM Room UI (Draft 32)
-
-- New `dm.html` is linked from the Character Sheet. It imports multiple v1 character exports into **snapshots** and adds manual enemies/NPCs; setup values and actual rolled initiative totals can be reviewed and corrected before starting.
-- It shows current actor and round, initiative order, Health, Armor Rating, AP, and per-actor controls for raw damage, healing, manual HP edits and stabilization. Next turn refreshes AP and applies 4 bleeding damage at 0 or less if not stabilized. All operations use `WBEncounter` with shared `WBCombat` formulas and revision/ID validation.
-- `WBCombat.healthAtLevel` is now used for the sheet's `computeLog` and DM import. Max HP includes historical VIT, per-level rolls, chosen hit die and gear; incomplete advancement produces a DM-review warning. Imported characters retain no live sync to their originals, and the player-character save is never changed by DM actions.
-- Only the optional DM-owned `game.encounter` is saved, and the original map/tokens/fog/foes remain intact. The room does **not** provide online multiplayer, authenticated permissions, joined player movement, automatic initiative rolls, attack/dice animation, or cross-device cloud saves. Keep a single tab for active local edits until transactional cloud saving exists.
-
-## Offline DM tactical map (Draft 33)
-
-- The local DM screen displays the same Stone Hall, Barrow, and blank five-foot-grid map sources as the character Battlemap. The DM can select any encounter PC/NPC, click a free map square to place/reposition the token, click tokens to select them, and clear their placement.
-- Token placement is revisioned through `WBEncounter.PlaceToken` / `ClearToken`, checked against map bounds, impassable cells and other encounter actor positions by pure `WBEncounterMap`. Each actor stores optional `mapId` so changing maps doesn't teleport placed tokens.
-- The shared game map selection is saved in `game.map`. DM encounter positions are still **separate** from the player movement and legacy foes, and manual DM placement costs **no AP**. There is no player pathfinding/AP validation in the DM room, no shared player-map token movement, no cloud syncing, and no access permissions yet.
-
-## Validated encounter movement (Draft 34)
-
-- In the offline DM Room, **Combat movement (AP)** is distinct from **DM placement (free)**. During an active encounter, select the current actor and an open destination, inspect the route preview with distance/difficult terrain/AP and Surge, then Confirm move. Free placement remains explicitly available for manual corrections.
-- `WBEncounterMap.movementRoute` computes shortest routes across eight adjacent 5-ft squares, charging 10 ft for rubble, water and bones, and rejecting walls, blocked corners, occupied cells and inaccessible destinations. Route costs are recomputed in the validated `WBEncounter.MoveToken` command; never accept a browser-supplied cost.
-- `WBCombat.movePlan`, `movementAfter` and `spendAp` handle leftover feet, Command AP priority, and free Surge AP (2/turn when effective AGL reaches 21). Turn starts reset the encounter's movement tracker; move commands require the actor's own turn and a placed token on the correct map.
-- Character imports snapshot Movement ft/AP from effective AGL, gear, form/ability bonuses and manual override. NPC movement is editable in setup. Movement does not synchronize back to player character sheets or `game.tokens`. No cloud account or true player-authorized multiplayer yet.
-
-## PR #25 preview fixes (movement UX and roster continuity)
-
-- Fixed the native Map dropdown that looked blank or only showed a popup border on some browsers by replacing it with explicit map-choice buttons; same saved map semantics.
-- Combat movement now selects the current initiative combatant automatically; another actor cannot be moved using AP outside their own turn. Inactive/finished encounters disable Combat movement and explain how to reopen setup. Movement/path errors also appear beside the map, instead of only in the far-away top feedback banner.
-- Added DM-only `ReopenSetup` command and **Reuse roster / Edit setup** button after Finish combat. It preserves imported actors, health, map positions and initiative; refreshes AP/Surge/leftover movement and returns to setup where new NPCs/players and value edits are allowed. **New empty roster** still clears everything after confirmation.
-- Added browser-interaction and encounter regression tests for map switching, turn auto-selection, movement confirmation, roster reuse and restarting. Existing character saves and game tokens are untouched.
-
-### PR #25 movement polish: straight routes and visible token travel
-
-- Fixed equally short paths that zigzagged via unnecessary diagonals. `WBEncounterMap.movementRoute` now ranks routes lexicographically: movement feet first, then fewer diagonal steps, fewer turns, and less drift from the direct line. Direction-aware Dijkstra states preserve correct turn-minimization. Straight horizontal and vertical routes remain straight on open grids.
-- After Confirm move, `WBEncounter.MoveToken` still validates and commits destination/AP immediately. `js/dm-map.js` uses the accepted command's `event.path` to animate a separate temporary token along each square (170 ms/step), hiding the committed destination token until the animation finishes. Interruptions, map changes, or refreshes reveal the final saved position. Reduced-motion preferences are respected; a timed fallback covers browsers without Web Animations.
-- Regression coverage now checks exact straight routes, each animation keyframe, and that AP is deducted once before the animation ends. No sheet saves or legacy map tokens are changed.
-
-## Local Player Encounter Preview (Draft 35)
-
-- A separate `player.html` UI is now available via Character Sheet or DM Room. In the **same browser/origin**, it reads the existing DM-owned optional `game.encounter`, shows the active turn and selected PC's own Health, AP, Movement, Surge, AR and initiative, plus public combatant names/positions on the same map. Other NPC/PC HP and AR do not appear in the player view.
-- Its local **Preview as** selection is a convenience, **not authentication**: anyone with access to this browser can select any imported PC. This cannot be used as a real remote session, an access-control mechanism or a code-based player login.
-- `WBPlayerSession.issue` whitelists only `MoveToken`, `SpendAP`, and `EndTurn`; it forces the selected PC ID, expected revision and role='player', and reuses `WBEncounter` turn/owner/AP/path validation. No player UI commands can alter damage, foes, healing, setup or DM map selection. The DM page receives same-origin changes through local storage events. Character sheet files, old `game.tokens` and `game.foes` remain unchanged.
-- **Next:** a hosted/authenticated session with join code, server-enforced actor ownership and revision-safe writes, then cross-device events and player/DM information filtering from a trusted backend. Browser seat selection is deliberately not secure and does not sync across devices.
-
-## Cloud character account foundation (Draft 36)
-
-- Added `cloud.html` with opt-in Supabase project configuration (HTTPS project URL and public/publishable key), signup/login/logout, manual private character upload, list, restore, delete, local backup export and undo. This page is **inactive** until a Supabase project and database migration are configured; it does not connect automatically on users who never configure it.
-- `js/cloud-characters.js` provides an async RLS-backed repository with revision-checked updates/deletes. Cloud saves are separate from the local `characters` key and DM `games` data. Existing character exports remain v1 JSON and original local sheets are unchanged unless the user explicitly confirms a restore.
-- `supabase/migrations/20261028230000_private_characters.sql` creates private per-user characters and owner-only SELECT/INSERT/UPDATE/DELETE RLS. No secrets are committed; Cloud Saves rejects obvious service_role/secret keys. See `docs/SUPABASE_SETUP.md` to activate, verify account isolation, and test cloud restore from another device.
-- Still **not** a real multiplayer server: DM encounters, player view and token movement remain local, and Cloud Saves is manual rather than automatic background sync. Next: secure game/session memberships, join codes, server-authenticated command processing and redacted player views.
+See [ROADMAP.md](ROADMAP.md) for pending items and [ARCHITECTURE.md](ARCHITECTURE.md) for engineering detail.
