@@ -74,12 +74,13 @@
      r.current=Math.min(before[r.id].hardCap,number(command.value));
    else if(type==='SetResourceMaximum'){
      r.max=Math.max(1,number(command.value,1));
+     if(fixedCap(r)!==null&&fixedCap(r)<r.max)r.cap=r.max;
      const after=limits(next,r);
      // A base maximum edit is a correction, but its capacity change still
      // applies the explicit overflow policy. It must not trigger automation.
      if(after.effectiveMax<before[r.id].effectiveMax && policy(r)==='lose')
        r.current=Math.min(number(r.current),after.effectiveMax);
-     if(after.hasFixedCap && after.hardCap<before[r.id].hardCap)
+     if(after.hardCap<before[r.id].hardCap && after.hasFixedCap)
        r.current=Math.min(number(r.current),after.hardCap);
    } else if(type==='SetResourceCap'){
      if(command.value!=='' && command.value!=null &&
@@ -89,7 +90,9 @@
      const after=limits(next,r);
      if(after.effectiveMax<before[r.id].effectiveMax&&policy(r)==='lose')
        r.current=Math.min(number(r.current),after.effectiveMax);
-     if(after.hasFixedCap&&after.hardCap<before[r.id].hardCap)
+     // Explicitly removing or lowering a hard cap is a correction to that cap,
+     // so it must not silently leave points beyond the new physical ceiling.
+     if(after.hardCap<before[r.id].hardCap)
        r.current=Math.min(number(r.current),after.hardCap);
    } else if(type==='SetResourceOverflowPolicy'){
      if(!['lose','keep'].includes(command.value))return {ok:false,error:'INVALID_POLICY'};
