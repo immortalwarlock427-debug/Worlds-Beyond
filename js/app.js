@@ -872,8 +872,10 @@
     renderEquip();
     renderMap();
     save();
+    const oldResourceMaxima=resourceManager.maxima();
     resourceManager.turnStart();
     abilityLibrary.turnStart();
+    resourceManager.reconcileMaximums(oldResourceMaxima);
     statusManager.turnStart();
     refreshAll(); // Update movement and the battlemap after timed effects expire.
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.

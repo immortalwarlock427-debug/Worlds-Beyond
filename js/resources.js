@@ -49,7 +49,7 @@
       id: typeof r.id === 'string' && /^res[a-z0-9]{6,36}$/.test(r.id) ? r.id : id(),
       name: text(r.name) || 'Resource',
       max,
-      current: Math.min(max, value(r.current, max)),
+      current: value(r.current, max), // Loading may not erase a still-active max buff.
       amount: Math.max(1, value(r.amount, 5)),
       display: r.display === 'percent' ? 'percent' : 'number',
       regen: value(r.regen, 0),
@@ -79,7 +79,20 @@
     const showAll = document.getElementById('resourceShowAll');
     const summary = document.getElementById('resourceSummary');
     const byId = (resourceId) => getState().resources.find((r) => r.id === resourceId);
-    const effectiveMax = (r) => window.WBAbilities && window.WBAbilities.resourceMax ? window.WBAbilities.resourceMax(getState(), r) : r.max;
+    const derive=() => window.WBCharacter.derive(getState()).resources;
+    const effectiveMax=r=>derive()[r.id].effectiveMax;
+    // One command path for every resource point/max change. Apply the pure
+    // result in place to keep existing editors' references stable.
+    const applyResource=(command)=>{
+      const state=getState();
+      const result=window.WBCharacter.apply(state,command);
+      if(!result.ok)return result;
+      for(const revised of result.state.resources){
+        const original=state.resources.find(r=>r.id===revised.id);
+        if(original)Object.assign(original,revised);
+      }
+      return result;
+    };
 
     function render() {
       const state = getState();
@@ -110,9 +123,9 @@
             (!shared && r.loadoutIds.includes(form.id) ? ' checked' : '') + '> ' + escape(form.name) + '</label>').join('') +
           '</div></fieldset>' : '';
         const maxNow = effectiveMax(r);
-        // When a temporary maximum expires, excess points cannot remain above
-        // the restored cap. Raising the cap never grants free points.
-        if (r.current > maxNow) r.current = maxNow;
+        // Rendering must be read-only; loading a 150/200 active-effect pool
+        // cannot destroy valid points. Reconcile only on actual max changes.
+        const excess = Math.max(0,r.current-maxNow);
         const percent = Math.min(100, Math.round(100 * r.current / maxNow));
         const currentDisplay = r.display === 'percent' ? percent + '%' : r.current + ' / ' + maxNow;
         return '<div class="custom-resource' + (active ? '' : ' resource-inactive') + '" data-resource-id="' + escape(r.id) + '">' +
@@ -123,7 +136,8 @@
             '<strong class="resource-figure" aria-live="polite">' + escape(currentDisplay) + '</strong>' +
             '<button type="button" class="xbtn del" data-resource-action="remove" aria-label="Remove ' + escape(r.name) + '">&times;</button>' +
           '</div>' +
-          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + maxNow + '" aria-valuenow="' + r.current + '">' +
+          (excess ? '<p class="resource-effect-bonus">Above current maximum by ' + excess + ' — preserved until a gameplay change.</p>' : '') +
+          '<div class="resource-meter ' + escape(r.color) + '" role="progressbar" aria-label="' + escape(r.name) + '" aria-valuemin="0" aria-valuemax="' + Math.max(maxNow,r.current) + '" aria-valuenow="' + r.current + '">' +
             '<span style="width:' + percent + '%"></span></div>' +
           '<div class="resource-values">' +
             '<label><span class="foot-label">Current</span><input type="number" inputmode="numeric" min="0" max="' + maxNow + '" data-resource-prop="current" value="' + r.current + '"></label>' +
@@ -204,9 +218,10 @@
       const prop = input.dataset.resourceProp;
       if (prop === 'name') r.name = text(input.value) || 'Resource';
       else if (prop === 'max') {
-        r.max = Math.max(1, value(input.value, r.max));
-        r.current = Math.min(r.max, r.current);
-      } else if (prop === 'current') r.current = Math.min(effectiveMax(r), value(input.value, r.current));
+        applyResource({type:'SetResourceMaximum',resourceId:r.id,value:Math.max(1,value(input.value,r.max))});
+      } else if (prop === 'current') {
+        applyResource({type:'SetResourceCurrent',resourceId:r.id,value:value(input.value,r.current)});
+      }
       else if (prop === 'regen') r.regen = value(input.value, r.regen);
       else if (prop === 'display') r.display = input.value === 'percent' ? 'percent' : 'number';
       else if (prop === 'color') r.color = COLORS.includes(input.value) ? input.value : 'teal';
@@ -226,35 +241,40 @@
       if (action === 'remove') {
         if (!window.confirm('Remove ' + r.name + '? This cannot be undone unless you import a saved character.')) return;
         getState().resources = getState().resources.filter((x) => x.id !== r.id);
-      } else if (action === 'refill') r.current = effectiveMax(r);
-      else {
+      } else if (action === 'refill') {
+        applyResource({type:'FillResource',resourceId:r.id});
+      } else {
         const field = card.querySelector('[data-resource-amount]');
         // Save the amount before the card is rebuilt; never revert to the default 5.
         r.amount = field && String(field.value).trim() !== '' ? Math.max(1, value(field.value, r.amount)) : r.amount;
-        if (action === 'spend') r.current = Math.max(0, r.current - r.amount);
-        if (action === 'restore') r.current = Math.min(effectiveMax(r), r.current + r.amount);
+        if (action === 'spend') applyResource({type:'SpendResource',resourceId:r.id,amount:r.amount});
+        if (action === 'restore') applyResource({type:'GainResource',resourceId:r.id,amount:r.amount});
       }
       render();
       save();
     });
 
     function turnStart() {
-      let changed = false;
-      getState().resources.forEach((r) => {
-        if (resourceVisible(getState(), r) && r.regen && r.current < effectiveMax(r)) {
-          r.current = Math.min(effectiveMax(r), r.current + r.regen);
-          changed = true;
-        }
-      });
-      if (changed) { render(); save(); }
+      const result=applyResource({type:'ResourceTurnStart'});
+      if(result.ok&&result.events.length){render();save();}
     }
     function longRest() {
-      getState().resources.forEach((r) => { if (r.refillOnRest) r.current = r.max; });
+      applyResource({type:'ResourceLongRest'});
       render();
+    }
+    // The actual effect-expiry command, not render/reload, may lower a max.
+    function reconcileMaximums(previousMaxima) {
+      const result=applyResource({type:'ReconcileResourceMaximums',previousMaxima});
+      if(result.ok&&result.events.length){render();save();}
+    }
+    function maxima() {
+      const result=Object.create(null);
+      for(const [id,data] of Object.entries(derive())) result[id]=data.effectiveMax;
+      return result;
     }
 
     render();
-    return { render, turnStart, longRest };
+    return { render, turnStart, longRest, reconcileMaximums, maxima };
   }
 
   window.WBResources = { normalizeState, init, resourceVisible, manaVisible, setMembership };

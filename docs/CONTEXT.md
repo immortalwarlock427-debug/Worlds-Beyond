@@ -273,3 +273,7 @@ tuning together.
 ## Roadmap and website plan
 
 See [ROADMAP.md](ROADMAP.md) for pending items and [ARCHITECTURE.md](ARCHITECTURE.md) for engineering detail.
+
+## Character command foundation (in progress)
+
+The first slice of `WBCharacter.derive/apply` now provides DOM-free custom resource math and typed adjustments. The resource UI routes manual Spend/Restore/Fill, maximum edits, turn regeneration and rest through that foundation. Loading, importing and rendering no longer erase a legitimate current value above base maximum; effect expiry reconciles a maximum drop during the turn command. **Automatic triggers, hard overflow caps and the general rule editor are not implemented yet.** See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md). This stage does not change other character mutation paths.

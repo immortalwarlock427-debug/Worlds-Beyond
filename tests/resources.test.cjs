@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 const script = fs.readFileSync(path.join(__dirname, '..', 'js', 'resources.js'), 'utf8');
+const pure = fs.readFileSync(path.join(__dirname, '..', 'js', 'character-core.js'), 'utf8');
 
 function setup() {
   class Element {
@@ -36,6 +37,7 @@ function setup() {
     document: { getElementById },
     Date, Math, Set
   };
+  vm.runInNewContext(pure, context, { filename: 'character-core.js' });
   vm.runInNewContext(script, context, { filename: 'resources.js' });
   const api = context.window.WBResources;
   const state = { resources: [], showMana: true };
@@ -78,7 +80,7 @@ test('legacy characters keep Mana and start with no custom resources', () => {
   assert.deepEqual(old.fields, { mpCur: 37, manaKind: 'holy' });
 });
 
-test('imported values are clamped, sanitized and assigned distinct stable ids', () => {
+test('import retains above-base current values for effective-max effects; other fields sanitized', () => {
   const { api } = setup();
   const state = { showMana: false, resources: [
     { id: 'resabcdefg', name: 'Energy', max: 100, current: 500, regen: -20, color: 'blue', display: 'percent', refillOnRest: false },
@@ -88,7 +90,7 @@ test('imported values are clamped, sanitized and assigned distinct stable ids', 
   api.normalizeState(state);
   assert.equal(state.showMana, false);
   assert.equal(state.resources.length, 2);
-  assert.equal(state.resources[0].current, 100);
+  assert.equal(state.resources[0].current, 500);
   assert.equal(state.resources[0].regen, 0);
   assert.equal(state.resources[0].refillOnRest, false);
   assert.equal(state.resources[0].display, 'percent');
@@ -213,6 +215,7 @@ test('Mana visibility toggles without changing resource balances', () => {
 test('the character sheet loads manager before app and hooks turn/rest/export', () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
+  assert.ok(html.indexOf('src="js/character-core.js') < html.indexOf('src="js/resources.js'));
   assert.ok(html.indexOf('src="js/resources.js') < html.indexOf('src="js/app.js'));
   assert.match(html, /id="resourceSection"/);
   assert.match(app, /window\.WBResources\.normalizeState\(state\)/);

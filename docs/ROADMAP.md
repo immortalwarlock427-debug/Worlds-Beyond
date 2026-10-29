@@ -29,3 +29,7 @@ This is a **future-work plan**, not a record of pull requests. For what works to
 ## Undecided — do not build
 
 AP growth by level; Block dice scaling by level and shield sizes; two-handed versus dual-wield damage; AP costs for smaller actions; WIS actions; Exhaustion redesign. Proposals in CONTEXT.md are not decisions.
+
+## Automation engine (new staged direction)
+
+See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md) for the agreed Manual/Automatic choice and Claude's reviewed foundation. First resource-command slice is in progress; next, migrate other character commands (including ability activations and AP), define form effects and overflow policies, then add state/event triggers and the ability editor in independently tested PRs. Stat-based ability AP discounts remain planned and should share the eventual activation command path.
