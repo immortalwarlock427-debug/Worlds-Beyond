@@ -535,6 +535,10 @@
       '</div>';
     }
 
+    function formEffectRow(e,state) {
+      return effectRow(e,state).replaceAll('data-effect-prop=','data-form-effect-prop=')
+        .replace('data-ability-action="remove-effect"','data-form-effect-action="remove"');
+    }
     function memberships(ability) {
       const forms = getState().abilityLoadouts || [];
       if (!forms.length) return '';
@@ -546,10 +550,6 @@
           '<label><input type="checkbox" data-loadout-member="' + esc(form.id) + '" ' +
             (!shared && ability.loadoutIds.includes(form.id) ? 'checked ' : '') +
             '> ' + esc(form.name) + '</label>').join('') + '</div></fieldset>';
-    }
-    function formEffectRow(e,state) {
-      return effectRow(e,state).replaceAll('data-effect-prop=','data-form-effect-prop=')
-        .replace('data-ability-action="remove-effect"','data-form-effect-action="remove"');
     }
     function renderLoadoutConfig() {
       const state = getState();

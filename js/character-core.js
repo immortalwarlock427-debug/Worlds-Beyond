@@ -15,8 +15,8 @@
    return Number.isFinite(n)?Math.max(-LIMIT,Math.min(LIMIT,Math.round(n))):0;
  };
  const policy=r=>r.overflowPolicy==='keep'?'keep':'lose';
- const rest=r=>['fill','empty','unchanged'].includes(r.restBehavior)?r.restBehavior:
-   (r.refillOnRest===false?'unchanged':'fill');
+ const rest=r=>r.restBehavior==='empty'?'empty':
+   (r.restBehavior==='unchanged'||r.refillOnRest===false?'unchanged':'fill');
  const fixedCap=r=>r.cap!=='' && r.cap!=null &&
    Number.isFinite(Number(r.cap)) && Number(r.cap)>0 ?
    Math.max(1,number(r.cap,1)) : null;
