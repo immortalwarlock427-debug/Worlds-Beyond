@@ -33,3 +33,5 @@ AP growth by level; Block dice scaling by level and shield sizes; two-handed ver
 ## Automation engine (new staged direction)
 
 See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md) for the agreed Manual/Automatic choice and Claude's reviewed foundation. First resource-command slice is in progress; next, migrate other character commands (including ability activations and AP), define form effects and overflow policies, then add state/event triggers and the ability editor in independently tested PRs. Stat-based ability AP discounts remain planned and should share the eventual activation command path.
+
+- **Form modifiers and resource overflow — implemented:** resources have optional absolute caps, per-resource lose/keep policy (lose default), three rest behaviors and overcharge display; named forms derive modifiers like active abilities. State-crossing auto-transformation and manual/automatic rule editing are still planned, not shipped.

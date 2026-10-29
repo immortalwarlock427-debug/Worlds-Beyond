@@ -186,7 +186,8 @@ test('selecting Shared clears all specific forms without resetting ability track
 test('form membership checkboxes are interactive even when Shared is selected', () => {
   const js=read('js/abilities.js');
   const start=js.indexOf('function memberships(ability)');
-  const end=js.indexOf('function renderLoadouts()',start);
+  // Test the membership markup itself; unrelated form effect buttons may be disabled.
+  const end=js.indexOf('function renderLoadoutConfig()',start);
   assert.ok(start>0 && end>start);
   const markup=js.slice(start,end);
   assert.match(markup,/data-loadout-member/);
@@ -579,4 +580,33 @@ test('cost editor and portrait events use the same form payment path',()=>{
  assert.match(js,/selectLoadout\(state,loadoutSelect\.value,controls\)/);
   assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
  assert.match(app,/entryCost\(state,dest\?dest\.id:'',formEntryControls\)/);
+});
+
+test('form effect normalization preserves targets and only active form contributes',()=>{
+ const {api,state}=harness();
+ state.resources=[{id:'resabcdefg',max:100,current:150,cap:200}];
+ const beast=api.createLoadout(state,'Monstrous');
+ beast.effects=[{id:'effabcdefg',target:'resource-max',resourceId:'resabcdefg',value:100},
+  {id:'effhijklmn',target:'armor',value:7},
+  {id:'effmnopqrs',target:'stat',stat:'AGL',value:4}];
+ const copy=JSON.parse(JSON.stringify(state));
+ api.normalizeState(copy);
+ const normalized=copy.abilityLoadouts.find(x=>x.id===beast.id);
+ assert.equal(normalized.effects.length,3);
+ assert.equal(normalized.effects[0].resourceId,'resabcdefg');
+ assert.equal(api.effectBonus(copy,'armor'),7);
+ assert.equal(api.effectBonus(copy,'stat','AGL'),4);
+ assert.equal(api.resourceMax(copy,copy.resources[0]),200);
+ copy.activeAbilityLoadoutId='';
+ assert.equal(api.effectBonus(copy,'armor'),0);
+ assert.equal(api.effectBonus(copy,'stat','AGL'),0);
+ assert.equal(api.resourceMax(copy,copy.resources[0]),100);
+});
+test('form effect edit controls support add/remove and a resource maximum target',()=>{
+ const js=read('js/abilities.js'),page=read('index.html');
+ assert.match(js,/data-form-effect-action="add"/);
+ assert.match(js,/data-form-effect-prop/);
+ assert.match(js,/formEffectRow/);
+ assert.match(js,/reconcileMaxima\(state,prior\)/);
+ assert.match(page,/js\/character-core\.js/);
 });

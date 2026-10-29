@@ -1,6 +1,6 @@
 # Character Automation — Proposed Architecture
 
-**Design in progress.** No automatic transformations, trigger editor or overcharge settings exist yet. Built from Claude's October 2026 code review.
+**Design in progress.** Resource overcharge configuration and ongoing form modifiers are now implemented in a separate PR. Automatic transformation triggers and the rules editor are **not implemented yet**. Based on Claude's October 2026 architecture review and the DM's explicit choices.
 
 ## Confirmed principles
 
@@ -21,9 +21,10 @@
 
 ## Decisions the DM still needs to make
 
-1. **Rage model:** base max 100 + absolute cap 200 + Monstrous Form max +100 (true overflow), **or** always max 200 with a threshold marker at 100?
-2. **Leaving Monstrous Form above 100:** reduce to 100, **or** keep the excess up to cap 200?
-3. **Manual corrections:** should typing a value ever fire automatic rules? Claude recommends **no**, and the first command foundation tags such changes as corrections.
-4. **Automatic form-entry costs:** Claude recommends skipping configured AP/resource entry costs by default for involuntary automatic transitions, with an explicit override to pay.
+1. **Rage model — confirmed:** base maximum 100, absolute cap 200, Monstrous Form has a derived +100 Rage effective-maximum effect. This is true overcharge, not a fake always-200 resource.
+2. **After maximum decreases — confirmed:** configurable **per resource**, with **lose excess** as the default; **keep excess** is optional. Absolute hard cap remains enforced on actual changes.
+3. **Manual corrections — confirmed:** typing values **never fires automation**. State-crossing rules will only be evaluated after gameplay commands/events.
+4. **Rule activation — confirmed:** a player chooses **Manual or Automatic** per rule/ability (with both supported when explicitly configured).
+5. **Automatic form-entry costs — recommended, not yet approved:** skip configured AP/resource entry costs by default for involuntary automatic transitions, with an explicit per-action override to pay. This remains to confirm before trigger implementation.
 
-Unresolved choices must not be hardcoded into trigger behavior or future resource-cap configuration.
+Implementation guidance: a resource's explicit absolute cap bounds player Gain/Restore and direct corrections. Regeneration and Fill stop at effective maximum, not cap; overcharge can be gained through gameplay Gain/Restore. Rest behavior supports Fill to base, Empty, or Unchanged. Form modifiers are derived from current form, never separate actions that need manual removal. Loading and rendering never discard excess.

@@ -1370,3 +1370,20 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .form-entry-costs .ability-effect-hint {grid-column:1/-1;margin:0;}
 .form-entry-costs input,.form-entry-costs select {width:100%;min-width:0;}
 @media(max-width:600px){.form-entry-costs {grid-template-columns:1fr;}}
+
+/* Independent resource ceilings: base/effective max, optional absolute cap and
+   overcharge. The dividing marker is read-only and never alters stored points. */
+.resource-meter {position:relative;overflow:hidden;}
+.resource-max-marker {position:absolute;top:0;bottom:0;z-index:1;border-left:2px solid
+  var(--text);opacity:.75;pointer-events:none;}
+.resource-cap-settings {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;
+  margin-top:7px;}
+.resource-cap-settings label {display:grid;gap:4px;min-width:0;}
+.resource-cap-settings input,.resource-cap-settings select {min-width:0;width:100%;}
+.form-effect-settings {min-width:0;border:1px solid var(--rule);border-radius:4px;
+  padding:11px;display:grid;gap:10px;}
+.form-effect-settings legend {font:700 13px var(--font-label);color:var(--brass);}
+.form-effect-settings .ability-effects-head {display:flex;justify-content:space-between;
+  gap:8px;align-items:center;}
+.form-effect-settings .ability-effect-row {min-width:0;}
+@media(max-width:520px){.resource-cap-settings {grid-template-columns:1fr;}}

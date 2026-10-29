@@ -59,8 +59,14 @@
     const rules = window.WBCombat, abilities = window.WBAbilities;
     const fields = record(state.fields), over = record(state.over);
     const lvl = rules.level(state);
-    // Form and gear modifiers remain; live ability bonuses cannot be made permanent.
-    const bonus = () => 0;
+    // Persistent modifiers on the selected form are part of the snapshot;
+    // active *timed ability* effects remain excluded (no DM duration clock).
+    const form = (Array.isArray(state.abilityLoadouts)?state.abilityLoadouts:[])
+      .find(f=>f.id===state.activeAbilityLoadoutId);
+    const bonus = (target,key) => (Array.isArray(form&&form.effects)?form.effects:[])
+      .reduce((sum,e)=>sum+(e.target===target&&
+        (target==='stat'?e.stat===key:target==='resource-max'?e.resourceId===key:true)
+        ?(Number(e.value)||0):0),0);
     const formBonus = key => abilities && Array.isArray(state.abilityLoadouts) ?
       abilities.formStatBonus(state, key) : 0;
     const vit = rules.effectiveScore(state, 'VIT', lvl, bonus('stat','VIT'), formBonus('VIT'));
@@ -93,7 +99,8 @@
     const agilityMod = rules.modifier(state,'AGL',lvl,bonus('stat','AGL'),formBonus('AGL'));
     const speedOverride = numeric(over.speed);
     const baseSpeed = Number.isFinite(speedOverride) ? speedOverride :
-      Math.max(0,Math.max(5,5*(1+agilityMod))+rules.gearBonus(state,'move'));
+      Math.max(0,Math.max(5,5*(1+agilityMod))+rules.gearBonus(state,'move')+
+        bonus('movement'));
     const speedFt = bounded(baseSpeed,5,0,10000);
     const surgeMax = agility != null && agility >= 21 ? 2 : 0;
     const apMax = rules.trackerMax(fields.apMax, 15);

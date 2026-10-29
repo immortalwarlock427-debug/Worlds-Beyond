@@ -80,10 +80,26 @@
     }
     return {ok:true,ap,cost,resource,resourceId,form};
   }
+  function resourceMaxima(state) {
+    if(!window.WBCharacter)return null;
+    const derived=window.WBCharacter.derive(state).resources,old={};
+    for(const [id,value] of Object.entries(derived))old[id]=value.effectiveMax;
+    return old;
+  }
+  function reconcileMaxima(state,prior) {
+    if(!prior||!window.WBCharacter)return;
+    const result=window.WBCharacter.apply(state,
+      {type:'ReconcileResourceMaximums',previousMaxima:prior});
+    if(result.ok)for(const r of result.state.resources){
+      const original=(state.resources||[]).find(x=>x.id===r.id);
+      if(original)Object.assign(original,r);
+    }
+  }
   function commitFormEntry(state, identifier, controls) {
     const payment=entryCost(state,identifier,controls);
     if(!payment.ok)return payment;
     if(state.activeAbilityLoadoutId===identifier)return payment;
+    const prior=resourceMaxima(state);
     if(window.WBEquipment && !window.WBEquipment.switchForm(state,identifier))
       return {ok:false,message:'Could not switch equipment profiles.'};
     if(payment.ap)controls.spendAp(payment.ap);
@@ -92,6 +108,7 @@
       else payment.resource.current=Math.max(0,Number(payment.resource.current)-payment.cost);
     }
     state.activeAbilityLoadoutId=identifier;
+    reconcileMaxima(state,prior);
     return payment;
   }
   function selectLoadout(state, identifier, controls) {
@@ -147,8 +164,8 @@
   function createLoadout(state, name) {
     const text = clean(name,60).trim();
     if (!text || !Array.isArray(state.abilityLoadouts) || state.abilityLoadouts.length >= MAX_LOADOUTS) return null;
-    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, manaMode: 'inherit',
-      entryApCost:'',entryResourceId:'',entryResourceCost:'' };
+    const entry = { id: formId(), name: text, portraitId: '', statBonuses: {}, effects:[],
+      manaMode: 'inherit',entryApCost:'',entryResourceId:'',entryResourceCost:'' };
     state.abilityLoadouts.push(entry);
     if (window.WBEquipment) window.WBEquipment.switchForm(state, entry.id); // New form copies current gear.
     state.activeAbilityLoadoutId = entry.id;
@@ -174,6 +191,7 @@
   }
 
   function removeLoadout(state, identifier) {
+    const prior=resourceMaxima(state);
     const before = (state.abilityLoadouts || []).length;
     if ((state.abilityLoadouts || []).some(x => x.id === identifier) &&
         state.activeAbilityLoadoutId === identifier && window.WBEquipment) {
@@ -189,6 +207,7 @@
     }
     if (state.activeAbilityLoadoutId === identifier) state.activeAbilityLoadoutId = '';
     if (window.WBEquipment) window.WBEquipment.removeForm(state, identifier);
+    reconcileMaxima(state,prior);
     return true;
   }
   const signedNumber = (n) => {
@@ -221,18 +240,24 @@
     });
   }
   function effectBonus(state, target, key) {
-    return (state.abilities || []).reduce((total, a) => {
-      if (!(a.durationLeft > 0)) return total;
-      return total + (a.effects || []).reduce((subtotal, e) =>
-        subtotal + (e.target === target &&
-          (target === 'stat' ? e.stat === key :
-           target === 'resource-max' ? e.resourceId === key : true) ?
-           signedNumber(e.value) : 0), 0);
-    }, 0);
+    const sum=effects=>(effects||[]).reduce((subtotal,e)=>
+      subtotal+(e.target===target &&
+        (target==='stat'?e.stat===key:target==='resource-max'?e.resourceId===key:true)
+        ?signedNumber(e.value):0),0);
+    const timed=(state.abilities||[]).reduce((total,a)=>
+      total+(a.durationLeft>0?sum(a.effects):0),0);
+    const form=(state.abilityLoadouts||[]).find(f=>f.id===state.activeAbilityLoadoutId);
+    return timed+(form?sum(form.effects):0);
   }
   const movementBonus = (state) => effectBonus(state, 'movement');
-  function resourceMax(state, resource) {
-    return Math.max(1, (Number(resource.max) || 1) + effectBonus(state, 'resource-max', resource.id));
+  function resourceMax(state,resource) {
+    if(window.WBCharacter){
+      const calculated=window.WBCharacter.derive(state).resources[resource.id];
+      if(calculated)return calculated.effectiveMax;
+    }
+    const effective=Math.max(1,(Number(resource.max)||1)+effectBonus(state,'resource-max',resource.id));
+    const cap=resource.cap==null||resource.cap===''?effective:Math.max(1,Number(resource.cap)||effective);
+    return Math.min(effective,cap);
   }
   // Display and combat must agree: calculate the same effective movement once
   // from an unmodified base, never by adding a bonus to an already-adjusted input.
@@ -287,7 +312,7 @@
           if (amount) statBonuses[k] = amount;
         });
         return { id:key, name:clean(x.name,60).trim(),
-          portraitId: clean(x.portraitId,100), statBonuses,
+          portraitId: clean(x.portraitId,100), statBonuses, effects:normalizeEffects(x),
           manaMode: ['show', 'hide'].includes(x.manaMode) ? x.manaMode : 'inherit',
           entryApCost:optionalNumber(x.entryApCost), entryResourceId:clean(x.entryResourceId,100),
           entryResourceCost:optionalNumber(x.entryResourceCost) };
@@ -510,6 +535,10 @@
       '</div>';
     }
 
+    function formEffectRow(e,state) {
+      return effectRow(e,state).replaceAll('data-effect-prop=','data-form-effect-prop=')
+        .replace('data-ability-action="remove-effect"','data-form-effect-action="remove"');
+    }
     function memberships(ability) {
       const forms = getState().abilityLoadouts || [];
       if (!forms.length) return '';
@@ -564,6 +593,14 @@
               '</select></label>' +
             '<label class="ability-field"><span class="foot-label">Resource amount to enter</span>' +
               '<input data-loadout-entry-cost="entryResourceCost" type="number" min="0" max="999999" step="1" inputmode="numeric" placeholder="Free" value="' + esc(form.entryResourceCost) + '"></label>' +
+          '</fieldset>' +
+          '<fieldset class="form-effect-settings"><legend>While this form is active</legend>' +
+            '<p class="ability-effect-hint">Ongoing modifiers, not one-time actions. Add resource maximum (+100 Rage), Armor Rating, Evasion, Movement or stats. These apply through portrait and named-form switching alike.</p>' +
+            '<div class="ability-effects-head"><span>Form effects</span>' +
+              '<button type="button" class="btn" data-form-effect-action="add"' +
+              ((form.effects||[]).length>=MAX_EFFECTS?' disabled':'')+'>+ Add effect</button></div>' +
+            ((form.effects||[]).length ? form.effects.map(e=>formEffectRow(e,state)).join('') :
+              '<p class="ability-effect-hint">No ongoing form effects.</p>') +
           '</fieldset>' +
           '<p class="ability-effect-hint">Temporary form score adjustments (not permanent stat points). Bonuses and penalties apply while this form is selected.</p>' +
           '<div class="loadout-stat-grid">' + STATS.map(k =>
@@ -763,6 +800,23 @@
     clearFilters.addEventListener('click', () => { resetFilters(); render(); });
     showAllLoadouts.addEventListener('change', render);
     loadoutConfig.addEventListener('change', e => {
+      const effectInput=e.target.closest('[data-form-effect-prop]');
+      if(effectInput) {
+        const state=getState();
+        const form=(state.abilityLoadouts||[]).find(f=>f.id===state.activeAbilityLoadoutId);
+        const row=effectInput.closest('[data-effect-id]');
+        const effect=form&&row&&(form.effects||[]).find(x=>x.id===row.dataset.effectId);
+        if(!effect)return;
+        const old=resourceMaxima(state),prop=effectInput.dataset.formEffectProp;
+        if(prop==='target')effect.target=effectTargets.includes(effectInput.value)?effectInput.value:'none';
+        else if(prop==='value')effect.value=signedNumber(effectInput.value);
+        else if(prop==='stat')effect.stat=STATS.includes(effectInput.value)?effectInput.value:'STR';
+        else if(prop==='resourceId')effect.resourceId=clean(effectInput.value,100);
+        else return;
+        reconcileMaxima(state,old);
+        if(controls.refresh)controls.refresh();
+        render();save();return;
+      }
       const el = e.target.closest('[data-loadout-portrait], [data-loadout-stat], [data-loadout-mana-mode], [data-loadout-entry-cost], [data-loadout-entry-resource]');
       if (!el) return;
       const state = getState();
@@ -775,6 +829,25 @@
       if (controls.refresh) controls.refresh();
       render();
       save();
+    });
+    loadoutConfig.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-form-effect-action]');
+      if(!btn)return;
+      const state=getState();
+      const form=(state.abilityLoadouts||[]).find(f=>f.id===state.activeAbilityLoadoutId);
+      if(!form)return;
+      const old=resourceMaxima(state);
+      if(btn.dataset.formEffectAction==='add'){
+        if((form.effects||[]).length>=MAX_EFFECTS)return;
+        form.effects=form.effects||[];
+        form.effects.push(normalizeEffect({id:effectId(),target:'none',value:0}));
+      } else if(btn.dataset.formEffectAction==='remove'){
+        const row=btn.closest('[data-effect-id]');
+        form.effects=(form.effects||[]).filter(x=>x.id!==(row&&row.dataset.effectId));
+      } else return;
+      reconcileMaxima(state,old);
+      if(controls.refresh)controls.refresh();
+      render();save();
     });
     loadoutSelect.addEventListener('change', () => {
       const state=getState();
