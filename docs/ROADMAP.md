@@ -5,7 +5,7 @@ This is a **future-work plan**, not a record of pull requests. For what works to
 ## Current baseline
 
 - GitHub Pages serves the fully featured Character Sheet, custom resources, Ability Library, forms, Status Effects, Battlemap, offline DM Room, and same-browser Player Preview.
-- `WBCombat` and `WBEncounter` share deterministic combat logic and revision-checked offline encounter actions. Sheet and DM movement pathfinding still differ.
+- `WBCombat` and `WBEncounter` share deterministic combat logic and revision-checked offline encounter actions. Sheet and DM movement pathfinding now differ.
 - Supabase Auth and private character cloud Save/Restore now work across devices. The production site auto-connects through a **public publishable** key. **Cloud saves remain manual**; the DM game is not online.
 - The same-browser Player Preview is useful for local testing but **will not be extended as the multiplayer architecture**.
 
@@ -13,7 +13,7 @@ This is a **future-work plan**, not a record of pull requests. For what works to
 
 1. **Documentation cleanup (this task):** accurate current capability summary, rule decisions and undecided questions; stop per-PR sections and move engineering detail from AGENTS to ARCHITECTURE.
 2. **Browser integration testing:** Playwright in GitHub Actions on every PR. Test custom resources, ability AP/cooldown decrement, timed statuses, multiple forms/gear/resources, export/import, DM import/start/move, and every page at 390px without horizontal scrolling. Discover all tests under `tests/` instead of a fixed list; rename the legacy Resource Manager workflow and remove old triggers.
-3. **Unified sheet/DM movement:** one pure pathfinder, retaining sheet fog and discovery behavior; allies/downed creatures can be passed through but not stopped upon; standing enemies obstruct. DM actors need editable Party/Enemy sides with sensible defaults. Keep eight directions.
+3. **Unified sheet/DM movement — implemented:** shared pure routing, fog-aware sheet planning, traversable allies/downed actors and legal stopping squares.
 4. **Fix DM temporary-effect imports:** only permanent equipment/current form bonuses enter the snapshot; list omitted timed buffs and remaining turns as warnings.
 5. **Optional form-switch costs:** default free; AP, Mana/Holy Power or custom resource, or both; full validation on portrait and form selectors; Base remains free.
 6. **Stat discounts for custom ability AP:** None/STR/DEX/INT/FTH, pure `WBCombat` formula with half-cost floor; update cards, availability and filters.

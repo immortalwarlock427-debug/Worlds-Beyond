@@ -29,14 +29,14 @@ The following features **already exist** in the live site:
 - **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Currently switching forms is free.** Effective scores may exceed 28 and unlock milestones.
 - **Custom resources:** independent named pools with current/max, colors/display, manual spend/restore, turn regeneration, long-rest refill, ability costs and form availability.
 - **Status Effects:** shows active timed ability effects and their bonuses, plus manually added Buff, Debuff, Condition and Other entries with optional expiration timers. Manual statuses are descriptive until an actual rule applies.
-- **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware route algorithm currently lives in `js/app.js`.
+- **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware planning uses shared `js/routing.js`.
 - **Offline DM Room:** import player snapshots and NPCs, initiative/rounds/turns, AP, Health, damage/healing, manual token placement and confirmed AP-based path movement with animation. Finishing combat allows **Reuse roster / Edit setup**. DM encounter positions are distinct from sheet Battlemap positions and do not sync to other devices.
 - **Same-browser Player Preview:** `player.html` can display selected player stats/public encounter positions and submit MoveToken/SpendAP/EndTurn in another tab of the **same browser origin**. Seat selection is not authenticated and it **is not** the planned phone-player multiplayer solution.
 - **Cloud Saves:** `cloud.html` automatically connects to the configured Supabase project; users can sign up/sign in, manually save/list/restore/delete private character copies with revision conflicts and backups. Cross-device character restore has been tested; **automatic saving and live encounters are not implemented**.
 
 ### Known implementation gaps
 
-- The sheet's Battlemap route planner and `WBEncounterMap.movementRoute` use different pathfinding/occupancy rules.
+- The sheet Battlemap and DM Room both use pure `WBRouting` for routes; the sheet supplies fog-limited terrain and visible foes, while DM uses full map terrain and its actor roster.
 - DM character import can treat an active temporary ability Movement/Armor Rating buff as permanent because the DM snapshot does not track the effect's remaining turns.
 - Custom abilities do **not yet** apply stat-based AP discounts, and switching named forms has **no optional cost**.
 - Existing automated tests include many source-text assertions; real browser-click/390px tests need broader coverage.
@@ -192,7 +192,7 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
   next turn. It's gone at the start of the turn after.
 - A set counts its armor once for the whole pair.
 - Reach shading only shows on squares you've seen, so it doesn't give the layout away. Free placement ignores the fog.
-- **Decided occupancy rule:** standing enemies block; allies and downed creatures of either side can be crossed but never used as the destination. The DM and character-sheet pathfinders do not consistently implement this yet.
+- **Decided occupancy rule:** standing enemies block; allies and downed creatures of either side can be crossed but never used as the destination. The DM and character-sheet pathfinders now share `WBRouting`.
 - A weapon reaches 5 ft unless its Range says otherwise, and needs line of sight; the square next to you always
   counts as in sight. A both-hands attack needs the target in reach of both weapons.
 - Against an enemy on the map, Armor Rating comes off each hit separately (the off-hand after halving).

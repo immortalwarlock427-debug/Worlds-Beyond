@@ -6,7 +6,7 @@ const plain=v=>JSON.parse(JSON.stringify(v));
 function modules(){
  const ctx={window:{},Math,Number,Object,Set,Map,Date};
  for(const file of ['js/combat-core.js','js/encounter-actions.js',
-   'js/maps.js','js/encounter-map.js','js/game-state.js',
+   'js/maps.js','js/routing.js','js/encounter-map.js','js/game-state.js',
    'js/abilities.js','js/dm-characters.js'])
    vm.runInNewContext(read(file),ctx);
  return ctx.window;

@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261028-cloud-v20">
-<link rel="stylesheet" href="css/dm.css?v=20261028-cloud-v20">
+<link rel="stylesheet" href="css/sheet.css?v=20261028-routing-v23">
+<link rel="stylesheet" href="css/dm.css?v=20261028-routing-v23">
 </head>
 <body>
 <main class="sheet dm-sheet">
@@ -60,6 +60,7 @@
         <h4>Add enemy or NPC</h4>
         <div class="dm-form-grid">
           <label class="dm-wide">Name<input name="name" type="text" maxlength="100" required placeholder="Fallen guardian"></label>
+          <label>Side<select name="side"><option value="enemy" selected>Enemy</option><option value="party">Party</option></select></label>
           <label>Max HP<input name="maxHp" type="number" min="1" max="1000000" value="20" required></label>
           <label>Armor Rating<input name="ar" type="number" min="0" max="1000000" value="0" required></label>
           <label>AP / turn<input name="apMax" type="number" min="0" max="40" value="15" required></label>
@@ -144,15 +145,16 @@
     <p>Damage inputs are already-rolled damage before resistance and Armor Rating. Each hit is applied separately. Turn starts handle AP resets and bleeding automatically. This DM view uses validated movement within the encounter. The character-sheet Battlemap and online multiplayer are not synchronized yet.</p>
   </footer>
 </main>
-<script src="js/persistence.js?v=20261028-cloud-v20"></script>
-<script src="js/combat-core.js?v=20261028-cloud-v20"></script>
-<script src="js/encounter-actions.js?v=20261028-cloud-v20"></script>
-<script src="js/game-state.js?v=20261028-cloud-v20"></script>
-<script src="js/abilities.js?v=20261028-cloud-v20"></script>
-<script src="js/dm-characters.js?v=20261028-cloud-v20"></script>
-<script src="js/maps.js?v=20261028-cloud-v20"></script>
-<script src="js/encounter-map.js?v=20261028-cloud-v20"></script>
-<script src="js/dm-map.js?v=20261028-cloud-v20"></script>
-<script src="js/dm.js?v=20261028-cloud-v20"></script>
+<script src="js/persistence.js?v=20261028-routing-v23"></script>
+<script src="js/combat-core.js?v=20261028-routing-v23"></script>
+<script src="js/encounter-actions.js?v=20261028-routing-v23"></script>
+<script src="js/game-state.js?v=20261028-routing-v23"></script>
+<script src="js/abilities.js?v=20261028-routing-v23"></script>
+<script src="js/dm-characters.js?v=20261028-routing-v23"></script>
+<script src="js/maps.js?v=20261028-routing-v23"></script>
+<script src="js/routing.js?v=20261028-routing-v23"></script>
+<script src="js/encounter-map.js?v=20261028-routing-v23"></script>
+<script src="js/dm-map.js?v=20261028-routing-v23"></script>
+<script src="js/dm.js?v=20261028-routing-v23"></script>
 </body>
 </html>

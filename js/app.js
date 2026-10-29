@@ -3093,72 +3093,31 @@
   const cellName = (c) => colName(c.x) + (c.y + 1);
   const sameCell = (a, b) => !!(a && b && a.x === b.x && a.y === b.y);
   const freeFeet = () => moveNow().left + surgeLeft() * speedNow();
-  // Shortest distances in feet from your token to every square (Dijkstra over the 8 neighbours).
-  // A diagonal step can't squeeze between two blocked squares that touch at a corner.
-  let pathMemo = { key: '', dist: null, prev: null };
-  function paths(ms) {
-    // Routes go by what you know: standing enemies you can see are in the way, and squares you haven't seen
-    // count as open floor. If something turns up on the way, the walk stops there (see stepWalk).
-    const foes = knownFoes(ms).filter((f) => !foeDown(f));
-    const key = ms.id + '|' + ms.cols + '|' + ms.rows + '|' + ms.x + '|' + ms.y + '|' + foes.map((f) => f.x + ',' + f.y).join(';') + '|' + (fogOn(ms) && !ms.free ? fogVer : 'all');
-    if (pathMemo.key === key) return pathMemo;
-    const N = ms.cols * ms.rows;
-    const dist = new Array(N).fill(Infinity);
-    const prev = new Int32Array(N).fill(-1);
-    const kinds = new Array(N);
-    for (let y = 0; y < ms.rows; y++) for (let x = 0; x < ms.cols; x++) kinds[y * ms.cols + x] = knownKind(ms, x, y);
-    const stop = new Uint8Array(N);
-    foes.forEach((f) => { stop[f.y * ms.cols + f.x] = 1; });
-    const start = ms.y * ms.cols + ms.x;
-    dist[start] = 0;
-    const heap = [[0, start]];
-    const push = (it) => { heap.push(it); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
-    const pop = () => {
-      const top = heap[0];
-      const last = heap.pop();
-      if (heap.length) {
-        heap[0] = last;
-        let i = 0;
-        for (;;) {
-          const l = 2 * i + 1, r = l + 1;
-          let m = i;
-          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
-          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
-          if (m === i) break;
-          [heap[m], heap[i]] = [heap[i], heap[m]];
-          i = m;
-        }
-      }
-      return top;
-    };
-    while (heap.length) {
-      const [d, i] = pop();
-      if (d > dist[i]) continue;
-      const x = i % ms.cols, y = (i - x) / ms.cols;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dy) continue;
-          const nx = x + dx, ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= ms.cols || ny >= ms.rows) continue;
-          const j = ny * ms.cols + nx;
-          if (isBlocked(kinds[j]) || stop[j]) continue;
-          if (dx && dy && isBlocked(kinds[y * ms.cols + nx]) && isBlocked(kinds[ny * ms.cols + x])) continue;
-          // A tiny extra on diagonal steps picks the straightest of several equally short routes.
-          const nd = d + (isRough(kinds[j]) ? 2 * SQ_FT : SQ_FT) + (dx && dy ? 0.001 : 0);
-          if (nd < dist[j]) { dist[j] = nd; prev[j] = i; push([nd, j]); }
-        }
-      }
-    }
-    pathMemo = { key, dist, prev, kinds };
+  // Shared pathfinder: unknown fog tiles are treated as open floor. Only
+  // visible opponents enter occupancy planning; a walk rechecks each step.
+  let pathMemo = { key: '', dist: null, to: null };
+  function paths(ms, target = null) {
+    const visible = knownFoes(ms);
+    const fog = fogOn(ms) && !ms.free;
+    const key = [ms.id,ms.cols,ms.rows,ms.x,ms.y,
+      target ? target.x + ',' + target.y : 'all',
+      visible.map(f=>f.id+':'+f.x+','+f.y+':'+f.hp).join(';'),
+      fog ? fogVer : 'all'].join('|');
+    if(pathMemo.key===key)return pathMemo;
+    const plan=window.WBRouting.findPaths({
+      cols:ms.cols,rows:ms.rows,start:{x:ms.x,y:ms.y},
+      terrain:ms.def.terrain||[],
+      side:'party',
+      occupants:visible.map(f=>({x:f.x,y:f.y,hp:f.hp,side:'enemy'})),
+      seen:fog?seenFor(ms):null,
+      goal:target
+    });
+    pathMemo={key,...plan};
     return pathMemo;
   }
-  function routeTo(ms, t) {
-    const pm = paths(ms);
-    const out = [];
-    let i = t.y * ms.cols + t.x;
-    if (!isFinite(pm.dist[i])) return out;
-    while (i >= 0) { out.push({ x: i % ms.cols, y: Math.floor(i / ms.cols) }); i = pm.prev[i]; }
-    return out.reverse();
+  function routeTo(ms,t) {
+    const route=paths(ms,t).to(t.x,t.y);
+    return route.ok?route.path:[];
   }
   function cellFromPoint(cx, cy) {
     const ms = mapState();
@@ -3176,7 +3135,7 @@
     const fa = ms.free ? anyFoeAt(ms, t.x, t.y) : knownFoes(ms).find((f) => f.x === t.x && f.y === t.y);
     if (fa) return { ft: null, ok: false, text: fa.name + (foeDown(fa) ? ' is lying there.' : ' is standing there.') };
     if (ms.free) return { ft: null, ok: true, text: 'Free placement, so no AP is spent.' };
-    const ft = Math.round(paths(ms).dist[t.y * ms.cols + t.x]);
+    const ft = Math.round(paths(ms,t).dist[t.y * ms.cols + t.x]);
     if (!isFinite(ft)) return { ft: null, ok: false, text: 'There’s no way through to there.' };
     const way = routeTo(ms, t).slice(1);
     const rough = way.filter((c) => isRough(knownKind(ms, c.x, c.y))).length;
