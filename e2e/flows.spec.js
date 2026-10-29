@@ -196,6 +196,40 @@ test('DM side is editable in setup and persists through reload',async({page})=>{
   await expect(page.locator('#dmActorList form[data-dm-action="edit"] [name="side"]').first()).toHaveValue('enemy');
 });
 
+
+test('import shows every omitted active buff and retains only permanent DM combat bonuses',async({page})=>{
+  await page.goto('/dm.html');
+  const state={
+    id:'buffed-hero',fields:{charName:'Buff Tester',level:'1',hpCur:'14',apMax:'15'},
+    hist:{VIT:{1:16},AGL:{1:15},WIS:{1:12}},rolls:{},asi:{},over:{},lvGear:{},
+    items:[{id:'armor-one',type:'armor',ar:2,bonuses:[]}],equip:{torso:'armor-one'},settled:{},
+    resources:[],abilityLoadouts:[],activeAbilityLoadoutId:'',
+    abilities:Array.from({length:5},(_,i)=>({
+      id:'abil'+String(i+1).repeat(8),name:'Temp Ward '+(i+1),
+      durationLeft:i+1,effects:[{target:i===0?'movement':'armor',value:i===0?15:i+2}]
+    }))
+  };
+  await page.locator('#dmCharacterFiles').setInputFiles({
+    name:'buffed-hero.json',mimeType:'application/json',
+    buffer:Buffer.from(JSON.stringify({format:'worlds-beyond-character',version:1,state}))
+  });
+  await page.locator('#dmImport').click();
+  const warnings=page.locator('#dmImportWarnings');
+  await expect(warnings).toBeVisible();
+  await expect(warnings.locator('li')).toHaveCount(5);
+  await expect(warnings).toContainText('Temp Ward 1');
+  await expect(warnings).toContainText('+15 Movement (ft/AP)');
+  await expect(warnings).toContainText('1 turn left');
+  await expect(warnings).toContainText('Temp Ward 5');
+  await expect(warnings).toContainText('5 turns left');
+  await settled(page,game,g=>Boolean(g?.encounter?.actors?.['buffed-hero']));
+  const actor=(await game(page)).encounter.actors['buffed-hero'];
+  expect(actor.ar).toBe(4,'gear + VIT modifier; no temporary Armor Rating');
+  expect(actor.speedFt).toBe(10,'AGL modifier only; no temporary Movement bonus');
+  await page.locator('#startEncounter').click();
+  await expect(warnings).toBeVisible();
+});
+
 for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/cloud.html']){
   test('390px viewport does not scroll the document sideways: '+path,async({browser})=>{
     const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});

@@ -147,3 +147,62 @@ test('DM page has local link, import, roster, turn and error feedback wiring', (
   assert.match(ui,/repository\.save\(\{ \.\.\.game, encounter: result\.state \}\)/);
   assert.match(ui,/window\.addEventListener\('storage'/);
 });
+
+test('DM snapshot excludes every active temporary effect while retaining gear, form and manual overrides',()=>{
+  const w=modules(),source=plain(sheet);
+  source.hist.AGL={1:15};source.hist.VIT={1:16};source.hist.WIS={1:12};
+  source.abilityLoadouts=[{id:'load12345678',name:'Battle Form',statBonuses:{VIT:6,AGL:3,WIS:3}}];
+  source.activeAbilityLoadoutId='load12345678';
+  source.abilities=[
+    {id:'abil12345678',name:'Arcane Shell',durationLeft:2,effects:[
+      {target:'armor',value:7},{target:'stat',stat:'VIT',value:6},
+      {target:'movement',value:10},{target:'evasion',value:2}]},
+    {id:'abil22345678',name:'Mind Fade',durationLeft:1,effects:[
+      {target:'stat',stat:'WIS',value:-6},{target:'resource-max',resourceId:'soul',value:4}]},
+    {id:'abil32345678',name:'Expired',durationLeft:0,effects:[{target:'armor',value:100}]},
+    {id:'abil42345678',name:'Non-numeric Ward',durationLeft:3,effects:[]}
+  ];
+  source.resources=[{id:'soul',name:'Soul Charges',max:10,current:8}];
+  const before=plain(source),pure=plain(source);
+  pure.abilities=[];
+  const base=w.WBDMCharacters.fromCharacter(pure,'fallback');
+  const imported=w.WBDMCharacters.fromCharacter(source,'fallback');
+  assert.deepEqual(plain(source),before,'import must never mutate the exported player character');
+  assert.deepEqual(plain(imported.actor),plain(base.actor),
+    'all imported combat attributes are independent of active duration bonuses');
+  assert.deepEqual(plain(imported.warnings).filter(x=>x.includes('Active temporary ability')).length,3);
+  assert.ok(imported.warnings.some(x=>x.includes('Arcane Shell')&&x.includes('2 turns left')&&
+    x.includes('+7 Armor Rating')&&x.includes('+6 VIT score')&&
+    x.includes('+10 Movement (ft/AP)')&&x.includes('+2 Evasion')));
+  assert.ok(imported.warnings.some(x=>x.includes('Mind Fade')&&x.includes('1 turn left')&&
+    x.includes('-6 WIS score')&&x.includes('+4 maximum Soul Charges')));
+  assert.ok(imported.warnings.some(x=>x.includes('Non-numeric Ward')&&
+    x.includes('3 turns left')&&x.includes('no automatic numerical bonuses')));
+  assert.ok(!imported.warnings.some(x=>x.includes('Expired')));
+  const noGearOrForm=plain(pure);
+  noGearOrForm.equip={};
+  noGearOrForm.activeAbilityLoadoutId='';
+  const stripped=w.WBDMCharacters.fromCharacter(noGearOrForm,'fallback').actor;
+  assert.ok(imported.actor.ar>stripped.ar,'gear and selected form still affect Armor Rating');
+  assert.ok(imported.actor.speedFt>stripped.speedFt,'form AGL bonus still affects Movement');
+  const manual=plain(source);
+  manual.over={...manual.over,armor:'27',speed:'55'};
+  const explicit=w.WBDMCharacters.fromCharacter(manual,'fallback').actor;
+  assert.equal(explicit.ar,27);
+  assert.equal(explicit.speedFt,55);
+});
+test('legacy single-effect data also warns without baking the effect into DM Armor',()=>{
+  const w=modules(),source=plain(sheet);
+  source.abilities=[{name:'Legacy Armor',durationLeft:4,effectTarget:'armor',effectValue:9}];
+  const snap=w.WBDMCharacters.fromCharacter(source,'fallback');
+  assert.equal(snap.actor.ar,4);
+  assert.ok(snap.warnings.some(s=>s.includes('Legacy Armor')&&s.includes('+9 Armor Rating')&&s.includes('4 turns left')));
+});
+test('all import warnings are surfaced without an unsafe HTML insertion or truncation',()=>{
+  const page=read('dm.html'),ui=read('js/dm.js');
+  assert.match(page,/id="dmImportWarnings"/);
+  assert.match(page,/id="dmImportWarningList"/);
+  assert.match(ui,/li\.textContent=warning/);
+  assert.match(ui,/converted\.warnings\.forEach/);
+  assert.doesNotMatch(ui,/warnings\.slice\(0,\s*4\)/);
+});

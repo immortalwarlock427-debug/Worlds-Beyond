@@ -344,6 +344,7 @@
       const next = core.createEncounter(newId('encounter'));
       repository.save({ ...game, encounter: next });
       encounter = next;
+      showImportWarnings([]);
       render();
       message('New encounter ready. Your character and battlemap saves are untouched.');
       saveMessage('New encounter saved on this device');
