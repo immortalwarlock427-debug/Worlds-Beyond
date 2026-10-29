@@ -18,7 +18,7 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 36)
+## What the site does (Draft 37)
 
 The following features **already exist** in the live site:
 
