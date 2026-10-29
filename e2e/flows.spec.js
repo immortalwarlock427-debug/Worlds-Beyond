@@ -105,6 +105,7 @@ test('two forms retain distinct ability, resource and worn gear profiles',async(
   await expect(page.locator('#abilityList')).not.toContainText('Shield Bash');
   await tab(page,'equipment');
   expect((await character(page)).equip.head||'').not.toBe(warriorGear);
+  await tab(page,'abilities');
   await page.locator('#abilityLoadoutSelect').selectOption(warrior);
   await tab(page,'overview');
   await expect(page.locator('#resourceList')).toContainText('Guard Points');
