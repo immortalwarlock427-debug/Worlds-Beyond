@@ -66,15 +66,18 @@ test('ability: editing AP and cooldown, Use spends AP, start turn decrements coo
   await addAbility(page,'Meteor Barrage',3,2);
   await expect(page.locator('#abilityList')).toContainText('Meteor Barrage');
   await settled(page,character,s=>Boolean(s&&s.abilities&&s.abilities.length===1));
-  // A new character's default displayed AP is initialized by Start of turn.
+  // The AP tracker belongs to Overview, so navigate there for the real click.
+  await tab(page,'overview');
   await page.locator('#turnReset').click();
   await settled(page,character,s=>s?.apAvail===15);
+  await tab(page,'abilities');
   const before=await character(page);
   const apBefore=before.apAvail;
   await page.locator('#abilityList .ability-item').first().locator('[data-ability-action="use"]').first().click();
   await settled(page,character,s=>s?.abilities?.[0]?.cooldownLeft===2);
   const used=await character(page);
   expect(used.apAvail).toBe(apBefore-3);
+  await tab(page,'overview');
   await page.locator('#turnReset').click();
   await settled(page,character,s=>s?.abilities?.[0]?.cooldownLeft===1);
   await page.locator('#turnReset').click();
@@ -119,8 +122,10 @@ test('two forms retain distinct ability, resource and worn gear profiles',async(
   await tab(page,'abilities');
   await page.locator('#abilityLoadoutSelect').selectOption(warrior);
   await tab(page,'overview');
-  await expect(page.locator('#resourceList')).toContainText('Guard Points');
-  await expect(page.locator('#resourceList')).not.toContainText('Spell Charges');
+  // Input values are not text nodes; check the actual visible input and form.
+  const visibleResource=page.locator('#resourceList .custom-resource [data-resource-prop="name"]');
+  await expect(visibleResource).toHaveCount(1);
+  await expect(visibleResource).toHaveValue('Guard Points');
   await tab(page,'equipment');
   expect((await character(page)).equip.head).toBe(warriorGear);
   await tab(page,'abilities');
