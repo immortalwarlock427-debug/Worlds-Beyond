@@ -83,7 +83,7 @@
   function commitFormEntry(state, identifier, controls) {
     const payment=entryCost(state,identifier,controls);
     if(!payment.ok)return payment;
-    if(!identifier || state.activeAbilityLoadoutId===identifier)return payment;
+    if(state.activeAbilityLoadoutId===identifier)return payment;
     if(window.WBEquipment && !window.WBEquipment.switchForm(state,identifier))
       return {ok:false,message:'Could not switch equipment profiles.'};
     if(payment.ap)controls.spendAp(payment.ap);
