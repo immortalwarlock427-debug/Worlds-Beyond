@@ -131,7 +131,7 @@ test('cloud save page loads private adapter without changing sheet or DM scripts
    assert.ok(page.includes('id="'+id+'"'),id);
  assert.match(page,/@supabase\/supabase-js@2/);
  const files=['css/sheet.css','css/dm.css','css/cloud.css',
-  'js/persistence.js','js/cloud-characters.js','js/cloud.js'];
+  'js/persistence.js','js/cloud-config.js','js/cloud-characters.js','js/cloud.js'];
  const versions=files.map(f=>{
    const m=page.match(new RegExp('(?:href|src)="'+f.replaceAll('.','\\.')+
      '\\?v=([^"]+)"'));
@@ -143,4 +143,27 @@ test('cloud save page loads private adapter without changing sheet or DM scripts
  const controller=read('js/cloud.js');
  assert.match(controller,/local\.save\(latest\.document\)/);
  assert.match(controller,/cloud\.save\(state,row\?row\.revision:null\)/);
+});
+
+test('deployed site supplies safe public cloud defaults and retains advanced override',()=>{
+ const page=read('cloud.html'),controller=read('js/cloud.js');
+ const context={window:{}};
+ vm.runInNewContext(read('js/cloud-config.js'),context);
+ const config=context.window.WBCloudConfig;
+ const adapter=cloud();
+ assert.equal(config.url,'https://bribnpmgptnktvlbhzdm.supabase.co');
+ assert.equal(config.key,'sb_publishable_zWJlrpJloCXo6Cma5vxhHA_8djQB6T3', 'Publishable keys are case-sensitive');
+ assert.equal(config.key.startsWith('sb_publishable_'),true);
+ assert.equal(adapter.validateConfig(config.url,config.key),true);
+ assert.ok(page.includes('id="cloudAdvanced"'));
+ assert.ok(page.includes('id="cloudUseDefault"'));
+ assert.ok(page.includes('src="js/cloud-config.js?v='));
+ assert.ok(page.indexOf('js/cloud-config.js')<page.indexOf('js/cloud.js'));
+ assert.ok(controller.includes('const siteConfig=window.WBCloudConfig'));
+ assert.ok(controller.includes('await connect(chosen.url,chosen.key,false)'));
+ assert.ok(controller.includes("await connect(text(data.get('url')).trim(),text(data.get('key')).trim(),true)"));
+ assert.ok(controller.includes('window.localStorage.removeItem(configKey)'));
+ assert.ok(controller.includes("saved.key===legacyBadKey"));
+ assert.ok(controller.includes("!legacyTypo&&saved.url&&saved.key"));
+ assert.doesNotMatch(read('js/cloud-config.js'),/sb_secret_|service_role/);
 });
