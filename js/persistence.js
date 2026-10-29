@@ -57,6 +57,23 @@
     return JSON.stringify(characterEnvelope(state, timestamp));
   }
 
+  // Rebase this view's top-level game changes onto the newest stored game.
+  // Character Sheet, DM Room and Player Preview own different game sections;
+  // an unchanged local section must never replace a newer value from another view.
+  function mergeGameChanges(base, local, latest) {
+    if (!isRecord(local)) throw new TypeError('Local game state must be a plain object.');
+    const before = isRecord(base) ? base : {};
+    const newest = isRecord(latest) ? latest : {};
+    const merged = copy(newest);
+    const keys = new Set(Object.keys(before).concat(Object.keys(local)));
+    keys.forEach(key => {
+      if (JSON.stringify(before[key]) === JSON.stringify(local[key])) return;
+      if (Object.prototype.hasOwnProperty.call(local, key)) merged[key] = copy(local[key]);
+      else delete merged[key];
+    });
+    return merged;
+  }
+
   function createLocalRepositories(storageProvider) {
     if (typeof storageProvider !== 'function') throw new TypeError('A storage provider is required.');
     const storage = () => {
@@ -107,6 +124,7 @@
   window.WBPersistence = {
     CHARACTER_KEY, GAME_KEY, CHARACTER_FORMAT, CHARACTER_VERSION,
     isRecord, parseStoredValue, importCharacter, parseCharacterFile,
-    characterEnvelope, exportCharacter, createLocalRepositories, createMemoryRepositories
+    characterEnvelope, exportCharacter, mergeGameChanges,
+    createLocalRepositories, createMemoryRepositories
   };
 })();

@@ -59,6 +59,24 @@ test('custom resource: add, spend, restore, and save after a refresh',async({pag
   await expect(page.locator('#resourceList [role="progressbar"]').first()).toHaveAttribute('aria-valuenow','97');
 });
 
+test('character autosave preserves a newer DM encounter from another local view',async({page})=>{
+  await page.goto('/index.html');
+  await page.evaluate(()=>{
+    const key=window.WBPersistence.GAME_KEY;
+    const saved=JSON.parse(localStorage.getItem(key)||'null')||window.WBGameState.blankGame();
+    saved.encounter=window.WBEncounter.createEncounter('concurrent-encounter');
+    localStorage.setItem(key,JSON.stringify(saved));
+  });
+  await page.locator('#charName').fill('Concurrent Save Tester');
+  await page.locator('#charName').blur();
+  await settled(page,character,s=>s?.fields?.charName==='Concurrent Save Tester');
+  await expect.poll(async()=>(await game(page))?.encounter?.id).toBe('concurrent-encounter');
+  await page.locator('[data-view="map"]').click();
+  await page.locator('#mapPick').selectOption('stone-hall');
+  await settled(page,game,g=>g?.map?.id==='stone-hall' &&
+    g?.encounter?.id==='concurrent-encounter');
+});
+
 test('ability: editing AP and cooldown, Use spends AP, start turn decrements cooldown',async({page})=>{
   await page.goto('/index.html');
   await page.locator('#charName').fill('Ability Tester');
