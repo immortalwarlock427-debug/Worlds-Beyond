@@ -141,7 +141,7 @@ Provide direct, plain-language feedback on success, rejection, skipped activatio
 
 **E. Later:** OR logic, optional reaction suggestions, encounter-owned rule actions, multi-device synchronization, templates, combat-hit/crit/kill events and advanced formulas.
 
-**Separate tracked feature — IMPLEMENTED:** custom ability **stat-based AP discounts** use None/STR/DEX/INT/FTH (None default); effective AP = `max(ceil(base AP / 2), base AP − current effective stat modifier)`. Negative modifiers raise cost; blank/zero base AP stays free. The B2 activation transaction, library/favorite badges, Usable now, AP bands and sorting share the derived price. The stored base cost and independent discount stat survive normalization, duplication and v1 exports.
+**Separate tracked feature — IMPLEMENTED:** custom ability **stat-based AP discounts** use None/STR/DEX/INT/FTH (None default); effective AP = `max(ceil(base AP / 2), base AP − current effective stat modifier)`. Negative modifiers raise cost; blank/zero base AP stays free. The B2 activation transaction, library/favorite badges, Usable now, AP bands and sorting share the derived price. Optional ability attack/damage/save fields now use this transaction too: it validates the roll definition before payment and returns a pre-activation roll snapshot only on success. Dice remain in the UI adapter; no automatic hit/crit/kill triggers or target mutations are introduced. The stored base cost and independent discount stat survive normalization, duplication and v1 exports.
 
 ## 8. Definition of done for every coding PR
 

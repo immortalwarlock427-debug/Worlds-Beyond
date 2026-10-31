@@ -208,6 +208,7 @@
        emit({type:'equipment.changed',previous:{...record(state.equip)},current:{...record(next.equip)}});
    }
    return {ok:true,state:{...state,...patch},patch,events,message:result.message,
+     ...(result.rollPlan?{rollPlan:result.rollPlan}:{}),
      log:[result.message,...events.map(e=>type+': '+e.type)]};
  }
  function apply(state,command){

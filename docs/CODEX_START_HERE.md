@@ -8,26 +8,26 @@
 - **Not implemented:** a single command path for all character state; form `effects`; configurable overcharge/hard caps; automatic/manual rules; trigger queue/editor/log; live session multiplayer.
 - Existing optional form-entry costs (AP, Mana/Holy Power or custom resource) and linked portrait/form gear changes **must be preserved**.
 - Ability AP discounts (None/STR/DEX/INT/FTH, None default) are **implemented** through shared pricing and the atomic activation command. Cards, favorites, readiness, AP bands and sorting agree; base prices remain saved separately.
+- Optional ability-card attack/damage rolls and save DCs are **implemented**. `ActivateAbility` validates the setup and returns a pre-activation `rollPlan` on success; `app.js` draws dice and uses the existing popup. Attack, damage bonus, AP discount, save DC and target-save stats stay independent. No Wonder/Defy Fate on attacks.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — optional ability-card rolls
+## Your next independent task — explicit combat/rest lifecycle
 
-**Scope:** continue finishing the character sheet. Add optional attack/damage/save configuration to the existing Ability Library, reusing the weapon roll UI and shared combat rules where applicable. Keep the existing AP-discount stat independent from attack stat, save-DC stat and target-save stat. Blank roll configuration must retain today's cost/tracker-only Use behavior.
+**Scope:** continue finishing the character sheet. Work out explicit in-combat/out-of-combat transitions and per-combat/per-round/long-rest use tracking before expanding milestone buttons. Keep offline DM/game saves separate; a local character combat switch is not encounter synchronization.
 
-**Before coding:** inspect the existing weapon popup, approved attack/check rules and persistence boundaries. Confirm only genuinely missing mechanics or roll/payment semantics with the DM; do not infer new gameplay rules from a review suggestion. Wonder and Defy Fate must not apply to attack rolls. Reuse the existing critical/advantage rules where they apply. Treat spells as an eventual ability type, rather than creating a parallel spell list.
+**Before coding:** inspect the current turn/rest behavior and confirmed milestone rules. Resolve the missing reset semantics with the DM: what starts/ends combat, which counters reset when, how out-of-combat uses work, and how to avoid refilling uses by repeatedly toggling combat. Present the concrete proposed behavior and genuinely unresolved choices before implementing rule-dependent resets. Do not treat previous review suggestions as final rules.
 
 **Preserve:**
-- The shared `WBCombat.abilityApCost` formula and `WBAbilities.abilityApCost` state derivation. None stays flat; negative modifiers raise the price; blank/zero remains free. Gear, effects, forms and manual overrides contribute just as they do to current character modifiers.
-- One atomic `ActivateAbility` payment path, Command-first AP, combined cost rejection, charges/cooldowns/duration, source-profile Mana, hidden pools and form/portrait/gear alignment.
-- Legacy abilities, v1 JSON exports, reload/import/cloud copies, independent DM saves and actual phone usability. New roll fields must survive duplication and round trips.
-- Pure tests for any shared rule additions plus relevant 390px browser interactions. Avoid implementing automatic triggers, unapproved resource overflow, new form effects or DM/multiplayer features in this slice.
-- Health, turn/rest orchestration, broader manual tracker commands and transaction-level Undo remain focused B2 follow-ups.
+- Existing turn/rest processing, form/portrait/gear alignment, hidden pools, source-profile Mana, active effects and v1 saves. Health, broader manual tracker commands and transaction-level Undo remain focused B2 follow-ups.
+- The shared optional AP discount and one atomic `ActivateAbility` payment path. Blank/zero remains free, None stays flat, negative modifiers raise price; Command AP is spent first and combined costs reject atomically.
+- Ability roll setup validation before payment, the pre-activation stat/gear snapshot returned on success, independent attack/damage/save/discount statistics, UI-only dice and no extra payment for damage follow-ups. Target saves resolve at the table; no new hit/crit/kill triggers.
+- Pure command/state tests plus actual 390px interactions, legacy reload/import/export/cloud copies and existing DM regression coverage. Do not introduce resource-overflow defaults, automatic triggers, multiplayer or a separate spell system in this slice.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the approved ability-roll slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+3. Implement the approved lifecycle slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

@@ -547,9 +547,7 @@
   function wornItems() { return SLOTS.map((s) => itemById(state.equip[s.k])).filter(Boolean); }
   function allEffects() { const out = []; wornItems().forEach((it) => (it.effects || []).forEach((e) => out.push(e))); return out; }
   function effectsFor(w) {
-    const out = [];
-    wornItems().forEach((it) => { if (it === w || !TYPES[it.type].weapon) (it.effects || []).forEach((e) => out.push(e)); });
-    return out;
+    return window.WBCombat.attackEffects(state,w&&w.id);
   }
   const sumEff = (list, k, on) => list.reduce((t, e) => t + (e.k === k && (!on || e.on === 'all' || e.on === on) ? e.v : 0), 0);
   const defBonus = (type) => sumEff(allEffects(), 'def', type);
@@ -655,7 +653,8 @@
     planPools: (costs) => window.WBCharacter.apply(state, { type: 'SpendPools', ...costs }),
     commitPools: commitCharacter,
     execute: (command) => commitCharacter(window.WBCharacter.apply(state, command)),
-    refresh: () => refreshAll()
+    refresh: () => refreshAll(),
+    rollAbility: (plan) => rollAbility(plan)
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
   const statusManager = window.WBStatus.init(() => state, save, { refresh: () => refreshAll() });
@@ -1323,9 +1322,9 @@
       const rl = reactTracker.avail();
       if (rl > 0) acts.push(['block', 'Block it (' + rl + (rl === 1 ? ' reaction' : ' reactions') + ' left)']);
     }
-    if (r.kind === 'attack' && (!foe || r.hit)) {
-      acts.push(['dmg', 'Roll damage']);
-      if (r.d20 === 20) acts.push(['crit', 'Roll critical damage']);
+    if (r.kind === 'attack' && (!foe || r.hit) && (r.weapon || r.abilityRoll && r.abilityRoll.damage)) {
+      acts.push([r.abilityRoll?'ability-dmg':'dmg', 'Roll damage']);
+      if (r.d20 === 20) acts.push([r.abilityRoll?'ability-crit':'crit', 'Roll critical damage']);
     }
     if (r.kind === 'dual') {
       const c = (d) => (d === 20 ? ' (crit)' : '');
@@ -1400,6 +1399,26 @@
     // Against a target from the map, its Armor Rating comes off the hit.
     const hurt = foe ? window.WBCombat.armorDamage(d.total, foe.ar) : null;
     showRoll({ title: w.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w, note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
+  }
+  function abilitySaveNote(plan) {
+    return plan.save?(plan.save.targetStat?plan.save.targetStat+' save':'Target save')+' DC '+plan.save.dc+
+      ' (12 + '+plan.save.stat+' modifier). Resolve the save and its effect at the table.':'';
+  }
+  function rollAbility(plan) {
+    const note=['Ability costs paid once.',abilitySaveNote(plan)].filter(Boolean).join(' · ');
+    if(plan.attack)rollCheck(plan.name+' attack',plan.attack.modifier,'attack',{abilityRoll:plan,note});
+    else if(plan.damage)rollAbilityDamage(plan,false);
+    else showRoll({kind:'notice',title:plan.name,math:abilitySaveNote(plan),note:'Ability costs paid once.'});
+  }
+  function rollAbilityDamage(plan,critical) {
+    const damage=plan.damage,base=rollSet(damage.dice,critical);
+    const extras=damage.extras.map(extra=>({roll:rollSet(extra.dice,critical),type:extra.type}));
+    const packet=window.WBCombat.damagePacket(base.t,damage.modifier,damage.flatBonus,extras.map(extra=>extra.roll.t));
+    let math=(base.math||'0')+(damage.modifier?modText(damage.modifier):'')+(damage.flatBonus?modText(damage.flatBonus):'');
+    if(damage.type)math+=' '+damage.type;
+    extras.forEach(extra=>{math+=', '+extra.roll.math+(extra.type?' '+extra.type:'');});
+    const notes=['Ability costs paid once.',abilitySaveNote(plan),...damage.hits.map(text=>'On hit: '+text)].filter(Boolean);
+    showRoll({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · ')});
   }
 
   // Dual wielding: one attack that swings both weapons. Each rolls to hit; the off-hand hit does half damage, rounded down.
@@ -1535,6 +1554,8 @@
       showRoll(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
     } else if (act === 'defy') {
       showRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
+    } else if (act === 'ability-dmg' || act === 'ability-crit') {
+      rollAbilityDamage(r.abilityRoll,act==='ability-crit');
     } else if (act === 'dmg') {
       rollDamage(r.weapon, false, r.foe);
     } else if (act === 'crit') {

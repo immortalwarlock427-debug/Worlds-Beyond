@@ -13,11 +13,14 @@
   };
   const TYPES = ['active', 'passive', 'reaction', 'other'];
   const propNames = ['name', 'category', 'type', 'description', 'apCost', 'apDiscountStat', 'resourceId',
-    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes'];
+    'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes',
+    'attackStat','damageDice','damageType','damageStat','saveDcStat','targetSaveStat'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
   const DISCOUNT_STATS = ['STR', 'DEX', 'INT', 'FTH'];
   const discountStat = ability => DISCOUNT_STATS.includes(ability.apDiscountStat) ? ability.apDiscountStat : '';
+  const rollStats = new Set(['attackStat','damageStat','saveDcStat','targetSaveStat']);
+  const rollStat = value => STATS.includes(value)?value:'';
   const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
   const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const MAX_EFFECTS = 12;
@@ -54,6 +57,25 @@
     const modifier=combat.modifier(state,stat,combat.level(state),
       effectBonus(state,'stat',stat),formStatBonus(state,stat));
     return combat.abilityApCost(base,modifier);
+  }
+  function abilityRollPlan(state,ability) {
+    const attackStat=rollStat(ability.attackStat),damageStat=rollStat(ability.damageStat);
+    const saveDcStat=rollStat(ability.saveDcStat),targetSaveStat=rollStat(ability.targetSaveStat);
+    const dice=clean(ability.damageDice,1000).trim();
+    if(!attackStat&&!dice&&!saveDcStat&&!targetSaveStat)return {ok:true,configured:false};
+    const combat=window.WBCombat;
+    const parsed=dice?combat.parseDamageDice(dice):null;
+    if(dice&&!parsed)return {ok:false,message:'Check the damage dice for '+ability.name+'. Use dice such as 2d6 + 3, added dice, or a flat number (up to 1,000 dice).'};
+    if(targetSaveStat&&!saveDcStat)return {ok:false,message:'Choose a Save DC stat for '+ability.name+', or clear Target save.'};
+    const modifier=stat=>stat?combat.modifier(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat)):0;
+    const effects=combat.attackEffects(state);
+    const sum=kind=>effects.reduce((total,e)=>total+(e.k===kind?Number(e.v)||0:0),0);
+    return {ok:true,configured:true,name:ability.name,
+      attack:attackStat?{stat:attackStat,modifier:modifier(attackStat)+sum('atk')}:null,
+      damage:dice?{dice:parsed.expression,stat:damageStat,modifier:modifier(damageStat),type:clean(ability.damageType,60),flatBonus:sum('flat'),
+        extras:effects.filter(e=>e.k==='dmg').map(e=>({dice:e.dice,type:e.dt||''})),
+        hits:effects.filter(e=>e.k==='onhit').map(e=>e.text)}:null,
+      save:saveDcStat?{stat:saveDcStat,targetStat:targetSaveStat,dc:combat.abilitySaveDc(modifier(saveDcStat))}:null};
   }
   function planPoolPayment(controls,ap,mana,allowHiddenMana=false) {
     if(!(ap||mana)||!controls||typeof controls.planPools!=='function'||
@@ -280,6 +302,9 @@
       notes: clean(value.notes, 6000),
       apCost: optionalNumber(value.apCost),
       apDiscountStat: discountStat(value),
+      attackStat: rollStat(value.attackStat), damageDice: clean(value.damageDice,1000),
+      damageType: clean(value.damageType,60), damageStat: rollStat(value.damageStat),
+      saveDcStat: rollStat(value.saveDcStat), targetSaveStat: rollStat(value.targetSaveStat),
       resourceId: clean(value.resourceId, 100),
       resourceCost: optionalNumber(value.resourceCost),
       cooldown: optionalNumber(value.cooldown),
@@ -357,6 +382,8 @@
         !(state.resources || []).some((r) => r.id === e.resourceId));
       if (missing) return { ok: false, message: 'Choose an existing custom resource for the maximum-resource effect.' };
     }
+    const rollPlan=abilityRollPlan(state,a);
+    if(!rollPlan.ok)return rollPlan;
     const ap = abilityApCost(state,a);
     if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
       return { ok: false, message: 'AP tracker is not available.' };
@@ -382,7 +409,7 @@
     }
     const poolPayment=planPoolPayment(controls,ap,a.resourceId==='base-mana'?cost:0);
     if(poolPayment&&!poolPayment.ok)return poolPaymentError();
-    return { ok: true, ability: a, ap, cost, resource, poolPayment };
+    return { ok: true, ability: a, ap, cost, resource, poolPayment, rollPlan };
   }
 
   function activate(state, abilityId, controls) {
@@ -402,7 +429,8 @@
     if (a.capacityMax !== '') a.capacityCurrent += 1;
     a.cooldownLeft = a.cooldown === '' ? 0 : a.cooldown;
     a.durationLeft = a.duration === '' ? 0 : a.duration;
-    return { ok: true, message: 'Used ' + a.name + (a.durationLeft ? ' — duration: ' + a.durationLeft + ' turn(s)' : '') + '.' };
+    return { ok: true, ...(check.rollPlan.configured?{rollPlan:check.rollPlan}:{}),
+      message: 'Used ' + a.name + (a.durationLeft ? ' — duration: ' + a.durationLeft + ' turn(s)' : '') + '.' };
   }
 
   const SORT_MODES = ['favorites', 'name', 'ap', 'category', 'usable'];
@@ -627,6 +655,13 @@
       const stat=discountStat(ability);
       if (stat) badges.push(abilityApCost(getState(),ability)+' AP ('+(ability.apCost||0)+' base · '+stat+')');
       else if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
+      const roll=abilityRollPlan(getState(),ability);
+      if(!roll.ok)badges.push('Check roll setup');
+      else if(roll.configured){
+        if(roll.attack)badges.push(roll.attack.stat+' attack '+(roll.attack.modifier>=0?'+':'')+roll.attack.modifier);
+        if(roll.damage)badges.push(roll.damage.dice+(roll.damage.type?' '+roll.damage.type:''));
+        if(roll.save)badges.push((roll.save.targetStat?roll.save.targetStat+' save · ':'Save ')+'DC '+roll.save.dc);
+      }
       if (ability.resourceId && ability.resourceCost !== '') {
         const s = getState();
         const r = ability.resourceId === 'base-mana'
@@ -649,6 +684,10 @@
         badges.push((e.value > 0 ? '+' : '') + e.value + ' ' + name + (ability.durationLeft ? ' active' : ''));
       });
       return badges;
+    }
+    function statField(label,prop,value) {
+      return '<label class="ability-field"><span class="foot-label">'+label+'</span><select data-ability-prop="'+prop+'">'+
+        '<option value="">None</option>'+STATS.map(stat=>'<option value="'+stat+'"'+(value===stat?' selected':'')+'>'+stat+'</option>').join('')+'</select></label>';
     }
     function card(ability) {
       const inactive = !loadoutVisible(getState(), ability);
@@ -699,6 +738,20 @@
             field('Duration (turns)', 'duration', ability.duration, 'number') +
             field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Limits activations until rest; leave blank for unlimited."') +
           '</div>' +
+          '<details class="ability-roll-config"'+(ability.attackStat||ability.damageDice||ability.saveDcStat||ability.targetSaveStat?' open':'')+'>' +
+            '<summary>Optional rolls</summary><div class="ability-roll-fields">' +
+            '<p class="ability-effect-hint">Use pays once, then opens the roll popup. Damage costs no extra AP. Leave these blank for a tracker-only ability.</p>' +
+            '<div class="ability-editor-row ability-cost-row">' +
+              statField('Attack stat','attackStat',ability.attackStat) +
+              statField('Damage bonus stat','damageStat',ability.damageStat) + '</div>' +
+            '<div class="ability-editor-row ability-cost-row">' +
+              field('Damage dice / flat','damageDice',ability.damageDice,'text',' maxlength="120" placeholder="2d6 + 3"') +
+              field('Damage type','damageType',ability.damageType,'text',' maxlength="60" placeholder="Fire, slashing…"') + '</div>' +
+            '<div class="ability-editor-row ability-cost-row">' +
+              statField('Save DC stat (12 + mod)','saveDcStat',ability.saveDcStat) +
+              statField('Target save','targetSaveStat',ability.targetSaveStat) + '</div>' +
+            '<p class="ability-effect-hint">These stats are independent of Discounted by. Damage adds only the bonus stat you choose. The target rolls their save; resolve its effect at the table.</p>' +
+            '</div></details>' +
           '<div class="ability-capacity">' +
             field('Max active / held (blank = no limit)', 'capacityMax', ability.capacityMax, 'number', ' placeholder="No limit" title="Maximum number of creations or objects that can exist at once. Separate from uses."') +
             (ability.capacityMax === '' ? '' :
@@ -765,6 +818,7 @@
       output.textContent = result.message;
       output.classList.toggle('ability-error', !result.ok);
       if (result.ok && controls.refresh) controls.refresh();
+      if (result.ok && result.rollPlan && controls.rollAbility) controls.rollAbility(result.rollPlan);
     }
     if (favoriteList) favoriteList.addEventListener('click', event => {
       const button = event.target.closest('[data-favorite-use]');
@@ -926,10 +980,11 @@
         return { ability, prop };
       }
       if (!propNames.includes(prop)) return null;
-      ability[prop] = prop==='apDiscountStat' ? discountStat({apDiscountStat:input.value}) :
+      ability[prop] = rollStats.has(prop)?rollStat(input.value):
+        prop==='apDiscountStat' ? discountStat({apDiscountStat:input.value}) :
         numerical.has(prop) ? optionalNumber(input.value) :
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
-          prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
+          prop === 'description' ? 12000 : prop === 'notes' ? 6000 : prop==='damageDice'?120:prop==='damageType'?60:100);
       if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
       if (prop === 'capacityMax') {
         ability.capacityCurrent = ability.capacityMax === '' ? 0 :
@@ -1063,7 +1118,7 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, abilityApCost, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
+    formStatBonus, abilityApCost, abilityRollPlan, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };

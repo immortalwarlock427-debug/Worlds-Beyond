@@ -88,6 +88,39 @@
     const discount=Number.isFinite(Number(modifier))?Number(modifier):0;
     return Math.max(Math.ceil(base/2),base-discount);
   }
+  function abilitySaveDc(modifier) { return 12+modifier; }
+  // Dice are parsed here, but drawn by the UI. Reject partial expressions so
+  // an ability never spends its costs and silently rolls only part of its dice.
+  function parseDamageDice(value) {
+    const text=String(value==null?'':value).trim().replace(/−/g,'-');
+    if(!text || text.length>120 || /\d\s+\d/.test(text))return null;
+    const compact=text.replace(/\s+/g,'');
+    if(!/^[+-]?(?:\d*d\d+|\d+)(?:[+-](?:\d*d\d+|\d+))*$/i.test(compact))return null;
+    const terms=compact.match(/[+-]?[^+-]+/g)||[];
+    let count=0,maximum=0,flat=0;
+    for(const term of terms){
+      const die=term.match(/^\+?(\d*)d(\d+)$/i);
+      if(die){
+        const n=die[1]===''?1:Number(die[1]),sides=Number(die[2]);
+        // The existing random adapter samples an unsigned 32-bit integer.
+        if(!Number.isSafeInteger(n)||n<1||!Number.isSafeInteger(sides)||sides<1||sides>4294967296)return null;
+        count+=n;maximum+=n*sides;
+      } else {
+        if(!/^[+-]?\d+$/.test(term))return null;
+        flat+=Number(term);
+      }
+    }
+    if(!terms.length||count>1000||!Number.isSafeInteger(maximum)||!Number.isSafeInteger(flat))return null;
+    return {expression:compact,count,maximum,flat};
+  }
+  // Non-weapon worn effects apply to every attack; a weapon contributes only
+  // when it is the source. Ability rolls have no implicit weapon source.
+  function attackEffects(state,weaponId) {
+    return SLOTS.flatMap(slot=>{
+      const item=(state.items||[]).find(it=>it&&it.id===record(state.equip)[slot]);
+      return item&&(item.id===weaponId||!['onehand','twohand'].includes(item.type))?item.effects||[]:[];
+    });
+  }
   function trackerMax(value,fallback) {
     let m=num(value);
     if (isNaN(m)) m=num(fallback);
@@ -292,7 +325,7 @@
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
-    autoMod,modifier,attackApCost,abilityApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
+    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
     hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
     attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,
