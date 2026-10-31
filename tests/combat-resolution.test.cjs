@@ -109,9 +109,11 @@ test('sheet delegates attack and defense decisions to shared rules, not duplicat
   for(const name of [
     'WBCombat.attackHits(', 'WBCombat.dualHits(', 'WBCombat.damagePacket(',
     'WBCombat.criticalTotal(', 'WBCombat.armorDamage(',
-    'WBCombat.defenseResult(', 'WBCombat.afterArmor',
-    'WBCombat.deathThreshold(', 'WBCombat.damageHealth('
+    'WBCombat.defenseResult(', 'WBCombat.afterArmor'
   ]) assert.ok(app.includes(name),name);
+  const character=read('js/character-core.js');
+  for(const name of ['combat.deathThreshold(', 'combat.damageHealth(', 'combat.healHealth('])assert.ok(character.includes(name),name);
+  assert.match(app,/type:'DamageHealth'/);assert.match(app,/type:'HealHealth'/);
   assert.doesNotMatch(app,/r\.d20 === 20 \|\| r\.total >= foe\.ev/);
   assert.doesNotMatch(app,/const weaponDmg = Math\.max\(0, base\.t \+ m \+ fb\)/);
 });

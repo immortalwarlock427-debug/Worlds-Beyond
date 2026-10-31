@@ -16,13 +16,15 @@
 - Character notes are **implemented** in the Notes tab: session notes, backstory, personality, languages and allies/connections use optional plain-text `state.fields` entries. They persist through local/v1/manual-cloud saves and stay shared across forms/rests. Narrative input skips gameplay refresh/commands; character replacement clears absent note fields.
 - Consumables are **implemented** under Equipment: separate character-wide stock, Add/Edit/Remove/Use and quantity corrections through `WBCharacter`. Complete roll validation precedes consumption; optional UI healing reuses the existing Health rules once. No inferred AP price, replenishment on rests/forms or other-character writes. Definitions and unknown fields survive local/v1/manual-cloud saves; edits preserve current quantities.
 - Free dice/recent rolls are **implemented** in Dice. Complete free-expression validation uses the existing roll adapter; RecordRoll/ReviseRoll/ClearRollHistory write only bounded primitive metadata and emit no gameplay events. Actual rolls capture without extra dice RNG; Wonder creates a result, while Devastate/Defy Fate/opportunity conversion revise the original id/time. Read-only details never invoke the popup or replay effects. Local/v1/manual-cloud saves retain the newest 20; legacy/reset/import behavior and unsupported-data guards are covered.
+- Shared Health is **implemented**: state-derived maximum/current/threshold/flags and typed damage, healing, manual current/max, stability, Trauma and treatment commands. Ordinary/potion healing share recovery/cap math. Metadata hydration is pure and applied at load/save, not rendering; no gameplay events or Trauma occur from repaint/configuration. Historical gear numbers are read consistently. Full turn/rest and rest Undo remain in the controller.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — shared Health commands
+## Your next independent task — atomic turn and long rest
 
-**Scope:** migrate existing own-character damage, healing and current-Health corrections to pure `WBCharacter` commands. Reuse the existing `WBCombat` formulas, current Health maximum/blank-value semantics, Death's Mercy, Trauma and recovery rules. Route consumable healing and existing Health buttons through the same path. Keep dice, prompts and target/DM ownership in their existing adapters; do not add Temporary Health, change armor order or invent new healing/death rules. Full turn/rest and transaction Undo remain subsequent focused slices.
+**Scope:** move existing Start my turn and Long rest orchestration into atomic character transactions. Preserve AP/Command/reaction/movement resets, resource regeneration, ability/status timer order, maximum-drop reconciliation, equipment settlement, Health bleeding/rest recovery and the current selective rest Undo. Use the existing Health and ability lifecycle commands; do not refill consumables or undo unrelated later notes/history/stock edits. Keep legacy rest/resource policies unchanged; B3 overflow/rest choices remain pending. Broader transaction-history Undo remains separate.
 
 **Preserve:**
+- Shared Health derivation/commands, signed/full sentinels, history-based maxima, current VIT/gear/form effects, Death's Mercy, recovery Trauma, manual corrections and metadata-only flag hydration. No rendering-side Health writes or extra healing applications.
 - Free-dice validation, actual-roll capture without extra RNG, bounded primitive history, id/time-preserving revisions, read-only details and character-only persistence. Viewing history must never trigger Health actions.
 - Consumable quantity/definition commands, current-count edits, optional healing and single-application results, no rest/form refills, unknown metadata and manual corrections.
 - Notes fields and exact multiline text, narrative-only editing, legacy empty defaults and character replacement/reset behavior.
@@ -30,13 +32,13 @@
 - Confirmed weapon milestones, actual natural dice, source damage snapshots, atomic AP/reaction + Singularity payment, one-hit Devastate and existing opportunity conversion.
 - All other milestone/custom ability flows, separate combat/outside allowances, idempotent StartCombat, combat-only scoped round refills and no refill on EndCombat.
 - Source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment, cloud revision receipts, stale-tab save protection and independent DM saves.
-- Relevant 390px browser interactions and existing regressions. Full turn/rest/Undo orchestration remains a subsequent focused slice; do not introduce unapproved game rules, automatic triggers or multiplayer.
+- Relevant 390px browser interactions and existing regressions. Broader transaction Undo remains a subsequent focused slice; do not introduce unapproved game rules, automatic triggers or multiplayer.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the Health-command slice with deterministic purity/rejection checks and real Health/consumable phone interactions, then run the regression checks and CI. Update docs where status changes.
+3. Implement the turn/rest transaction slice with deterministic atomicity/order checks and real phone/rest-Undo interactions, then run the regression checks and CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

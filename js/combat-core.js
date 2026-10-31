@@ -329,6 +329,13 @@
     return {after,down:nextDown,dropped,dead:diesAt(after,threshold),mercyCapped,
       concentrationDc:Math.max(12,Math.floor(amt/2)),amount:amt};
   }
+  function healHealth(before,amount,maximum,trauma) {
+    const amt=Math.max(0,Math.round(amount));
+    let after=before+amt;
+    if(maximum!=null&&after>maximum)after=Math.max(before,maximum);
+    const recovered=before<=0&&after>0;
+    return {after,recovered,trauma:trauma+(recovered?1:0),amount:amt};
+  }
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
@@ -337,6 +344,6 @@
     hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
     attackHits,dualHits,criticalTotal,weaponCritical,damagePacket,offhandDamage,
     armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
-    defenseResult,deathThreshold,diesAt,damageHealth
+    defenseResult,deathThreshold,diesAt,damageHealth,healHealth
   };
 })();
