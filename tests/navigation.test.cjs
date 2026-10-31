@@ -5,9 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
-const TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses', 'notes'];
+const TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses', 'notes', 'dice'];
 
-test('main destinations are separate from six character tabs without duplicating sheet sections', () => {
+test('main destinations are separate from seven character tabs without duplicating sheet sections', () => {
   const html = read('index.html');
   const destination = html.match(/<nav class="views main-views"[^>]*>([\s\S]*?)<\/nav>/);
   const tabs = html.match(/<nav class="sheet-tabs"[^>]*>([\s\S]*?)<\/nav>/);
@@ -15,11 +15,11 @@ test('main destinations are separate from six character tabs without duplicating
   assert.ok(tabs, 'Missing inner character navigation');
   assert.deepEqual(Array.from(destination[1].matchAll(/data-view="([^"]+)"/g), m => m[1]), ['sheet','map']);
   assert.deepEqual(Array.from(tabs[1].matchAll(/data-sheet-tab="([^"]+)"/g), m => m[1]), TABS);
-  assert.equal((html.match(/data-sheet-section="/g)||[]).length, 9);
+  assert.equal((html.match(/data-sheet-section="/g)||[]).length, 10);
   for (const [head, group] of [
     ['statusHead','statuses'], ['vitalsHead','overview'], ['defHead','overview'],
     ['attrHead','attributes'],['equipHead','equipment'],['abilityHead','abilities'],
-    ['advHead','attributes'],['notesHead','notes']]) {
+    ['advHead','attributes'],['notesHead','notes'],['diceHead','dice']]) {
     assert.match(html, new RegExp('<section[^>]*data-sheet-section="' + group + '"[^>]*aria-labelledby="' + head + '"'));
   }
   assert.match(html, /<section class="top"[^>]*data-sheet-section="overview" aria-label="Character"/);
@@ -42,7 +42,7 @@ function navigationHarness() {
     dataset: {sheetTab:key}, setAttribute(k,value) { this[k]=value; },
     scrollIntoView(options) { this.scrollOptions=options; }
   }));
-  const sections = ['notes','statuses','overview','overview','overview','attributes','equipment','abilities','attributes'].map(key => ({
+  const sections = ['dice','notes','statuses','overview','overview','overview','attributes','equipment','abilities','attributes'].map(key => ({
     dataset: {sheetSection:key}, hidden: false
   }));
   const navHandlers={};
@@ -75,6 +75,7 @@ test('switching sheet tabs hides unrelated panels without destroying anything', 
     assert.equal(h.ctx.__nav.getTab(),tab);
     assert.equal(h.classes['view-map'],false);
     assert.equal(h.classes['view-notes'],tab==='notes');
+    assert.equal(h.classes['view-dice'],tab==='dice');
     assert.equal(h.topButtons[0]['aria-pressed'],'true');
     assert.equal(h.topButtons[1]['aria-pressed'],'false');
     for(const s of h.sections) assert.equal(s.hidden,s.dataset.sheetSection!==tab, tab);
@@ -105,7 +106,8 @@ test('deep links preserve legacy #status, #sheet and #map', () => {
     ['#sheet/abilities','sheet','abilities'],['#sheet/attributes','sheet','attributes'],
     ['#sheet/statuses','sheet','statuses'],['#status','sheet','statuses'],
     ['#sheet/notes','sheet','notes'],
-    ['#map','map','notes'],['#sheet','sheet','overview'],['','sheet','overview']
+    ['#sheet/dice','sheet','dice'],
+    ['#map','map','dice'],['#sheet','sheet','overview'],['','sheet','overview']
   ]) {
     h.ctx.location.hash=hash;h.ctx.__nav.viewFromHash();
     assert.equal(h.ctx.__nav.getView(),expectedView,hash);

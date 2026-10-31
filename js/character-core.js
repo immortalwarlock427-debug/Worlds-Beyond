@@ -407,6 +407,7 @@
    if(command.type==='BeginWeaponAttack')return beginWeaponAttack(state,command);
    if(command.type==='UseEquipmentAbility'||command.type==='SetEquipmentAbilityUses')return applyEquipmentAbility(state,command);
    if(consumableTypes.has(command.type))return applyConsumable(state,command);
+   if(['RecordRoll','ReviseRoll','ClearRollHistory'].includes(command.type))return window.WBRolls.apply(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;

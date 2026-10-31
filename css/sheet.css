@@ -1325,7 +1325,34 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .character-note textarea { width: 100%; min-width: 0; min-height: 100px; padding: 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); color: var(--ink); font: 16px/1.5 var(--font-body); resize: vertical; }
 .character-note textarea:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
 main.view-notes ~ .advbar { display: none; }
+main.view-dice ~ .advbar { display: none; }
+.free-dice-form { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; gap:12px; align-items:end; margin-bottom:16px; }
+.free-dice-form label { display:grid; gap:6px; min-width:0; }
+.free-dice-form label > span { font:700 14px var(--font-label); color:var(--muted); }
+.free-dice-form input { width:100%; min-width:0; min-height:44px; padding:9px; border:1px solid var(--rule); border-radius:3px; background:var(--field); color:var(--ink); font:16px var(--font-body); }
+.free-dice-form button, .recent-roll-heading button, .roll-history-confirm button { min-height:44px; }
+.recent-roll-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:24px; margin-bottom:12px; }
+.recent-roll-heading h3 { margin:0; font:700 19px var(--font-label); }
+#rollHistoryCount { color:var(--muted); font-size:14px; margin-left:6px; }
+.recent-roll-list { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.recent-roll { border:1px solid var(--rule); border-radius:4px; background:var(--field); min-width:0; }
+.recent-roll summary { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; min-height:44px; padding:12px; cursor:pointer; }
+.recent-roll summary::before { content:'▸'; color:var(--brass); }
+.recent-roll summary::-webkit-details-marker { display:none; }
+.recent-roll summary:focus-visible { outline:2px solid var(--brass); outline-offset:-2px; }
+.recent-roll details[open] summary::before { content:'▾'; }
+.recent-roll-title { flex:1; min-width:0; overflow-wrap:anywhere; font-weight:700; }
+.recent-roll-total { color:var(--brass); font:24px var(--font-display); }
+.recent-roll time { flex-basis:100%; color:var(--muted); font-size:13px; }
+.recent-roll-math, .recent-roll-note { margin:0; padding:0 12px 12px; white-space:pre-wrap; overflow-wrap:anywhere; }
+.recent-roll-note, .recent-roll-empty { color:var(--muted); font-size:14px; }
+.dice-feedback:empty { display:none; }
+.dice-feedback { color:var(--verdigris); font-size:14px; overflow-wrap:anywhere; }
+.dice-feedback.error { color:var(--blood); }
+.roll-history-confirm { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:12px; }
+.roll-history-confirm > span { flex-basis:100%; }
 @media (max-width: 540px) {
+  .free-dice-form { grid-template-columns:minmax(0,1fr); }
   .character-notes-grid { grid-template-columns: minmax(0, 1fr); }
   .views.main-views { gap: 12px; }
   .views.main-views button {

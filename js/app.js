@@ -119,7 +119,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {}, equipmentOutsideSpent:{},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: [], consumables:[]
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: [], consumables:[], rollHistory:[]
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -218,6 +218,7 @@
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
     if(state.consumables==null)state.consumables=[];
+    if(state.rollHistory==null)state.rollHistory=[];
     window.WBResources.normalizeState(state);
     window.WBAbilities.normalizeState(state);
     window.WBStatus.normalizeState(state);
@@ -663,6 +664,10 @@
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
   const milestoneManager = window.WBAbilities.initMilestones(() => state,save,formEntryControls);
   const consumableManager = window.WBConsumables.init(()=>state,save,{execute:formEntryControls.execute,onUse:rollConsumable});
+  const diceManager = window.WBRolls.init(()=>state,save,{execute:formEntryControls.execute,rollFree:(plan,label)=>{
+    const result=rollSet(plan.expression,false);
+    showRolled({kind:'free',title:label||'Free dice',total:result.t,math:plan.expression+' → '+(plan.count?result.math:String(plan.flat))});
+  }});
   $('#combatToggle').addEventListener('click',()=>{
     const r=formEntryControls.execute({type:state.inCombat?'EndCombat':'StartCombat'});
     $('#combatFeedback').textContent=r.message;
@@ -1149,7 +1154,7 @@
       const m = mod('STR');
       const g = defBonus('block');
       df.amt = Math.max(0, rs.t + m + g);
-      showRoll({ kind: 'block', title: 'Block' + who, total: df.amt, math: rs.math + modText(m) + (g ? modText(g) : ''), defense: df });
+      showRolled({ kind: 'block', title: 'Block' + who, total: df.amt, math: rs.math + modText(m) + (g ? modText(g) : ''), defense: df });
     } else {
       rollCheck(name + who, type === 'dodge' ? mod('AGL') + defBonus('dodge') : mod('DEX') + defBonus('parry'), 'check', { defense: df });
     }
@@ -1165,6 +1170,7 @@
   const fresh = new Set();
   function rollStatDice() {
     const d = [1 + randInt(6), 1 + randInt(6), 1 + randInt(12)];
+    diceManager.capture({kind:'stat',title:'Stat dice',total:d[0]+d[1]+d[2],math:'2d6 ('+d[0]+', '+d[1]+') + 1d12 ('+d[2]+')'});
     return { v: d[0] + d[1] + d[2], d };
   }
   function statOfRoll(i) { const k = Object.keys(state.alloc).find((s) => state.alloc[s] === i); return k || null; }
@@ -1267,6 +1273,14 @@
   const modText = (m) => (m >= 0 ? ' + ' : ' \u2212 ') + Math.abs(m);
   const defyFate = () => reached('FTH', 21);
   let lastRoll = null;
+  function showRolled(result){
+    showRoll(result);
+    result.historyId=diceManager.capture({...result,note:$('#toastNote').textContent});
+  }
+  function reviseRoll(result){
+    showRoll(result);
+    if(result.historyId)diceManager.capture({...result,note:$('#toastNote').textContent},result.historyId);
+  }
   function flatOf(str) {
     let t = 0;
     String(str || '').replace(/\d*\s*d\s*\d+/gi, '').replace(/([+-]?)\s*(\d+)/g, (m, sg, n) => { t += (sg === '-' ? -1 : 1) * Number(n); return m; });
@@ -1382,7 +1396,7 @@
     if(!plan.healing){showRoll({kind:'notice',title:plan.name,math:plan.description||'Used one item.',note:'Apply any listed costs and effects at the table.'});return;}
     const parsed=plan.healing,rolled=parsed.count?rollDice(parsed.expression):0;
     const total=Math.max(0,rolled+parsed.flat);
-    showRoll({kind:'consumable-healing',title:plan.name+' healing',total,
+    showRolled({kind:'consumable-healing',title:plan.name+' healing',total,
       math:parsed.expression+' = '+(rolled+parsed.flat)+(total===0?' (minimum 0 healing)':''),note,
       consumableHealing:{amount:total,characterId:state.id,applied:false}});
   }
@@ -1395,7 +1409,7 @@
   }
   function rollCheck(title, m, kind, extra) {
     const r = rollD20(advMode());
-    showRoll(Object.assign({ title, kind, mod: m, d20: r.d, mode: r.mode, total: r.d + m, math: r.txt + modText(m) }, extra || {}));
+    showRolled(Object.assign({ title, kind, mod: m, d20: r.d, mode: r.mode, total: r.d + m, math: r.txt + modText(m) }, extra || {}));
   }
   function rollSet(str, crit) {
     let t = 0;
@@ -1441,7 +1455,7 @@
     const foe = foeId ? foeById(foeId) : null;
     // Against a target from the map, its Armor Rating comes off the hit.
     const hurt = foe ? window.WBCombat.armorDamage(d.total, foe.ar) : null;
-    showRoll({ title: d.data.source.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w,
+    showRolled({ title: d.data.source.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w,
       attackDamage:{main:d.data,off:null,dual:false},note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
   }
   function abilitySaveNote(plan) {
@@ -1465,7 +1479,7 @@
     const notes=['Ability costs paid once.',abilitySaveNote(plan),...damage.hits.map(text=>'On hit: '+text)].filter(Boolean);
     const data=plan.attack?{main:{source:{stat:damage.stat,damageModifier:damage.modifier,flatBonus:damage.flatBonus},
       baseRoll:base.t,baseMath,extraMath,extras:extras.map(extra=>extra.roll.t),devastateBonus:0},off:null,dual:false}:null;
-    showRoll({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · '),attackDamage:data});
+    showRolled({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · '),attackDamage:data});
   }
 
   // Dual wielding: one attack that swings both weapons. Each rolls to hit; the off-hand hit does half damage, rounded down.
@@ -1484,7 +1498,7 @@
     const notes = [];
     if (extra && extra.note) notes.push(extra.note);
     [['Main hand', a.d], ['Off-hand', b.d]].forEach(([n, d]) => { if (d === 20) notes.push(n + ' natural 20'); if (d === 1) notes.push(n + ' natural 1'); });
-    showRoll(Object.assign({}, extra || {}, {
+    showRolled(Object.assign({}, extra || {}, {
       title: 'Dual wield attack' + (extra && extra.foe && foeById(extra.foe) ? ' on ' + foeById(extra.foe).name : ''), kind: 'dual', total: null,
       dual: { a: a.d, b: b.d, ta: a.d + ma, tb: b.d + oa },
       math: 'Main hand ' + (a.d + ma) + ' (' + a.txt + modText(ma) + ') · Off-hand ' + (b.d + oa) + ' (' + b.txt + modText(oa) + ')',
@@ -1519,7 +1533,7 @@
     }
     const hurt = foe ? window.WBCombat.dualArmorDamage(mainTotal, offTotal, foe.ar, mainHit, offHit) : 0;
     const uniq = hits.filter((h, i) => hits.indexOf(h) === i);
-    showRoll({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
+    showRolled({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
       attackDamage:damage,foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
   }
   function applyDevastate(roll,hand) {
@@ -1540,7 +1554,7 @@
     const foe=roll.foe?foeById(roll.foe):null;
     const hurt=foe?(damage.dual?window.WBCombat.dualArmorDamage(main,off,foe.ar,!!damage.main,!!damage.off):window.WBCombat.armorDamage(main,foe.ar)):null;
     refreshAll();save();
-    showRoll({...roll,attackDamage:damage,devastateApplied:true,total:main+(damage.dual?window.WBCombat.offhandDamage(off):0),
+    reviseRoll({...roll,attackDamage:damage,devastateApplied:true,total:main+(damage.dual?window.WBCombat.offhandDamage(off):0),
       math:parts.join(' · '),hurt,note:[roll.note,'Devastate: original STR damage modifier applied twice.'].filter(Boolean).join(' · ')});
   }
 
@@ -1617,9 +1631,9 @@
     }
     if (act === 'wonder') {
       const rr = rollD20(r.mode);
-      showRoll(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
+      showRolled(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
     } else if (act === 'defy') {
-      showRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
+      reviseRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
     } else if (act === 'consumable-heal') {
       const healing=r.consumableHealing;
       if(!healing||healing.applied||healing.characterId!==state.id)return;
@@ -1668,7 +1682,7 @@
       renderGiven();
       renderMove();
       spendReaction();
-      showRoll(Object.assign({}, r, { apSpent: 0, note: 'Opportunity attack: used a reaction and got ' + r.apSpent + ' AP back' }));
+      reviseRoll(Object.assign({}, r, { apSpent: 0, note: 'Opportunity attack: used a reaction and got ' + r.apSpent + ' AP back' }));
     } else if (act === 'conc') {
       rollCheck('Concentration (VIT)', mod('VIT'), 'check', { dc: r.concDc || 12 });
     } else if (act === 'indom') {
@@ -2872,6 +2886,7 @@
       return;
     }
     state.rolls[n] = String(v);
+    diceManager.capture({kind:'advancement',title:'Level '+n+' Health roll',total:v,math:row.die+' = '+v,note:'Hit die only; advancement bonuses are added separately.'});
     refreshAll();
     save();
     const el = document.getElementById('lv' + n + '-roll');
@@ -4230,7 +4245,7 @@
   }
   // Independent destinations: Character Sheet (with its own sub-tabs) and Battlemap.
   // Keep old #sheet, #status and #map URLs usable alongside #sheet/abilities etc.
-  const SHEET_TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses', 'notes'];
+  const SHEET_TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses', 'notes', 'dice'];
   let activeSheetTab = 'overview';
   function setView(destination, tab) {
     view = destination === 'map' ? 'map' : 'sheet';
@@ -4238,6 +4253,7 @@
     const onSheet = view === 'sheet';
     mainEl.classList.toggle('view-map', !onSheet);
     mainEl.classList.toggle('view-notes', onSheet && activeSheetTab === 'notes');
+    mainEl.classList.toggle('view-dice', onSheet && activeSheetTab === 'dice');
     document.querySelectorAll('#viewNav button').forEach(b =>
       b.setAttribute('aria-pressed', String(b.dataset.view === view)));
     document.querySelectorAll('#sheetTabs button').forEach(b => {
@@ -4484,6 +4500,7 @@
   const footBtns = $('#footBtns');
   const importConfirm = $('#importConfirm');
   function resetSession() {
+    diceManager.reset();
     consumableManager.reset();
     lastRoll=null;
     selected = null;

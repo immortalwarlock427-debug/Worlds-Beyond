@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-consumables-v39">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-dice-history-v40">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 49</p>
+    <p class="meta">Homebrew rules · Draft 50</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -82,7 +82,26 @@
     <button type="button" data-sheet-tab="abilities" aria-pressed="false">Abilities</button>
     <button type="button" data-sheet-tab="statuses" aria-pressed="false">Status Effects</button>
     <button type="button" data-sheet-tab="notes" aria-pressed="false">Notes</button>
+    <button type="button" data-sheet-tab="dice" aria-pressed="false">Dice</button>
   </nav>
+
+  <section id="diceSec" data-sheet-section="dice" aria-labelledby="diceHead" hidden>
+    <div class="sec-head">
+      <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
+      <h2 id="diceHead">Dice and recent rolls</h2>
+    </div>
+    <form id="freeDiceForm" class="free-dice-form">
+      <label><span>Dice</span><input id="freeDiceExpression" type="text" placeholder="3d6+2" required autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="freeDiceHelp"></label>
+      <label><span>Label (optional)</span><input id="freeDiceLabel" type="text" maxlength="160" placeholder="e.g. Camp supplies" autocomplete="off"></label>
+      <button type="submit" class="btn strong">Roll dice</button>
+    </form>
+    <p class="note" id="freeDiceHelp">Free dice roll the expression as written. Use + or − for flat bonuses. These rolls spend no AP, resources or items.</p>
+    <p id="diceFeedback" class="dice-feedback" role="status" aria-live="polite"></p>
+    <div class="recent-roll-heading"><h3>Recent rolls <span id="rollHistoryCount"></span></h3><button type="button" class="btn" id="rollHistoryClear">Clear recent rolls</button></div>
+    <p class="note">The last 20 results travel with this character in saves, exports and Cloud Saves. Expand a result to show it at the table. Viewing history never rerolls or applies an effect.</p>
+    <div id="rollHistoryConfirm" class="roll-history-confirm" hidden><span>Clear recent results? This does not undo costs, uses or healing.</span><button type="button" class="btn danger" id="rollHistoryClearYes">Clear history</button><button type="button" class="btn" id="rollHistoryKeep">Keep</button></div>
+    <ol id="recentRollList" class="recent-roll-list" aria-label="Recent rolls"></ol>
+  </section>
 
   <section id="notesSec" data-sheet-section="notes" aria-labelledby="notesHead" hidden>
     <div class="sec-head">
@@ -878,19 +897,20 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-consumables-v39"></script>
-<script src="js/game-state.js?v=20261031-consumables-v39"></script>
-<script src="js/maps.js?v=20261031-consumables-v39"></script>
-<script src="js/routing.js?v=20261031-consumables-v39"></script>
-<script src="js/combat-core.js?v=20261031-consumables-v39"></script>
-<script src="js/equipment-profiles.js?v=20261031-consumables-v39"></script>
-<script src="js/abilities.js?v=20261031-consumables-v39"></script>
-<script src="js/character-core.js?v=20261031-consumables-v39"></script>
-<script src="js/resources.js?v=20261031-consumables-v39"></script>
-<script src="js/encounter-actions.js?v=20261031-consumables-v39"></script>
-<script src="js/status.js?v=20261031-consumables-v39"></script>
-<script src="js/consumables.js?v=20261031-consumables-v39"></script>
-<script src="js/sheet-layout.js?v=20261031-consumables-v39"></script>
-<script src="js/app.js?v=20261031-consumables-v39"></script>
+<script src="js/persistence.js?v=20261031-dice-history-v40"></script>
+<script src="js/game-state.js?v=20261031-dice-history-v40"></script>
+<script src="js/maps.js?v=20261031-dice-history-v40"></script>
+<script src="js/routing.js?v=20261031-dice-history-v40"></script>
+<script src="js/combat-core.js?v=20261031-dice-history-v40"></script>
+<script src="js/equipment-profiles.js?v=20261031-dice-history-v40"></script>
+<script src="js/abilities.js?v=20261031-dice-history-v40"></script>
+<script src="js/rolls.js?v=20261031-dice-history-v40"></script>
+<script src="js/character-core.js?v=20261031-dice-history-v40"></script>
+<script src="js/resources.js?v=20261031-dice-history-v40"></script>
+<script src="js/encounter-actions.js?v=20261031-dice-history-v40"></script>
+<script src="js/status.js?v=20261031-dice-history-v40"></script>
+<script src="js/consumables.js?v=20261031-dice-history-v40"></script>
+<script src="js/sheet-layout.js?v=20261031-dice-history-v40"></script>
+<script src="js/app.js?v=20261031-dice-history-v40"></script>
 </body>
 </html>
