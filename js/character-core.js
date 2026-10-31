@@ -1,5 +1,5 @@
 /* Deterministic, DOM-free character command foundation.
- * Character payments, consumable inventory and ability/form transactions. No automatic triggers.
+ * Character Health, payments, consumable inventory and ability/form transactions. No automatic triggers.
  */
 (function(){
  'use strict';
@@ -30,6 +30,90 @@
    }
    return Math.max(1,number(r.max,1)+bonus);
  }
+ function health(state){
+   const fields=record(state.fields),over=record(state.over),combat=window.WBCombat,abilities=window.WBAbilities;
+   const automatic=combat.characterMaxHealth(state);
+   const automaticMax=Number.isFinite(automatic.max)?automatic.max:null;
+   const manual=over.hpMax!=null&&String(over.hpMax).trim()!=='';
+   const max=manual?(finite(over.hpMax)?numeric(over.hpMax):null):automaticMax;
+   const current=finite(fields.hpCur)?numeric(fields.hpCur):max;
+   const lv=combat.level(state),bonus=abilities.effectBonus(state,'stat','VIT'),form=abilities.formStatBonus(state,'VIT');
+   const score=combat.effectiveScore(state,'VIT',lv,bonus,form);
+   const vit=Number.isFinite(score)?score:null;
+   const vitModifier=combat.modifier(state,'VIT',lv,bonus,form);
+   const trauma=Math.max(0,Math.floor(Number(state.trauma))||0);
+   const threshold=combat.deathThreshold(lv,vit,trauma);
+   const rawDown=record(state.down);
+   const down=current==null||current>0?null:state.down&&typeof state.down==='object'&&!Array.isArray(state.down)?
+     {...rawDown,mercy:!!rawDown.mercy,stable:!!rawDown.stable}:{mercy:current<0,stable:false};
+   return Object.freeze({automaticMax,max,current,missing:automatic.missing,vit,vitModifier,trauma,threshold,down,
+     dead:current!=null&&combat.diesAt(current,threshold)});
+ }
+ // Loading/configuration/saving may reconcile derived tracker defaults, but
+ // rendering is read-only and this reconciliation emits no gameplay events.
+ function healthTrackingPatch(state){
+   const down=health(state).down;
+   return JSON.stringify(down)===JSON.stringify(state.down||null)?{}:{down};
+ }
+ const healthTypes=new Set(['DamageHealth','HealHealth','SetHealthCurrent','SetHealthMaximum','SetHealthStability','SetHealthTrauma','TreatHealth']);
+ function applyHealth(state,command){
+   const type=command.type,before=health(state),patch={},combat=window.WBCombat;
+   let plan={kind:type,amount:0,recovered:false};
+   if(type==='DamageHealth'||type==='HealHealth'){
+     const value=amount(command.amount);
+     if(value===null)return {ok:false,error:'INVALID_HEALTH_AMOUNT',message:'Enter a finite, nonnegative Health amount.'};
+     if(before.current==null)return {ok:false,error:'HEALTH_NOT_CONFIGURED',message:'Set your Health first, or enter VIT so it can be worked out.'};
+     const rounded=Math.round(value);
+     if(type==='DamageHealth'){
+       const outcome=combat.damageHealth(before.current,rounded,before.threshold,before.down);
+       if(!Number.isFinite(outcome.after))return {ok:false,error:'INVALID_HEALTH_RESULT',message:'That damage would produce an invalid Health value.'};
+       patch.fields={...record(state.fields),hpCur:String(outcome.after)};
+       patch.down=outcome.down?{...(before.down||{}),...outcome.down}:null;
+       const bleeding=command.source==='bleeding';
+       plan={...plan,...outcome,bleeding,
+         concentration:!bleeding&&!outcome.dead&&record(state.fields).concOn==='1'&&rounded>before.vitModifier,
+         indomitable:outcome.dropped&&!outcome.dead&&before.vit!=null&&before.vit>=21};
+     }else{
+       const outcome=combat.healHealth(before.current,rounded,before.max,before.trauma);
+       if(!Number.isFinite(outcome.after))return {ok:false,error:'INVALID_HEALTH_RESULT',message:'That healing would produce an invalid Health value.'};
+       patch.fields={...record(state.fields),hpCur:String(outcome.after)};
+       patch.down=outcome.after>0?null:before.down;
+       if(outcome.recovered)patch.trauma=outcome.trauma;
+       plan={...plan,...outcome};
+     }
+   }else if(type==='SetHealthCurrent'){
+     if(command.value!=null&&command.value!==''&&!finite(command.value))return {ok:false,error:'INVALID_HEALTH_VALUE',message:'Enter a finite Health value, or clear it for full Health.'};
+     patch.fields={...record(state.fields),hpCur:command.value==null||command.value===''?'':String(numeric(command.value))};
+     Object.assign(patch,healthTrackingPatch({...state,...patch}));
+   }else if(type==='SetHealthMaximum'){
+     const over={...record(state.over)};
+     if(command.value==null||command.value==='')delete over.hpMax;
+     else if(!finite(command.value))return {ok:false,error:'INVALID_HEALTH_MAXIMUM',message:'Enter a finite maximum, or clear it for the automatic value.'};
+     else over.hpMax=String(numeric(command.value));
+     patch.over=over;Object.assign(patch,healthTrackingPatch({...state,...patch}));
+   }else if(type==='SetHealthStability'){
+     if(typeof command.stable!=='boolean')return {ok:false,error:'INVALID_STABILITY',message:'Choose whether this character is stabilized.'};
+     if(before.down)patch.down={...before.down,stable:command.stable};
+   }else if(type==='SetHealthTrauma'){
+     const value=amount(command.value);
+     if(value===null||!Number.isSafeInteger(value))return {ok:false,error:'INVALID_TRAUMA',message:'Enter a whole, nonnegative Trauma value.'};
+     patch.trauma=value;Object.assign(patch,healthTrackingPatch({...state,...patch}));
+   }else if(type==='TreatHealth'){
+     if(before.current==null||before.current>0||before.dead)return {ok:false,error:'TREATMENT_UNAVAILABLE',message:'Treatment is for a living character at 0 Health or below.'};
+     patch.fields={...record(state.fields),hpCur:'1'};patch.trauma=before.trauma+1;patch.down=null;plan.recovered=true;
+   }
+   const next={...state,...patch},after=health(next);
+   plan={...plan,before:before.current,after:after.current,trauma:after.trauma,threshold:after.threshold};
+   const correction=type.startsWith('Set')&&command.source!=='indomitable';
+   const events=[];
+   if(JSON.stringify(before)!==JSON.stringify(after)||JSON.stringify(record(state.fields).hpCur)!==JSON.stringify(record(next.fields).hpCur))
+     events.push({type:'health.changed',previous:before,current:after,source:correction?'correction':'command',command:type});
+   if(type==='DamageHealth'||type==='HealHealth'||type==='TreatHealth')events.push({type:type==='DamageHealth'?'health.damaged':type==='HealHealth'?'health.healed':'health.treated',
+     previous:before.current,current:after.current,amount:plan.amount,
+     applied:type==='DamageHealth'?before.current-after.current:after.current-before.current,
+     source:command.source==='bleeding'?'bleeding':'command',command:type});
+   return {ok:true,state:next,patch,events,healthPlan:plan,log:events.map(event=>type+': '+event.type),message:'Health updated.'};
+ }
  function derive(state){
    const resources=Object.create(null);
    for(const r of (Array.isArray(state.resources)?state.resources:[])){
@@ -59,7 +143,7 @@
    const reactionMax=combat.reactionMaximum(state,window.WBAbilities.effectBonus(state,'stat','AGL'),window.WBAbilities.formStatBonus(state,'AGL'));
    const reactions=Object.freeze({max:reactionMax,current:combat.trackerAvailable(state.reactAvail==null?null:
      finite(state.reactAvail)?numeric(state.reactAvail):0,reactionMax)});
-   return {resources,ap,mana,reactions};
+   return {resources,ap,mana,reactions,health:health(state)};
  }
  const poolTypes=new Set(['SpendAP','RefundAP','SetAPCurrent','SetAPMaximum',
    'SpendMana','SetManaCurrent','SetManaMaximum','SpendPools']);
@@ -392,6 +476,7 @@
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
    if(poolTypes.has(command.type))return applyPools(state,command);
+   if(healthTypes.has(command.type))return applyHealth(state,command);
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
    if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
    if(command.type==='UseMilestone'||command.type==='SetMilestoneUses')return applyMilestone(state,command);
@@ -467,5 +552,5 @@
    return {ok:true,state:next,events,log:events.map(e=>
      type+': '+e.resourceId+' '+e.previous+' -> '+e.current)};
  }
- window.WBCharacter={derive,apply,consumables,consumableQuantity};
+ window.WBCharacter={derive,apply,health,healthTrackingPatch,consumables,consumableQuantity};
 })();

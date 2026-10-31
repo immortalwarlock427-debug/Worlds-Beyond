@@ -324,6 +324,7 @@
     if (form.portraitId && !portraitIds.has(form.portraitId)) form.portraitId = '';
   });
   if (!state.portraits.some((f) => f.id === state.formId)) state.formId = state.portraits.length ? state.portraits[0].id : null;
+  Object.assign(state,window.WBCharacter.healthTrackingPatch(state));
   }
 
   const statusEl = $('#saveStatus');
@@ -393,6 +394,7 @@
   if (characterLoadFailed) blockCharacterWrites();
   function save() {
     if (characterWritesBlocked) { blockCharacterWrites(); return; }
+    Object.assign(state,window.WBCharacter.healthTrackingPatch(state));
     window.WBEquipment.capture(state); // Save the currently worn slots in this form's profile.
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -578,7 +580,7 @@
       const lg = state.lvGear[n] || {};
       const vb = scoreAt('VIT', n);
       const mb = scoreAt(ms, n);
-      const vit = vb == null ? null : vb + (lg.VIT || 0);
+      const vit = vb == null ? null : vb + (Number(lg.VIT) || 0);
       const msv = mb == null ? null : mb + (Number(lg[ms]) || 0);
       const health = window.WBCombat.healthAtLevel(state, n, vit);
       const die = health.die, dieMax = health.dieMax, gain = health.gain;
@@ -597,7 +599,7 @@
   let log = { rows: [], hp: null, mp: null, missing: [] };
 
   const AUTO = {
-    hpMax: () => (log.hp == null ? '' : log.hp + gear('hp')),
+    hpMax: () => { const max=window.WBCharacter.health(state).automaticMax; return max==null?'':max; },
     mpMax: () => { const max = window.WBCombat.characterMaxMana(state); return max == null ? '' : max; },
     hitDie: () => { const v = score('VIT'); return v == null ? '' : hitDieFor(v); },
     evasion: () => 10 + mod('AGL') + gear('ev') + window.WBAbilities.effectBonus(state, 'evasion'),
@@ -613,8 +615,9 @@
 
   // Pools
   function updatePool(p) {
-    const c = num($('#' + p + 'Cur').value);
-    const m = num($('#' + p + 'Max').value);
+    const health=p==='hp'?window.WBCharacter.health(state):null;
+    const c = health?health.current:num($('#' + p + 'Cur').value);
+    const m = health?health.max:num($('#' + p + 'Max').value);
     const bar = $('#' + p + 'Bar');
     if (isNaN(m) || m <= 0) {
       bar.style.width = '100%';
@@ -960,7 +963,7 @@
     refreshAll(); // Update movement and the battlemap after timed effects expire.
     // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
     const h = hpNow();
-    if (h != null && h <= 0 && !(state.down && state.down.stable) && !isDead()) applyDamage(4, { bleed: true });
+    if (h != null && h <= 0 && !(window.WBCharacter.health(state).down||{}).stable && !isDead()) applyDamage(4, { bleed: true });
   });
 
   // Long rest: refill every resource and lock in worn gear, with an undo.
@@ -1322,7 +1325,8 @@
       won = !!r.success || r.total >= r.dc;
       notes.push((won ? 'Success' : 'Failed') + ' against DC ' + r.dc + (won && r.winNote ? ': ' + r.winNote : ''));
       // Indomitable: making the roll stops your own bleeding.
-      if (won && r.indom && state.down && !state.down.stable && !isDead()) { state.down.stable = true; refreshAll(); save(); }
+      const down=window.WBCharacter.health(state).down;
+      if (won && r.indom && down && !down.stable && !isDead()) setStable(true,'indomitable');
     }
     // Against a target from the battlemap: whether it hits, and how much gets through its Armor Rating.
     const foe = r.foe ? foeById(r.foe) : null;
@@ -1638,8 +1642,7 @@
       const healing=r.consumableHealing;
       if(!healing||healing.applied||healing.characterId!==state.id)return;
       if(hpNow()==null){showRoll({...r,note:'Set your Health first, or enter VIT so it can be worked out. The item has already been used.'});return;}
-      healing.applied=true;
-      applyHeal(healing.amount);
+      if(applyHeal(healing.amount))healing.applied=true;
     } else if (act === 'devastate-main' || act === 'devastate-off') {
       applyDevastate(r,act==='devastate-main'?'main':'off');
     } else if (act === 'ability-dmg' || act === 'ability-crit') {
@@ -1688,7 +1691,7 @@
     } else if (act === 'indom') {
       rollIndomitable();
     } else if (act === 'stable') {
-      setStable(true);
+      setStable(true,'indomitable');
       showRoll({ kind: 'notice', title: 'Indomitable', math: 'You stop bleeding. You’re still unconscious until you’re healed.' });
     } else if (act === 'gostats') {
       $('#asiBar').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
@@ -1699,76 +1702,51 @@
 
   // ---------- Health: damage, healing, bleeding out and death ----------
   const fmtHp = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
-  function hpMaxNow() { const m = num($('#hpMax').value); return isNaN(m) ? null : m; }
-  function hpNow() {
-    const c = num(state.fields.hpCur);
-    return isNaN(c) ? hpMaxNow() : c;
-  }
+  function hpNow() { return window.WBCharacter.health(state).current; }
   // Death Threshold: level + VIT, 5 closer for each Trauma since your last long rest.
   function deathThreshold() {
-    return window.WBCombat.deathThreshold(level(), score('VIT'), state.trauma);
+    return window.WBCharacter.health(state).threshold;
   }
   // At a Death Threshold of 0, going below 0 at all kills you.
   const diesAt = window.WBCombat.diesAt;
-  function isDead() { const h = hpNow(); return h != null && diesAt(h, deathThreshold()); }
-  // Tracks the current time at 0 or below: whether Death's Mercy is used up and whether you're stabilized.
-  function syncDown() {
-    const h = hpNow();
-    if (h == null || h > 0) state.down = null;
-    else if (!state.down) state.down = { mercy: h < 0, stable: false };
-  }
-  function setStable(on) {
-    syncDown();
-    if (state.down) state.down.stable = !!on;
-    refreshAll();
-    save();
+  function isDead() { return window.WBCharacter.health(state).dead; }
+  function setStable(on,source='correction') {
+    const result=formEntryControls.execute({type:'SetHealthStability',stable:on,source});
+    if(result.ok){refreshAll();save();}
   }
   function applyDamage(amt, opts) {
     opts = opts || {};
-    amt = Math.max(0, Math.round(amt));
-    const before = hpNow();
-    if (before == null) { showRoll({ kind: 'notice', title: 'Health', math: 'Set your Health first, or enter VIT so it can be worked out.' }); return; }
-    const dt = deathThreshold();
-    const outcome = window.WBCombat.damageHealth(before, amt, dt, state.down);
-    const after = outcome.after;
-    const dropped = outcome.dropped;
-    const dead = outcome.dead;
+    const result=formEntryControls.execute({type:'DamageHealth',amount:amt,source:opts.bleed?'bleeding':'damage'});
+    if(!result.ok){showRoll({kind:'notice',title:'Health',math:result.message});return false;}
+    const outcome=result.healthPlan,after=outcome.after,dead=outcome.dead;
+    amt=outcome.amount;
     const notes = [];
-    state.down = outcome.down;
     if (outcome.mercyCapped) notes.push("Death's Mercy stopped it at " + fmtHp(after));
-    state.fields.hpCur = String(after);
-    if (dead) notes.push(dt === 0 ? 'Below 0 with a Death Threshold of 0' : 'Death Threshold reached');
-    else if (dropped) notes.push('Unconscious and bleeding out');
+    if (dead) notes.push(outcome.threshold === 0 ? 'Below 0 with a Death Threshold of 0' : 'Death Threshold reached');
+    else if (outcome.dropped) notes.push('Unconscious and bleeding out');
     const acts = [];
     // Taking more damage than your VIT mod calls for a Concentration check.
     const concDc = outcome.concentrationDc;
-    if (!opts.bleed && !dead && state.fields.concOn === '1' && amt > mod('VIT')) acts.push(['conc', 'Concentration check (DC ' + concDc + ')']);
-    if (dropped && !dead && reached('VIT', 21)) acts.push(['indom', 'Indomitable roll']);
+    if (outcome.concentration) acts.push(['conc', 'Concentration check (DC ' + concDc + ')']);
+    if (outcome.indomitable) acts.push(['indom', 'Indomitable roll']);
     fillInputs();
     refreshAll();
     save();
     showRoll({ kind: 'notice', title: opts.bleed ? 'Bleeding out' : 'Health', math: (opts.bleed ? 'Lost ' + amt + ' to bleeding' : 'Took ' + amt + ' damage') + '. Health is now ' + fmtHp(after) + '.', note: notes.join(' · ') || undefined, acts, concDc });
+    return true;
   }
-  // Coming back above 0 after going down adds a Trauma.
-  function recover(notes) {
-    state.trauma = (state.trauma || 0) + 1;
-    state.down = null;
-    notes.push('Trauma ' + state.trauma + ': Death Threshold ' + (5 * state.trauma) + ' closer until your next long rest');
+  function recoveryNotes(plan) {
+    return plan.recovered?['Trauma ' + plan.trauma + ': Death Threshold ' + (5 * plan.trauma) + ' closer until your next long rest']:[];
   }
   function applyHeal(amt) {
-    amt = Math.max(0, Math.round(amt));
-    const before = hpNow();
-    if (before == null) { showRoll({ kind: 'notice', title: 'Healing', math: 'Set your Health first, or enter VIT so it can be worked out.' }); return; }
-    const max = hpMaxNow();
-    let after = before + amt;
-    if (max != null && after > max) after = Math.max(before, max);
-    const notes = [];
-    if (before <= 0 && after > 0) recover(notes);
-    state.fields.hpCur = String(after);
+    const result=formEntryControls.execute({type:'HealHealth',amount:amt});
+    if(!result.ok){showRoll({kind:'notice',title:'Healing',math:result.message});return false;}
+    const plan=result.healthPlan;
     fillInputs();
     refreshAll();
     save();
-    showRoll({ kind: 'notice', title: 'Healing', math: 'Healed ' + (after - before) + '. Health is now ' + fmtHp(after) + '.', note: notes.join(' · ') || undefined });
+    showRoll({ kind: 'notice', title: 'Healing', math: 'Healed ' + (plan.after - plan.before) + '. Health is now ' + fmtHp(plan.after) + '.', note: recoveryNotes(plan).join(' · ') || undefined });
+    return true;
   }
   function hpButton(heal) {
     const el = $('#hpAmt');
@@ -1779,15 +1757,12 @@
   }
   $('#hpHeal').addEventListener('click', () => hpButton(true));
   $('#treatedBtn').addEventListener('click', () => {
-    const before = hpNow();
-    if (before == null || before > 0 || isDead()) return;
-    const notes = [];
-    recover(notes);
-    state.fields.hpCur = '1';
+    const result=formEntryControls.execute({type:'TreatHealth'});
+    if(!result.ok)return;
     fillInputs();
     refreshAll();
     save();
-    showRoll({ kind: 'notice', title: 'Treated', math: 'Ten minutes of treatment after combat: back to 1 Health.', note: notes.join(' · ') });
+    showRoll({ kind: 'notice', title: 'Treated', math: 'Ten minutes of treatment after combat: back to 1 Health.', note: recoveryNotes(result.healthPlan).join(' · ') });
   });
   function rollIndomitable() { rollCheck('Indomitable (VIT)', mod('VIT'), 'check', { dc: 12, indom: true, winNote: 'you stop bleeding, though you\u2019re still unconscious' }); }
   // Stabilizing someone else: 5 AP and d20 + INT mod against DC 12.
@@ -1803,8 +1778,8 @@
   });
   $('#indomBtn').addEventListener('click', rollIndomitable);
   $('#stableOn').addEventListener('change', (e) => setStable(e.target.checked));
-  $('#traumaUp').addEventListener('click', () => { state.trauma = (state.trauma || 0) + 1; refreshAll(); save(); });
-  $('#traumaDown').addEventListener('click', () => { state.trauma = Math.max(0, (state.trauma || 0) - 1); refreshAll(); save(); });
+  $('#traumaUp').addEventListener('click', () => { formEntryControls.execute({type:'SetHealthTrauma',value:window.WBCharacter.health(state).trauma+1});refreshAll();save(); });
+  $('#traumaDown').addEventListener('click', () => { formEntryControls.execute({type:'SetHealthTrauma',value:Math.max(0,window.WBCharacter.health(state).trauma-1)});refreshAll();save(); });
   function renderDeath() {
     const dt = deathThreshold();
     const tr = state.trauma || 0;
@@ -1819,7 +1794,8 @@
     box.hidden = !down;
     if (!down) return;
     const dead = diesAt(h, dt);
-    const stable = !!(state.down && state.down.stable);
+    const healthDown=window.WBCharacter.health(state).down;
+    const stable = !!(healthDown && healthDown.stable);
     box.classList.toggle('dead', dead);
     box.classList.toggle('stable', stable && !dead);
     $('#dyingTitle').textContent = dead ? 'Dead' : stable ? 'Stabilized' : 'Bleeding out';
@@ -1833,7 +1809,7 @@
       txt += stable
         ? ' You’ve stopped bleeding but you’re still unconscious.'
         : ' You lose 4 at the start of each of your turns until someone stabilizes you (5 AP, d20 + INT mod against DC 12). Armor and resistance don\u2019t reduce it.';
-      if (!(state.down && state.down.mercy) && dt != null && dt > 0) txt += " Death's Mercy: the first hit that takes you below 0 can't take you past " + fmtHp(-Math.floor(Math.max(0, dt) / 2)) + '.';
+      if (!(healthDown && healthDown.mercy) && dt != null && dt > 0) txt += " Death's Mercy: the first hit that takes you below 0 can't take you past " + fmtHp(-Math.floor(Math.max(0, dt) / 2)) + '.';
     }
     $('#dyingTxt').textContent = txt;
     $('#stableOn').checked = stable;
@@ -4395,7 +4371,6 @@
     statusManager.render();
     updatePool('hp');
     updatePool('mp');
-    syncDown();
     renderDeath();
     renderAdv();
     renderAsi();
@@ -4437,7 +4412,8 @@
         if (!r || num(t.value) !== r.v) delete state.alloc[k];
       }
     } else if (t.hasAttribute('data-field')) {
-      if (t.id === 'mpCur') applyPoolCommand({ type: 'SetManaCurrent', value: t.value });
+      if (t.id === 'hpCur') applyPoolCommand({ type: 'SetHealthCurrent', value: t.value });
+      else if (t.id === 'mpCur') applyPoolCommand({ type: 'SetManaCurrent', value: t.value });
       else if (t.id === 'apMax') applyPoolCommand({ type: 'SetAPMaximum', value: t.value });
       else state.fields[t.id] = t.value;
       // Narrative edits use the same save path without rebuilding gameplay UI
@@ -4457,7 +4433,8 @@
         delete t.dataset.editingBase;
         delete t.dataset.initialBase;
       }
-      if (t.id === 'mpMax') applyPoolCommand({ type: 'SetManaMaximum', value: t.value });
+      if (t.id === 'hpMax') applyPoolCommand({ type: 'SetHealthMaximum', value: t.value });
+      else if (t.id === 'mpMax') applyPoolCommand({ type: 'SetManaMaximum', value: t.value });
       else if (t.value.trim() === '') delete state.over[t.id]; else state.over[t.id] = t.value;
     } else if (t.dataset && t.dataset.rollLv) {
       const n = t.dataset.rollLv;
