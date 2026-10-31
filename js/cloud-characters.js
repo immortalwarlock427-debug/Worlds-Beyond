@@ -9,11 +9,22 @@
   const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
   const validId=v=>typeof v==='string'&&/^c[a-z0-9]{4,30}$/.test(v);
   const cleanName=v=>String(v||'Unnamed character').trim().slice(0,100)||'Unnamed character';
+  // The receipt travels with this exact character copy, including JSON backups.
+  // Reading a fresh cloud list must never advance a stale device's base revision.
+  function expectedRevision(state,endpoint,ownerId) {
+    const receipt=state&&state.cloudSync;
+    return record(receipt)&&receipt.endpoint===endpoint&&receipt.ownerId===ownerId&&
+      Number.isSafeInteger(receipt.revision)&&receipt.revision>0 ? receipt.revision:null;
+  }
+  function withReceipt(state,endpoint,ownerId,revision) {
+    if(!Number.isSafeInteger(revision)||revision<1)throw new Error('INVALID_REVISION');
+    return {...state,cloudSync:{endpoint,ownerId,revision}};
+  }
   function ensureState(state) {
     if(!record(state)||!validId(state.id)||!record(state.fields)||!record(state.hist))
       throw new Error('INVALID_CHARACTER');
     const json=JSON.stringify(state);
-    if(json.length>MAX_JSON_BYTES)throw new Error('CHARACTER_TOO_LARGE');
+    if(new TextEncoder().encode(json).length>MAX_JSON_BYTES)throw new Error('CHARACTER_TOO_LARGE');
     return {document:JSON.parse(json),name:cleanName(state.fields.charName)};
   }
   function validateConfig(url,key) {
@@ -49,7 +60,12 @@
       return data.user;
     }
     function handle(result) {
-      if(result.error)throw result.error;
+      if(result.error){
+        if(result.error.code==='23505')throw new Error('REVISION_CONFLICT');
+        if(result.error.code==='23514'&&String(result.error.message).includes('wb_characters_document_size'))
+          throw new Error('CHARACTER_TOO_LARGE');
+        throw result.error;
+      }
       return result.data;
     }
     async function list(){
@@ -66,8 +82,9 @@
         .eq('owner_id',account.id).eq('character_id',id).maybeSingle());
       return data||null;
     }
-    async function save(state,expectedRevision) {
+    async function save(state,expectedRevision,expectedOwner) {
       const account=await user();
+      if(expectedOwner!==undefined&&account.id!==expectedOwner)throw new Error('SIGN_IN_REQUIRED');
       const {document,name}=ensureState(state);
       const character_id=state.id;
       if(expectedRevision===null){
@@ -99,5 +116,6 @@
     }
     return {user,list,get,save,remove,ensureState};
   }
-  window.WBCloudCharacters={createAdapter,ensureState,validateConfig,MAX_JSON_BYTES};
+  window.WBCloudCharacters={createAdapter,ensureState,validateConfig,MAX_JSON_BYTES,
+    expectedRevision,withReceipt};
 })();

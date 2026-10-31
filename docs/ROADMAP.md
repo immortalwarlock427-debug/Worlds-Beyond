@@ -11,6 +11,15 @@ Future-facing development priorities for Worlds Beyond. Current shipped behavior
 - GitHub CI with Node tests, Playwright browser interactions and 390px layout checks.
 - **PR #35 merged:** first pure `WBCharacter.derive/apply` resource-command slice, resource UI migration, and boosted resource-current preservation across reload. **Only resources are migrated so far**.
 
+## Save safety and release follow-up
+
+- **Phone backups:** keep JSON export/cloud-save guidance visible. A manifest, Home Screen instructions, a user-initiated persistent-storage request and per-character backup status deserve a separate mobile UX change. Browser storage and Home Screen installation are not guaranteed backups; test on real Safari before making retention promises.
+- **Forward compatibility:** preserve unsupported item/bonus/effect data or guard newer saves before adding schema targets in B3. Current malformed-save recovery does not solve every older-code/newer-data case.
+- **Cloud operations:** verify private-group sign-up/SMTP settings and two-user RLS on an isolated project; do not change production Auth or run production migrations during a code review. The new document-size constraint must be deployed through the normal migration workflow; existing oversized rows must be reduced before validating it.
+- **PR #36:** retain the eight unmerged commits for review. Its form-effects/overflow work belongs after B1/B2 and DM decisions; do not merge its claimed decisions into this plan or close/delete unmerged work without an agreed disposition. Git refs alone do not prove which PRs are currently open.
+- **Rules/docs outside this repo:** reconcile Notion's Charisma discount wording with the fixed 5 AP Command rule when Notion access is available. Block scaling and two-handed balance remain unresolved; historical comparisons are not approved mechanics.
+- **Maintenance:** replace source-text assertions with behavioral checks as the corresponding modules change, share the remaining hit-die/DM derivation formulas during B1/B2, and review merged branches for cleanup once PR status is available. Do not remove unmerged branches or raise AP/map/token limits without a concrete supported use case.
+
 ## Development queue — one narrow Codex PR per task
 
 1. **B1 — Next:** extend pure character derivation/commands for AP and Mana/Holy Power, migrate the appropriate existing UI callbacks, retain Command AP and form-entry semantics, add Node and browser tests. **Can begin without unanswered Rage decisions.** Use [CODEX_START_HERE.md](CODEX_START_HERE.md).

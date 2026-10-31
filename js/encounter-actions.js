@@ -269,10 +269,9 @@
       }
       case 'GrantAP': {
         if (!actor) return fail('ACTOR_NOT_FOUND');
-        if (!integer(action.amount, 1, 40)) return fail('INVALID_AP_AMOUNT');
-        const given = combat().givenAp(actor);
-        if (given + action.amount > 40) return fail('AP_CAP');
-        actor.apGiven = { n: given + action.amount, fresh: true };
+        if (!integer(action.amount, 1, 5)) return fail('INVALID_AP_AMOUNT');
+        const given = Math.min(5, combat().givenAp(actor));
+        actor.apGiven = { n: Math.max(given, action.amount), fresh: true };
         event.given = actor.apGiven.n;
         break;
       }

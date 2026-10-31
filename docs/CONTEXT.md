@@ -18,7 +18,7 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 37)
+## What the site does (Draft 38)
 
 The following features **already exist** in the live site:
 
@@ -26,30 +26,30 @@ The following features **already exist** in the live site:
 - **Shared combat core:** `WBCombat` handles effective stats, gear, Armor Rating, AP, Surge, attacks, dual hits/criticals, resistance, defenses and death calculations. Character progression and shared combat formulas are reusable; dice UI is separate.
 - **Equipment:** Pack, Forge, worn slots, weapon actions and bonuses. Named forms use one shared inventory but may wear different equipment profiles.
 - **Custom Ability Library:** create/edit/duplicate/delete/favorite, categories, search/sort/filters, compact display, optional AP/Mana/Holy Power/custom-resource costs, Use action, limited uses, held creations, cooldown, duration, ongoing numerical effects and turn/long-rest processing. Active effects support movement, Armor Rating, Evasion, stat scores and custom-resource maximums.
-- **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Currently switching forms is free.** Effective scores may exceed 28 and unlock milestones.
+- **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Named forms may charge optional AP and/or resource entry costs; returning to Base and reselecting the current form are free.** Effective scores may exceed 28 and unlock milestones.
 - **Custom resources:** independent named pools with current/max, colors/display, manual spend/restore, turn regeneration, long-rest refill, ability costs and form availability.
 - **Status Effects:** shows active timed ability effects and their bonuses, plus manually added Buff, Debuff, Condition and Other entries with optional expiration timers. Manual statuses are descriptive until an actual rule applies.
 - **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware planning uses shared `js/routing.js`.
 - **Offline DM Room:** import player snapshots and NPCs, initiative/rounds/turns, AP, Health, damage/healing, manual token placement and confirmed AP-based path movement with animation. Finishing combat allows **Reuse roster / Edit setup**. DM encounter positions are distinct from sheet Battlemap positions and do not sync to other devices.
 - **Same-browser Player Preview:** `player.html` can display selected player stats/public encounter positions and submit MoveToken/SpendAP/EndTurn in another tab of the **same browser origin**. Seat selection is not authenticated and it **is not** the planned phone-player multiplayer solution.
+- **Character save protection:** stale tabs pause autosave after an external character write or clear; export local edits before reloading. Unreadable stored character data is kept, with a raw download recovery action. This guards cooperating current tabs; old cached code and simultaneous localStorage writes still need stronger schema/concurrency safeguards.
 - **Independent local autosaves:** ordinary character edits do not rewrite unchanged DM game data. Battlemap edits preserve newer top-level encounter/player updates from another local view; simultaneous edits to the same game section still need the future transactional backend.
-- **Cloud Saves:** `cloud.html` automatically connects to the configured Supabase project; users can sign up/sign in, manually save/list/restore/delete private character copies with revision conflicts and backups. Cross-device character restore has been tested; **automatic saving and live encounters are not implemented**.
+- **Cloud Saves:** `cloud.html` automatically connects to the configured Supabase project; users can sign up/sign in, manually save/list/restore/delete private character copies with per-copy revision conflicts and backups. A revision receipt is scoped to the project/account and survives export/import; refreshing the list never advances it. Older local copies must be exported and restored before overwriting an existing cloud row. Cross-device character restore has been tested; **automatic saving and live encounters are not implemented**.
 
 ### Known implementation gaps
 
-- The sheet Battlemap and DM Room both use pure `WBRouting` for routes; the sheet supplies fog-limited terrain and visible foes, while DM uses full map terrain and its actor roster.
 - DM character imports exclude active temporary ability bonuses from combat stats, retaining current equipment, form bonuses and manual overrides. A visible warning lists each active ability, its bonuses and remaining turns; encounter timers for imported effects are still not implemented.
 - Custom abilities do **not yet** apply stat-based AP discounts. Named form entry can now charge AP and/or Mana/Holy Power or a custom resource; returning to Base remains free.
 - Existing automated tests include many source-text assertions; real browser-click/390px tests need broader coverage.
 - No authenticated cross-device DM game, join codes, server-authorized encounter commands, or live multiplayer synchronization.
 
-## Confirmed decisions for upcoming work — not implemented yet
+## Confirmed decisions and delivery status
 
 - **Form-entry cost — implemented:** named forms can charge AP, Mana/Holy Power or a custom pool, or AP plus a resource. Blank defaults to **free** for legacy forms. Entering through a selector or linked portrait checks all costs before spending; returning to **Base is free**, and selecting the already active form costs nothing. Switching worn gear profiles happens with the form.
 - **Ability AP discounts:** add `Discounted by: None / STR / DEX / INT / FTH` per ability, default **None**. Effective AP cost is `max(ceil(base AP / 2), base AP − current modifier)`; negative modifiers raise cost. Compute this in pure `WBCombat` and use it for activation, on-card base/effective prices, `Usable now` and AP-cost filters.
-- **Unified movement:** one shared DOM-free route algorithm used by sheet and DM. Preserve the sheet's fog planning (unseen squares assumed open; only visible standing enemies obstruct planning; travel stops when encountering a newly revealed obstacle). **Allies and downed creatures of either side are traversable at normal cost but cannot be destinations; standing enemies block.** Give DM actors editable `Party`/`Enemy` sides; imported PCs default Party, NPCs Enemy. Retain eight-direction movement unless a separate rule decision changes costs.
+- **Unified movement — implemented:** one shared DOM-free route algorithm used by sheet and DM. Preserve the sheet's fog planning (unseen squares assumed open; only visible standing enemies obstruct planning; travel stops when encountering a newly revealed obstacle). **Allies and downed creatures of either side are traversable at normal cost but cannot be destinations; standing enemies block.** Give DM actors editable `Party`/`Enemy` sides; imported PCs default Party, NPCs Enemy. Retain eight-direction movement unless a separate rule decision changes costs.
 - **Temporary effects on DM import — implemented:** only non-temporary combat stats are imported; active ability effects are shown as individual warnings with bonuses and turns remaining, rather than baked into permanent Armor Rating, Movement, Initiative, or stat-derived values.
-- **Browser tests:** Playwright scenarios for resource spend/restore, ability AP/cooldown/turn progression, separate forms/gear/resources, timed statuses, export/import, DM import/combat/movement/AP and no sideways scrolling at 390px. CI should run every `tests/` file.
+- **Browser tests — baseline implemented:** Playwright scenarios for resource spend/restore, ability AP/cooldown/turn progression, separate forms/gear/resources, timed statuses, export/import, DM import/combat/movement/AP and no sideways scrolling at 390px. CI should run every `tests/` file.
 - **Live multiplayer:** prepare a **plan only**, awaiting DM approval. DM hosts from computer/phone; each player joins from their own phone with an account, join code and cloud character, sees the permitted map and moves their token on their turn. Use backend membership, secure per-player reads and safe shared revisions; **do not** add anti-cheat restrictions to customizable sheets.
 
 ## Core rules
@@ -236,8 +236,7 @@ All attacks cost the same AP, so compare damage per attack. Dual wield ≈ 1.5×
 eats many small hits. Two parts:
 
 1. Two-handed dice average about 1.5× the one-handed die of the same tier.
-2. Two-handed attacks add 1.5× your STR or DEX mod (rounded down). Without it, dual wield pulls ahead as mods grow,
-   because it adds the mod 1.5× (full plus half).
+2. Current two-handed attacks add the STR or DEX modifier once. The historical 1.5× modifier comparison below is balance analysis only, not an approved rule; no modifier change is scheduled. Resolve the alternatives with the DM before changing code or Notion.
 
 | One-handed | Average | Two-handed target | Dice that fit |
 | --- | --- | --- | --- |

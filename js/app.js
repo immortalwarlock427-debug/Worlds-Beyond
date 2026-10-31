@@ -207,10 +207,15 @@
     if (savedGame) game = normalizeGame(savedGame);
   } catch (e) { /* unavailable storage: start blank */ }
   gameSaveBase = normalizeGame(game);
+  let characterSaveBase = null;
+  let characterLoadFailed = false;
   try {
+    characterSaveBase = repositories.characters.snapshot();
     const savedCharacter = repositories.characters.load();
-    if (savedCharacter) state = Object.assign(blank(), savedCharacter);
-  } catch (e) { /* unavailable storage: start blank */ }
+    if (savedCharacter && window.WBPersistence.isRecord(savedCharacter.fields) &&
+        window.WBPersistence.isRecord(savedCharacter.hist)) state = Object.assign(blank(), savedCharacter);
+    else if (characterSaveBase) characterLoadFailed = true;
+  } catch (e) { characterLoadFailed = true; }
   normalizeState();
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
@@ -327,12 +332,70 @@
     statusEl.classList.toggle('error', !!isError);
   }
   let saveTimer = null;
+  let characterWritesBlocked = characterLoadFailed;
+  function blockCharacterWrites() {
+    characterWritesBlocked = true;
+    clearTimeout(saveTimer);
+    $('#characterConflict').hidden = false;
+    setStatus(characterLoadFailed
+      ? 'The saved character could not be read. Its stored data has been kept; export the saved data before replacing it.'
+      : 'This character changed in another tab. Autosave is paused. Export any edits here, then reload the saved character.', true);
+  }
+  function checkCharacterSnapshot() {
+    if (characterWritesBlocked || repositories.characters.snapshot() !== characterSaveBase) {
+      blockCharacterWrites();
+      return false;
+    }
+    return true;
+  }
+  function writeCharacter() {
+    if (!checkCharacterSnapshot()) throw new Error('CHARACTER_CHANGED');
+    repositories.characters.save(state, characterSaveBase);
+    characterSaveBase = JSON.stringify(state);
+  }
+  window.addEventListener('storage', event => {
+    if ((event.key === repositories.characters.key || event.key === null) &&
+        event.storageArea === window.localStorage &&
+        repositories.characters.snapshot() !== characterSaveBase) blockCharacterWrites();
+  });
+  // Recheck on resume too: mobile browsers may suspend a tab's storage events.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      try { checkCharacterSnapshot(); } catch (e) { blockCharacterWrites(); }
+    }
+  });
+  $('#reloadCharacter').addEventListener('click', () => window.location.reload());
+  $('#replaceUnreadableCharacter').hidden = !characterLoadFailed;
+  $('#replaceUnreadableCharacter').addEventListener('click', () => {
+    if (!characterLoadFailed) return;
+    if (!window.confirm('Replace the unreadable saved data with this sheet? Download saved data first if you want a recovery copy.')) return;
+    try {
+      repositories.characters.save(state, characterSaveBase);
+      characterSaveBase = JSON.stringify(state);
+      characterLoadFailed = false;
+      characterWritesBlocked = false;
+      $('#characterConflict').hidden = true;
+      $('#replaceUnreadableCharacter').hidden = true;
+      setStatus('The unreadable save was replaced with this sheet.');
+    } catch (e) { setStatus('Saved data changed or could not be replaced. Download it and reload before retrying.', true); }
+  });
+  $('#downloadStoredCharacter').addEventListener('click', () => {
+    const saved = repositories.characters.snapshot();
+    if (saved === null) return;
+    const url = URL.createObjectURL(new Blob([saved], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'worlds-beyond-saved-data.json';
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+  if (characterLoadFailed) blockCharacterWrites();
   function save() {
+    if (characterWritesBlocked) { blockCharacterWrites(); return; }
     window.WBEquipment.capture(state); // Save the currently worn slots in this form's profile.
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        repositories.characters.save(state);
+        writeCharacter();
         const localGame = normalizeGame(game);
         if (JSON.stringify(localGame) !== JSON.stringify(gameSaveBase)) {
           const savedGame = repositories.games.load();
@@ -343,7 +406,8 @@
         }
         setStatus(DEFAULT_STATUS);
       } catch (e) {
-        setStatus("This browser won't save the sheet. Your entries stay until you close the page.", true);
+        if (e.message === 'CHARACTER_CHANGED') blockCharacterWrites();
+        else setStatus("This browser won't save the sheet. Your entries stay until you close the page.", true);
       }
     }, 250);
   }
@@ -2740,7 +2804,7 @@
     clearTimeout(saveTimer);
     try {
       window.WBEquipment.capture(state);
-      repositories.characters.save(state);
+      writeCharacter();
       return true;
     } catch (e) { return false; }
   }
@@ -4292,11 +4356,16 @@
     clearBtn.focus();
   });
   $('#clearYes').addEventListener('click', () => {
+    try {
+      if (!checkCharacterSnapshot()) return;
+      repositories.characters.remove(characterSaveBase);
+      characterSaveBase = null;
+      clearTimeout(saveTimer);
+    } catch (e) { setStatus('The sheet could not be cleared. Saved data was kept.', true); return; }
     // A cleared sheet is a new character: the old one's token leaves the game, the rest of the game stays.
     setTok(null);
     state = blank();
     state.id = newCharId();
-    try { repositories.characters.remove(); } catch (e) { /* ignore */ }
     resetSession();
     clearConfirm.hidden = true;
     footBtns.hidden = false;
@@ -4376,6 +4445,8 @@
   });
   $('#importYes').addEventListener('click', () => {
     if (!pendingImport) return;
+    try { if (!checkCharacterSnapshot()) return; }
+    catch (e) { blockCharacterWrites(); return; }
     const oldId = state.id;
     state = Object.assign(blank(), pendingImport);
     pendingImport = null;

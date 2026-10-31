@@ -122,14 +122,22 @@ test('sticky navigation and hidden sections maintain map separation', () => {
   assert.match(app,/if \(onSheet && activeSheetTab === 'statuses'\) statusManager\.render\(\)/);
 });
 
-test('published styles and scripts use the same cache-busting release version', () => {
-  const html = read('index.html');
-  const expected = ['css/sheet.css','js/persistence.js','js/game-state.js','js/maps.js','js/resources.js','js/equipment-profiles.js','js/abilities.js','js/combat-core.js','js/status.js','js/app.js'];
-  const versions = [];
-  for (const asset of expected) {
-    const match = html.match(new RegExp('(?:src|href)="' + asset.replace(/\./g, '\\.') + '\\?v=([\\w-]+)"'));
-    assert.ok(match, asset + ' should be versioned to avoid stale cached scripts/styles');
-    versions.push(match[1]);
+test('all local scripts/styles across every page share one release and Draft label', () => {
+  const versions = new Set(), drafts = new Set();
+  for (const file of ['index.html', 'dm.html', 'player.html', 'cloud.html']) {
+    const html = read(file);
+    const assets = Array.from(html.matchAll(/(?:src|href)="((?:js|css)\/[^"]+)"/g), m => m[1]);
+    assert.ok(assets.length > 0, file);
+    for (const asset of assets) {
+      const match = asset.match(/\?v=([\w-]+)$/);
+      assert.ok(match, file + ': ' + asset + ' must have a release version');
+      versions.add(match[1]);
+    }
+    const draft = html.match(/Draft (\d+)/);
+    assert.ok(draft, file);
+    drafts.add(draft[1]);
   }
-  assert.equal(new Set(versions).size, 1, 'All assets should share the same release version');
+  assert.equal(versions.size, 1, 'Every local asset on every page must use the same release');
+  assert.equal(drafts.size, 1, 'All pages must identify the same Draft');
+  assert.match(read('docs/CONTEXT.md'), new RegExp('What the site does \\(Draft ' + [...drafts][0] + '\\)'));
 });

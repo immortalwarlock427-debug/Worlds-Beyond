@@ -1,5 +1,5 @@
 /* Offline DM Room — uses Worlds Beyond theme tokens from sheet.css. */
-.dm-sheet { max-width: 1150px; gap: 24px; }
+.dm-sheet { max-width: 1150px; gap: 24px; grid-template-columns: minmax(0, 1fr); }
 .dm-sheet .masthead { margin-bottom: 0; }
 .dm-nav {
   display: flex; gap: 8px; padding: 8px; flex-wrap: wrap;
@@ -93,7 +93,7 @@
 .dm-sheet button:disabled { opacity: .5; cursor: not-allowed; }
 .dm-sheet button:focus-visible,.dm-sheet a:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
 @media (max-width: 780px) {
-  .dm-setup-grid { grid-template-columns: 1fr; }
+  .dm-setup-grid { grid-template-columns: minmax(0, 1fr); }
   .dm-actor-setup { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .dm-actor-setup .dm-name { grid-column: span 3; }
   .dm-actor-setup .dm-setup-btn { grid-column: span 3; }

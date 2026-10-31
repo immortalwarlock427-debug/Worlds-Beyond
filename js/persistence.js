@@ -83,8 +83,13 @@
       return result;
     };
     const read = key => parseStoredValue(storage().getItem(key));
-    const write = (key, value) => {
+    const checkSnapshot = (key, expected) => {
+      if (expected !== undefined && storage().getItem(key) !== expected)
+        throw new Error('CHARACTER_CHANGED');
+    };
+    const write = (key, value, expected) => {
       if (!isRecord(value)) throw new TypeError('Save value must be an object.');
+      checkSnapshot(key, expected);
       storage().setItem(key, JSON.stringify(value));
     };
     const remove = key => storage().removeItem(key);
@@ -92,9 +97,10 @@
     return {
       characters: {
         key: CHARACTER_KEY,
+        snapshot: () => storage().getItem(CHARACTER_KEY),
         load: () => read(CHARACTER_KEY),
-        save: state => write(CHARACTER_KEY, state),
-        remove: () => remove(CHARACTER_KEY)
+        save: (state, expected) => write(CHARACTER_KEY, state, expected),
+        remove: expected => { checkSnapshot(CHARACTER_KEY, expected); remove(CHARACTER_KEY); }
       },
       games: {
         key: GAME_KEY,

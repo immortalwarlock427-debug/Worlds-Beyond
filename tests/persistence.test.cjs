@@ -138,10 +138,26 @@ test('site integrates repositories for every load/save/clear/import/export path'
   const html=read('index.html'),app=read('js/app.js');
   assert.ok(html.indexOf('src="js/persistence.js')<html.indexOf('src="js/app.js'));
   for(const term of ['repositories.games.load()', 'repositories.characters.load()',
-    'repositories.games.save(game)', 'repositories.characters.save(state)',
-    'repositories.characters.remove()', 'WBPersistence.exportCharacter(state)',
+    'repositories.games.save(game)',
+    'WBPersistence.exportCharacter(state)',
     'WBPersistence.parseCharacterFile(String(reader.result))']) assert.ok(app.includes(term),term);
   assert.doesNotMatch(app,/localStorage\.(?:getItem|setItem|removeItem)\s*\(/);
   assert.match(app,/const saveTimer|let saveTimer/);
   assert.match(app,/WBPersistence\.mergeGameChanges\(gameSaveBase, localGame, latestGame\)/);
+});
+
+test('guarded character writes and clears reject a stale tab and retain newer data',()=>{
+ const api=core(),storage=mockStorage(),repo=api.createLocalRepositories(()=>storage.store).characters;
+ const before=repo.snapshot();
+ assert.equal(before,null);
+ repo.save({fields:{charName:'Phone'}},before);
+ const phone=repo.snapshot();
+ repo.save({fields:{charName:'Restored cloud copy'}},phone);
+ const newest=repo.snapshot();
+ assert.throws(()=>repo.save({fields:{charName:'Stale tab'}},phone),/CHARACTER_CHANGED/);
+ assert.throws(()=>repo.remove(phone),/CHARACTER_CHANGED/);
+ assert.equal(repo.snapshot(),newest);
+ repo.save({fields:{charName:'Reviewed edit'}},newest);
+ repo.remove(repo.snapshot());
+ assert.equal(repo.snapshot(),null);
 });

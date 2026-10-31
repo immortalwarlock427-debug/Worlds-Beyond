@@ -326,7 +326,31 @@ for(const path of ['/index.html','/index.html#map','/dm.html','/player.html','/c
       body:document.body.scrollWidth,
       width:window.innerWidth
     }));
-    expect(result.doc,JSON.stringify(result)).toBeLessThanOrEqual(result.width+1);
+    expect(result.viewport,JSON.stringify(result)).toBe(390);
+    expect(result.doc,JSON.stringify(result)).toBeLessThanOrEqual(390);
+    expect(result.body,JSON.stringify(result)).toBeLessThanOrEqual(390);
     await context.close();
   });
 }
+
+test('DM Command grants keep the highest pool and spend it before personal AP',async({page})=>{
+  await page.goto('/dm.html');
+  await page.locator('#dmNpcForm [name="name"]').fill('Command recipient');
+  await page.locator('#dmNpcForm button[type="submit"]').click();
+  await page.locator('#startEncounter').click();
+  const actor=()=>page.evaluate(()=>Object.values(JSON.parse(localStorage.getItem('worlds-beyond-game-v1')).encounter.actors)[0]);
+  const own=(await actor()).apAvail;
+  const grant=page.locator('[data-dm-action="grantap"]');
+  await expect(grant.locator('[name="amount"]')).toHaveAttribute('max','5');
+  for(const amount of [3,2,5]){
+    await grant.locator('[name="amount"]').fill(String(amount));
+    await grant.locator('button[type="submit"]').click();
+    expect((await actor()).apGiven.n).toBe(amount===2?3:amount);
+    expect((await actor()).apAvail).toBe(own);
+  }
+  const spend=page.locator('[data-dm-action="spendap"]');
+  await spend.locator('[name="cost"]').fill('4');
+  await spend.locator('button[type="submit"]').click();
+  expect((await actor()).apGiven.n).toBe(1);
+  expect((await actor()).apAvail).toBe(own);
+});

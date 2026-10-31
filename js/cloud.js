@@ -13,7 +13,7 @@
   const backupKey='wb-cloud-last-local-backup-v1';
   const siteConfig=window.WBCloudConfig||null;
   const local=window.WBPersistence.createLocalRepositories(()=>window.localStorage).characters;
-  let client=null,cloud=null,owner=null,listed=[],busy=false;
+  let client=null,cloud=null,owner=null,listed=[],busy=false,endpoint=null;
   const ui={
     feedback:$('#cloudFeedback'),auth:$('#cloudAuthSection'),
     account:$('#cloudAuthStatus'),characters:$('#cloudCharacterSection'),
@@ -22,7 +22,9 @@
   const messages={
     INVALID_CHARACTER:'The local character cannot be uploaded. Open the Character Sheet and save it first.',
     CHARACTER_TOO_LARGE:'This character is over the 3 MB cloud limit (usually a large embedded portrait). Export your JSON locally and reduce embedded images before cloud saving.',
-    REVISION_CONFLICT:'Conflict: this cloud character changed since the list was loaded. Refresh and review the newer copy before saving again.',
+    REVISION_CONFLICT:'Conflict: the cloud copy changed since this device last saved or restored it. Export your local character first, then restore and review the newer cloud copy. Refreshing the list does not resolve this conflict.',
+    CLOUD_BASE_REQUIRED:'This local character has no matching cloud revision for this account and project. Export it first, then restore the cloud copy before updating it.',
+    CHARACTER_CHANGED:'The local character changed in another tab during this operation. It was not replaced. Review the current local character and retry.',
     SIGN_IN_REQUIRED:'Sign in to your cloud account first.',
     INVALID_REVISION:'Invalid cloud version. Refresh and retry.'
   };
@@ -67,7 +69,8 @@
       throw new Error('Use an HTTPS Supabase project URL and a publishable/anon key. Never use a service-role key.');
     if(!window.supabase || !window.supabase.createClient)
       throw new Error('Supabase browser SDK could not load. Check your connection or content blocker.');
-    const endpoint=safeUrl(url),publishable=key.trim();
+    endpoint=safeUrl(url);
+    const publishable=key.trim();
     if(client&&client.auth&&client.auth.stopAutoRefresh)client.auth.stopAutoRefresh();
     client=window.supabase.createClient(endpoint,publishable,{
       auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,
@@ -194,13 +197,27 @@
   });
   $('#cloudSaveLocal').addEventListener('click',async()=>{
     if(busy||!owner)return;
-    const state=currentLocal();
+    const snapshot=local.snapshot();
+    const state=window.WBPersistence.parseStoredValue(snapshot);
     if(!state){announce('Save a character on the Character Sheet first.',true);return;}
+    const operationOwner=owner.id,operationEndpoint=endpoint,adapter=cloud;
+    const expected=window.WBCloudCharacters.expectedRevision(state,operationEndpoint,operationOwner);
     const row=listed.find(item=>item.character_id===state.id);
+    if(row&&expected===null){failure(new Error('CLOUD_BASE_REQUIRED'));return;}
+    if(row&&row.revision!==expected){failure(new Error('REVISION_CONFLICT'));return;}
     if(row&&!window.confirm('Update '+row.name+' in the cloud from this browser’s current local character? Your previous cloud revision will be replaced if no other device has changed it.'))return;
     setBusy(true);
     try{
-      await cloud.save(state,row?row.revision:null);
+      const upload=window.WBCloudCharacters.withReceipt(state,operationEndpoint,operationOwner,expected===null?1:expected+1);
+      const saved=await adapter.save(upload,expected,operationOwner);
+      const synced=window.WBCloudCharacters.withReceipt(state,operationEndpoint,operationOwner,saved.revision);
+      try { local.save(synced,snapshot); }
+      catch(error){
+        if(error.message!=='CHARACTER_CHANGED')throw error;
+        await reload();
+        announce('Cloud save succeeded, but another tab changed the local character. Its edits were preserved. Export them before restoring the cloud copy.',true);
+        return;
+      }
       await reload();
       announce('Character saved privately to cloud. Local saves remain separate.');
     }catch(error){failure(error);}
@@ -217,13 +234,18 @@
       if(!window.confirm('Restore '+meta.name+' from cloud? This replaces the locally saved character on this browser. Export your current character first if you want to keep a separate copy.'))return;
       setBusy(true);
       try{
+        const snapshot=local.snapshot();
+        const previous=window.WBPersistence.parseStoredValue(snapshot);
+        const operationOwner=owner.id,operationEndpoint=endpoint;
         const latest=await cloud.get(id);
         if(!latest)throw new Error('Character no longer exists. Refresh the list.');
         if(latest.revision!==meta.revision)throw new Error('REVISION_CONFLICT');
         window.WBCloudCharacters.ensureState(latest.document);
-        const previous=currentLocal();
+        if(!owner||owner.id!==operationOwner||endpoint!==operationEndpoint)throw new Error('SIGN_IN_REQUIRED');
+        if(local.snapshot()!==snapshot)throw new Error('CHARACTER_CHANGED');
         if(previous)window.localStorage.setItem(backupKey,JSON.stringify(previous));
-        local.save(latest.document);
+        const restored=window.WBCloudCharacters.withReceipt(latest.document,operationEndpoint,operationOwner,latest.revision);
+        local.save(restored,snapshot);
         updateLocal();
         announce('Cloud character restored on this device. Reopen or refresh the Character Sheet to use it. Undo last restore is available here.');
       }catch(error){failure(error);}finally{setBusy(false);updateLocal();}
@@ -240,11 +262,12 @@
   $('#cloudUndoRestore').addEventListener('click',()=>{
     if(!window.confirm('Replace this browser’s current local character with the previous restore backup?'))return;
     try{
+      const snapshot=local.snapshot();
       const backup=window.localStorage.getItem(backupKey);
       if(!backup)return;
       const state=JSON.parse(backup);
       window.WBCloudCharacters.ensureState(state);
-      local.save(state);
+      local.save(state,snapshot);
       window.localStorage.removeItem(backupKey);
       updateLocal();
       announce('Previous local character restored. Refresh the Character Sheet to see it.');

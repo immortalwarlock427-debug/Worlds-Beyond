@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=pathName=>fs.readFileSync(path.join(__dirname,'..',pathName),'utf8');
 const plain=obj=>JSON.parse(JSON.stringify(obj));
 function cloud(){
-  const ctx={window:{},URL,atob};
+  const ctx={window:{},URL,atob,TextEncoder};
   vm.runInNewContext(read('js/cloud-characters.js'),ctx);
   return ctx.window.WBCloudCharacters;
 }
@@ -141,8 +141,6 @@ test('cloud save page loads private adapter without changing sheet or DM scripts
  for(const file of ['index.html','dm.html','player.html'])
    assert.match(read(file),/href="cloud\.html"/);
  const controller=read('js/cloud.js');
- assert.match(controller,/local\.save\(latest\.document\)/);
- assert.match(controller,/cloud\.save\(state,row\?row\.revision:null\)/);
 });
 
 test('deployed site supplies safe public cloud defaults and retains advanced override',()=>{
@@ -166,4 +164,39 @@ test('deployed site supplies safe public cloud defaults and retains advanced ove
  assert.ok(controller.includes("saved.key===legacyBadKey"));
  assert.ok(controller.includes("!legacyTypo&&saved.url&&saved.key"));
  assert.doesNotMatch(read('js/cloud-config.js'),/sb_secret_|service_role/);
+});
+
+test('cloud revision receipts follow a character copy and are scoped to project/account',()=>{
+ const api=cloud();
+ const restored=api.withReceipt(hero,'https://project.supabase.co','owner',3);
+ assert.equal(api.expectedRevision(restored,'https://project.supabase.co','owner'),3);
+ assert.equal(api.expectedRevision(restored,'https://other.supabase.co','owner'),null);
+ assert.equal(api.expectedRevision(restored,'https://project.supabase.co','other'),null);
+ assert.equal(api.expectedRevision(hero,'https://project.supabase.co','owner'),null);
+ assert.equal(hero.cloudSync,undefined,'adding a receipt must not mutate its input');
+ const oldBackup=plain(restored);
+ const saved=api.withReceipt(restored,'https://project.supabase.co','owner',4);
+ assert.equal(saved.cloudSync.revision,4);
+ assert.equal(oldBackup.cloudSync.revision,3,'older backups must keep their older revision');
+ for(const revision of [0,-1,1.5,'3',null])
+   assert.equal(api.expectedRevision({...hero,cloudSync:{endpoint:'p',ownerId:'o',revision}},'p','o'),null);
+});
+
+test('cloud payload limits count UTF-8 bytes rather than UTF-16 code units',()=>{
+ const api=cloud();
+ const oversized={...hero,notes:'界'.repeat(1100000)};
+ assert.ok(JSON.stringify(oversized).length<api.MAX_JSON_BYTES);
+ assert.throws(()=>api.ensureState(oversized),/CHARACTER_TOO_LARGE/);
+ assert.equal(api.ensureState({...hero,notes:'界'.repeat(100)}).document.notes.length,100);
+});
+
+test('an account switch cannot reuse another account revision during a pending save',async()=>{
+ const api=cloud(),db=database('new-owner'),store=api.createAdapter(db.client);
+ await assert.rejects(()=>store.save(hero,3,'old-owner'),/SIGN_IN_REQUIRED/);
+ assert.equal(db.rows.size,0);
+});
+
+test('cloud SDK uses an exact version and cross-origin integrity verification',()=>{
+ const page=read('cloud.html');
+ assert.match(page,/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@\d+\.\d+\.\d+\/dist\/umd\/supabase\.js" integrity="sha384-[A-Za-z0-9+/]{64}" crossorigin="anonymous"><\/script>/);
 });
