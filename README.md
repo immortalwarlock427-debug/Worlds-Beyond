@@ -1,93 +1,54 @@
 # Worlds Beyond
 
-A character sheet, status effects view and battlemap for **Worlds Beyond**, a homebrew D&D combat framework built on 8 stats
-(STR, VIT, DEX, AGL, INT, WIS, CHA, FTH) and Action Points. It's growing into a lightweight, Foundry-style tool
-where a DM runs a game and players join with their characters.
+A customizable character sheet, status effects view and battlemap for **Worlds Beyond**, a homebrew D&D combat framework using STR, VIT, DEX, AGL, INT, WIS, CHA, FTH and Action Points. Rules live in Notion → D&D > Game Systems; this repository implements them.
 
-The rules live in Notion (D&D > Game Systems). This site follows them; when a rule changes, the site changes with it.
-The live site is at https://immortalwarlock427-debug.github.io/Worlds-Beyond/.
+The live site is https://immortalwarlock427-debug.github.io/Worlds-Beyond/.
 
-## What's here now
+## Run and test
 
-The Character Sheet uses Overview, Attributes, Equipment, Abilities and Status Effects tabs so players can switch without scrolling through the full sheet. Battlemap is a separate main destination. Character save files and game/map saves remain separate.
-
-- **Character sheet:** stats with milestones at 21 and 28, Health and Mana built level by level, death and dying,
-  AP, reactions, Wonder, movement, Command, defenses (Block, Dodge, Parry), a Diablo-style paper doll with a Forge,
-  weapon attacks, advancement, export and import of a character as a `.json` file.
-- **Battlemap:** 5 ft squares, moves that spend AP, sample maps (Stone Hall and the Barrow beneath it) with stairs,
-  fog of war with line of sight and light, step-by-step movement, and enemies you can place, target and attack.
-
-## Running it
-
-It's plain HTML, CSS and JavaScript with no build step. Open `index.html` in a browser, or serve the folder:
+The site is plain HTML, CSS and JavaScript with no build step. Serve this folder:
 
 ```
 python3 -m http.server 8000
 ```
 
-then go to http://localhost:8000. Everything saves in the browser (localStorage). Use **Export character** to move a
-character between browsers.
+Open `http://localhost:8000`. Characters and DM games save separately in this browser. Use **Export character** for a portable JSON backup; browser storage is not a backup and may be cleared by the browser or user. On iPhone, Safari → Share → Add to Home Screen can help keep the app accessible, but keep exports or cloud copies too. Home Screen and storage-retention behavior varies by browser and does not guarantee recovery.
 
-## Hosting (GitHub Pages)
+Run `npm install`, `npx playwright install chromium`, and `npm test`. The browser tests start their own local server. See [TESTING.md](docs/TESTING.md) for CI and test details.
 
-The site is served straight from the `main` branch. In the repository's settings, under Pages, set the source to
-deploy from the `main` branch, root folder. Every push updates the site within a minute or two. The `.nojekyll`
-file makes GitHub serve the files exactly as they are.
+## Character Sheet
 
-## Layout
+Overview, Attributes, Equipment, Abilities and Status Effects tabs provide editable stats, advancement, Health/Mana, AP, reactions, Wonder, defenses, equipment/Forge, custom resources, custom abilities and timed effects. Named forms can link portraits, select different worn gear and charge optional entry costs. Returning to Base is free. The separate Battlemap supports fog, light, terrain, targeting and AP-based movement.
 
-```
-index.html          the page: sheet and battlemap markup
-css/sheet.css       all the styles
-js/maps.js          the maps that come with the site: terrain, lighting, stairs
-js/app.js           the app: rules, sheet, battlemap
-maps/               map pictures (drawn by maptools/, no grid lines baked in)
-maptools/           Python scripts that draw the map pictures
-tools/              build_single.py makes a one-file version for the Claude artifact
-docs/               CONTEXT.md (rules and project context), ARCHITECTURE.md (code and saves), ROADMAP.md
-AGENTS.md           instructions for AI assistants (CLAUDE.md points to it)
-```
+If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
-See [docs/CONTEXT.md](docs/CONTEXT.md) for the rules and project context, [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-for how the data is stored and [docs/ROADMAP.md](docs/ROADMAP.md) for what's next.
+## Offline DM Room
 
-## Offline DM Room (Draft 32)
+Open `dm.html` or **Open DM Room** to import character JSON files as encounter snapshots, create NPCs, edit initiative and combat values, and run turns, damage, healing and stabilization. The tracker uses shared `WBCombat` rules and saves under the optional `game.encounter` field in the separate DM game record. Imported player files and the live character sheet are not rewritten.
 
-Open `dm.html` or select **Open DM Room** on the character sheet. This is a same-browser, **offline/local-only** combat tracker built for a DM:
+Choose Blank Grid, Stone Hall or Barrow, select an actor, and click to place its token. **DM placement (free)** is for setup/corrections. During combat, **Combat movement (AP)** previews a validated route; **Confirm move** pays movement/AP and animates the token. Party/Enemy sides affect occupancy, and rough terrain costs more distance. The current actor is selected automatically. Token positions are tied to a map and remain separate from legacy character Battlemap tokens.
 
-1. Import multiple exported character `.json` files using **Import selected files** (each becomes a compact encounter snapshot). Or create enemies/NPCs manually.
-2. Review each character's Health, maximum Health, Armor Rating, AP, Death Threshold and initiative. Edit any numbers before combat; enter the actual initiative **total** from a roll, not just its modifier.
-3. Select **Start encounter**. The current actor is highlighted. Use **Next turn**, per-actor AP spending, damage, healing, and stabilization controls. AP refresh and 4 Health bleeding at turn start follow `WBCombat` rules.
-4. The encounter saves automatically to the optional `game.encounter` field in `worlds-beyond-game-v1`; player `worlds-beyond-sheet-v1` data and JSON files are not overwritten. **New encounter** clears only the saved encounter after confirmation.
+Enter already-rolled initiative and damage; the DM Room does not roll attack dice or authenticate player ownership. Review import warnings for missing advancement or omitted temporary buffs. **Grant Command AP** keeps the highest grant, up to 5; it does not stack. After combat, **Reuse roster / Edit setup** preserves the roster and placement for the next fight; **New empty roster** clears only the encounter after confirmation.
 
-**Important limitations:** The tracker does not synchronize other devices or browser tabs, update the imported player character files, or move tokens on the existing battlemap. It does not automatically roll initiative or attack dice; enter already-rolled raw damage per hit (resistance then Armor Rating is applied automatically). Do not open the sheet and DM room simultaneously in different tabs for active editing: separate tabs may overwrite the game save. Imported advancement data may be incomplete; warnings tell you when to verify Health before combat. There is no account login or secure multiplayer authorization yet.
+## Player Preview
 
-## Tactical map in the DM Room (Draft 33)
+`player.html` displays an imported PC's map, turn, Health/AP and movement and submits validated movement, AP spending and End Turn. DM and player tabs must use the same browser profile and origin. Seat selection can switch between local PCs and is not authentication. Other phones do not receive these changes; live multiplayer remains a design task.
 
-The DM Room now contains a scrollable map with the same built-in artwork as the sheet Battlemap, or an empty grid. Choose a map and combatant, then click a square to place the token. Click a token to select it; choose **Remove selected token** to unplace. Player and NPC tokens are color-coded and the current actor is outlined in combat. Walls, occupied squares and out-of-bounds placements are rejected. Placements are saved with the local encounter and tagged by map ID; map switches do not teleport actors.
+## Cloud Saves
 
-The map selector updates the shared game map, but token placements are DM-only encounter snapshots. They do not change player AP, movement, or the legacy battlemap foe set. Until secure movement synchronization exists, use the DM Room for tactical tracking and the existing character Battlemap for each character's own movement. No fog-of-war or online multiplayer yet.
+`cloud.html` provides manual private character copies using Supabase Auth and owner-only database policies. The existing project uses a public publishable key in `js/cloud-config.js`; no service-role keys belong in the client. Advanced settings support another test project.
 
-## AP-based movement in the DM Room (Draft 34)
+Save, list, restore, delete and JSON backup are explicit actions. Each local copy remembers the cloud revision it last saved/restored, scoped to its project and account. A fresh list does not authorize overwriting a newer cloud revision. For a conflict or an older copy without a revision receipt, export local edits first, restore the newer cloud copy, then apply the edits you want to keep. Restoring keeps one undo backup in this browser. Cloud copies do not synchronize DM games or encounters. See [SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) for setup, limits and verification.
 
-After positioning characters and starting combat, the DM can select **Combat movement (AP)**. Choose the current actor, click an empty destination, review the highlighted shortest route (5 ft per normal square or 10 ft entering rubble, shallow water or bones), and press **Confirm move**. The shared combat engine pays leftover distance first, then free Surge movement if available, then Command/personal AP; the character's position and movement counters save with the encounter. You may change to **DM placement (free)** for setup or administrative corrections, which never consumes AP.
+## Hosting and repository layout
 
-Imported player Movement is calculated from the current exported sheet; NPC movement and Surge are editable in Setup. The DM Room is still a local snapshot and does not push position, health or AP changes to players' character sheets or their separate Battlemap. This is not online multiplayer. No real-time account security or cloud transaction authority has shipped.
+GitHub Pages serves `main` from the repository root (`.nojekyll` preserves static files). Netlify is configured for pull-request previews; production Netlify builds are skipped. Test a preview before approving a merge. Browser storage is separate for preview and production origins.
 
-### DM Room usability fixes (PR #25)
+- `index.html`, `dm.html`, `player.html`, `cloud.html`: application pages.
+- `js/`, `css/`: shared rules, persistence, controllers and styles.
+- `maps/`: committed sample art; `maptools/` contains optional Python renderers.
+- `tests/`, `e2e/`: Node contracts and real browser interaction checks.
+- `supabase/`: database configuration and migrations.
+- `tools/build_single.py`: optional Claude artifact, published only from merged `main`.
 
-Map selection uses **Blank Grid / Stone Hall / Barrow** buttons rather than a browser-native dropdown, which rendered blank in some Opera/dark themes. During active combat, Combat movement (AP) automatically selects the current initiative actor and provides errors beside the map. Combat movement is disabled after finishing a fight: choose **Reuse roster / Edit setup** to keep imported combatants, HP, initiative and encounter token positions, refresh AP/movement counters, and return to setup to add/edit actors before starting the next combat. **New empty roster** is the deliberately destructive alternative; it never changes player character files.
-
-### Natural movement routes and visual traversal
-
-When multiple paths cost the same movement distance, the DM map now prefers the route with fewer unnecessary diagonal steps and turns, so an unobstructed straight-line move stays straight. **Confirm move** still commits the validated route, coordinates, and AP once, but the token is drawn separately and travels smoothly through each square (170 ms per tile). Other actions and refreshes read the already saved destination, and the visual effect can be canceled without refunding or duplicating AP. The motion is suppressed when the browser requests reduced animations.
-
-## Local Player Preview (Draft 35)
-
-Open **Player Preview** from the character sheet or DM Room. On the same browser as a local DM encounter, choose an imported player character, then watch the shared map/turn order and your selected character's Health/AP/Movement. During your turn, click a reachable square to preview movement and confirm it, spend AP, or end your turn. The DM Room (open in another tab on this same website) will see these changes after its browser storage event. Player actions are validated by `WBEncounter`; no DM-only damage/healing/setup controls are exposed.
-
-**Not online multiplayer:** The selector can switch between any local PC and does not authenticate ownership. Imported `ownerId:offline` is a testing marker, not real user identity. The player and DM tabs must share the same browser profile and site origin. Other devices have separate browser storage and will not receive changes. No join codes, cloud saves, secure permissions or real-time network sessions are implemented yet. Character sheet saves remain separate.
-
-## Optional Cloud Character Saves (Draft 36)
-
-A new `cloud.html` page handles **manual private character copies** with Supabase Auth. See [Supabase setup](docs/SUPABASE_SETUP.md) for installation, SQL/RLS, public project keys and verification instructions. Use the Character Sheet as normal; Cloud Saves allows signing in, creating/listing private cloud records, uploading the current local character (with revision conflict protection), restoring a cloud copy with local undo backup, exporting a local JSON backup, and deleting a remote copy. The site is now preconfigured for the existing Supabase project via a public publishable key. Players open Cloud Saves and sign in without pasting project settings. The manual connection form remains available under Advanced for testing; no secret keys are committed. No automated cross-device sync, DM cloud storage or online multiplayer yet.
+Read [CONTEXT.md](docs/CONTEXT.md) for current behavior and rules, [ARCHITECTURE.md](docs/ARCHITECTURE.md) for module/save contracts, [ROADMAP.md](docs/ROADMAP.md) for the staged work, and [AGENTS.md](AGENTS.md) before making changes.

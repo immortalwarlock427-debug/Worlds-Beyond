@@ -1370,3 +1370,8 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .form-entry-costs .ability-effect-hint {grid-column:1/-1;margin:0;}
 .form-entry-costs input,.form-entry-costs select {width:100%;min-width:0;}
 @media(max-width:600px){.form-entry-costs {grid-template-columns:1fr;}}
+
+/* Keep restore/conflict recovery visible without relying on DM styles. */
+.character-conflict { border: 1px solid var(--blood); padding: 16px; border-radius: 5px; overflow-wrap: anywhere; }
+.character-conflict[hidden] { display: none; }
+.character-conflict p { margin: 0 0 10px; }
