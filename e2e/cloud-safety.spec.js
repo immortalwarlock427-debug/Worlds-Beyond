@@ -98,6 +98,7 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   await page.evaluate(()=>Object.assign(window.cloudTest.row.document.fields,{
     backstory:'Beyond the gate.\nA promise remains.',sessionNotes:'Cloud session notes 🗺️'
   }));
+  await page.evaluate(()=>{window.cloudTest.row.document.consumables=[{id:'conscloudpotion',name:'Cloud potion',quantity:3,healingDice:'5',description:'Cloud reminder',futureItem:{kept:true}}];});
   page.once('dialog',d=>d.accept());
   await page.locator('[data-cloud-action="restore"]').click();
   await expect(page.locator('#cloudFeedback')).toContainText('restored on this device');
@@ -123,6 +124,9 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   await sheet.locator('#sessionNotes').fill('Reviewed cloud session notes\nNext: the lighthouse.');
   await expect.poll(async()=>(await saved(sheet)).fields.charName).toBe('Reviewed level-up');
   await expect.poll(async()=>(await saved(sheet)).fields.sessionNotes).toBe('Reviewed cloud session notes\nNext: the lighthouse.');
+  await sheet.locator('[data-sheet-tab="equipment"]').click();
+  await sheet.locator('[data-consumable-id="conscloudpotion"] [data-consumable-action="use"]').click();
+  await sheet.locator('#toastClose').click();await expect.poll(async()=>(await saved(sheet)).consumables[0].quantity).toBe(2);
   page.once('dialog',d=>d.accept());
   await page.locator('#cloudSaveLocal').click();
   await expect(page.locator('#cloudFeedback')).toContainText('saved privately');
@@ -130,6 +134,7 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   expect(await page.evaluate(()=>window.cloudTest.row.document.fields.charName)).toBe('Reviewed level-up');
   expect(await page.evaluate(()=>window.cloudTest.row.document.fields.sessionNotes)).toBe('Reviewed cloud session notes\nNext: the lighthouse.');
   expect(await page.evaluate(()=>window.cloudTest.row.document.fields.backstory)).toBe('Beyond the gate.\nA promise remains.');
+  expect(await page.evaluate(()=>window.cloudTest.row.document.consumables[0])).toMatchObject({quantity:2,healingDice:'5',futureItem:{kept:true}});
 });
 
 test('malformed saved JSON cannot be overwritten by edits on a blank fallback sheet',async({page})=>{

@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-character-notes-v38">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-consumables-v39">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 48</p>
+    <p class="meta">Homebrew rules · Draft 49</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -562,6 +562,24 @@
       <h2 id="equipHead">Equipment</h2>
     </div>
     <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm, leg pieces either leg and rings either hand, unless the piece is a set, like boots, which fills both. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Gear counts toward a level-up's Health, Mana and hit die once you've worn it through a long rest, and never changes levels you already have.</p>
+    <div class="consumables-panel" id="consumablesPanel" aria-labelledby="consumablesHead">
+      <div class="consumables-heading"><h3 id="consumablesHead">Consumables</h3><button type="button" class="btn" id="consumableAdd">Add consumable</button></div>
+      <p class="note">Use tracks one item. Optional healing rolls can be applied to your Health from the roll popup; listed AP costs and other effects are handled at the table.</p>
+      <p id="consumableFeedback" class="consumable-feedback" role="status" aria-live="polite"></p>
+      <div id="consumableList" class="consumable-list"></div>
+      <form id="consumableForm" class="consumable-form" hidden>
+        <h4 id="consumableEditorTitle">Add consumable</h4>
+        <div class="consumable-form-grid">
+          <label><span>Name</span><input id="consumableName" type="text" required autocomplete="off" placeholder="e.g. Healing potion"></label>
+          <label id="consumableNewQuantity"><span>Quantity</span><input id="consumableQuantity" type="number" min="0" step="1" inputmode="numeric" value="1" required></label>
+          <label><span>Healing dice (optional)</span><input id="consumableHealing" type="text" autocomplete="off" placeholder="e.g. 2d6+2" aria-describedby="consumableHealingHelp"></label>
+        </div>
+        <p class="hint" id="consumableHealingHelp">Leave healing blank for a description-only item. Use complete dice and flat bonuses, such as 2d6+2 or 5.</p>
+        <p class="hint" id="consumableEditQuantityNote" hidden>Correct quantity in the list. Editing a description or healing roll keeps your current quantity.</p>
+        <label><span>Description / other effects</span><textarea id="consumableDescription" rows="3" placeholder="Effects, costs and reminders to resolve at the table."></textarea></label>
+        <div class="consumable-actions"><button type="submit" class="btn strong" id="consumableSave">Save consumable</button><button type="button" class="btn" id="consumableCancel">Cancel</button></div>
+      </form>
+    </div>
     <div class="equipment-profile-bar">
       <div><span class="foot-label">Worn equipment profile</span>
         <strong id="equipmentProfileName">Base</strong>
@@ -860,18 +878,19 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-character-notes-v38"></script>
-<script src="js/game-state.js?v=20261031-character-notes-v38"></script>
-<script src="js/maps.js?v=20261031-character-notes-v38"></script>
-<script src="js/routing.js?v=20261031-character-notes-v38"></script>
-<script src="js/combat-core.js?v=20261031-character-notes-v38"></script>
-<script src="js/equipment-profiles.js?v=20261031-character-notes-v38"></script>
-<script src="js/abilities.js?v=20261031-character-notes-v38"></script>
-<script src="js/character-core.js?v=20261031-character-notes-v38"></script>
-<script src="js/resources.js?v=20261031-character-notes-v38"></script>
-<script src="js/encounter-actions.js?v=20261031-character-notes-v38"></script>
-<script src="js/status.js?v=20261031-character-notes-v38"></script>
-<script src="js/sheet-layout.js?v=20261031-character-notes-v38"></script>
-<script src="js/app.js?v=20261031-character-notes-v38"></script>
+<script src="js/persistence.js?v=20261031-consumables-v39"></script>
+<script src="js/game-state.js?v=20261031-consumables-v39"></script>
+<script src="js/maps.js?v=20261031-consumables-v39"></script>
+<script src="js/routing.js?v=20261031-consumables-v39"></script>
+<script src="js/combat-core.js?v=20261031-consumables-v39"></script>
+<script src="js/equipment-profiles.js?v=20261031-consumables-v39"></script>
+<script src="js/abilities.js?v=20261031-consumables-v39"></script>
+<script src="js/character-core.js?v=20261031-consumables-v39"></script>
+<script src="js/resources.js?v=20261031-consumables-v39"></script>
+<script src="js/encounter-actions.js?v=20261031-consumables-v39"></script>
+<script src="js/status.js?v=20261031-consumables-v39"></script>
+<script src="js/consumables.js?v=20261031-consumables-v39"></script>
+<script src="js/sheet-layout.js?v=20261031-consumables-v39"></script>
+<script src="js/app.js?v=20261031-consumables-v39"></script>
 </body>
 </html>

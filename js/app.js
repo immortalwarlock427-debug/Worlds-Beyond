@@ -119,7 +119,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {}, equipmentOutsideSpent:{},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: [], consumables:[]
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -217,6 +217,7 @@
   normalizeState();
   // Checks and upgrades saved data (also used when a character file is imported).
   function normalizeState() {
+    if(state.consumables==null)state.consumables=[];
     window.WBResources.normalizeState(state);
     window.WBAbilities.normalizeState(state);
     window.WBStatus.normalizeState(state);
@@ -661,6 +662,7 @@
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
   const milestoneManager = window.WBAbilities.initMilestones(() => state,save,formEntryControls);
+  const consumableManager = window.WBConsumables.init(()=>state,save,{execute:formEntryControls.execute,onUse:rollConsumable});
   $('#combatToggle').addEventListener('click',()=>{
     const r=formEntryControls.execute({type:state.inCombat?'EndCombat':'StartCombat'});
     $('#combatFeedback').textContent=r.message;
@@ -1365,6 +1367,8 @@
         }
       }
     }
+    if(r.consumableHealing&&!r.consumableHealing.applied&&r.consumableHealing.amount>0)
+      acts.push(['consumable-heal','Apply '+r.consumableHealing.amount+' healing to me']);
     $('#toastActions').innerHTML = acts.map((a) => '<button type="button" class="btn' + (a[0] === 'wonder' || a[0] === 'defy' ? ' strong' : '') + '" data-act="' + a[0] + '">' + esc(a[1]) + '</button>').join('');
     toastEl.hidden = false;
     toastEl.classList.remove('pop-in');
@@ -1373,6 +1377,15 @@
   }
   // Every d20 follows the dice mode at the bottom of the screen: normal, advantage or disadvantage.
   const advMode = () => state.advMode || 'norm';
+  function rollConsumable(plan){
+    const note=['One item used. Apply any listed costs and other effects at the table.',plan.description].filter(Boolean).join(' ');
+    if(!plan.healing){showRoll({kind:'notice',title:plan.name,math:plan.description||'Used one item.',note:'Apply any listed costs and effects at the table.'});return;}
+    const parsed=plan.healing,rolled=parsed.count?rollDice(parsed.expression):0;
+    const total=Math.max(0,rolled+parsed.flat);
+    showRoll({kind:'consumable-healing',title:plan.name+' healing',total,
+      math:parsed.expression+' = '+(rolled+parsed.flat)+(total===0?' (minimum 0 healing)':''),note,
+      consumableHealing:{amount:total,characterId:state.id,applied:false}});
+  }
   function rollD20(mode) {
     const a = 1 + randInt(20);
     if (mode !== 'adv' && mode !== 'dis') return { d: a, txt: 'd20 (' + a + ')', mode: 'norm' };
@@ -1607,6 +1620,12 @@
       showRoll(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
     } else if (act === 'defy') {
       showRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
+    } else if (act === 'consumable-heal') {
+      const healing=r.consumableHealing;
+      if(!healing||healing.applied||healing.characterId!==state.id)return;
+      if(hpNow()==null){showRoll({...r,note:'Set your Health first, or enter VIT so it can be worked out. The item has already been used.'});return;}
+      healing.applied=true;
+      applyHeal(healing.amount);
     } else if (act === 'devastate-main' || act === 'devastate-off') {
       applyDevastate(r,act==='devastate-main'?'main':'off');
     } else if (act === 'ability-dmg' || act === 'ability-crit') {
@@ -4265,6 +4284,7 @@
     });
   }
   function refreshAll() {
+    consumableManager.render();
     log = computeLog();
     $('#sheetCharacterName').textContent = String(state.fields.charName || '').trim() || 'Worlds Beyond';
     $('#combatState').textContent=state.inCombat?'In combat':'Out of combat';
@@ -4464,6 +4484,8 @@
   const footBtns = $('#footBtns');
   const importConfirm = $('#importConfirm');
   function resetSession() {
+    consumableManager.reset();
+    lastRoll=null;
     selected = null;
     flash = '';
     spending = false;
