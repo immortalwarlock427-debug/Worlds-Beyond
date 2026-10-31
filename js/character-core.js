@@ -478,7 +478,7 @@
    }
    const singularityHand=command.singularityHand||'';
    if(singularityHand){
-     if(!['main','off','strapped'].includes(singularityHand)||!plan.dual&&singularityHand!==command.slot)
+     if(!['main','off','strapped','lstrapped'].includes(singularityHand)||!plan.dual&&singularityHand!==command.slot||plan.dual&&!['main','off'].includes(singularityHand))
        return {ok:false,error:'INVALID_SINGULARITY_HAND',message:'Choose one hand making this weapon attack.'};
      const used=applyMilestone({...state,...patch},{type:'UseMilestone',milestoneId:'singularity'});
      if(!used.ok)return used;
@@ -631,9 +631,9 @@
      if(!item||!['onehand','twohand'].includes(item.type))return {ok:false,error:'WEAPON_NOT_FOUND',message:'Choose a weapon.'};
      const rules=window.WBCombat.weaponRules(state,item),cost=(Array.isArray(item.signatures)?item.signatures:[]).includes('Quickdraw')?0:window.WBCombat.abilityApCost(2,window.WBCombat.currentModifier(state,'DEX'));
      const paid=applyPools(state,{type:'SpendAP',amount:cost});if(!paid.ok)return {...paid,message:'Drawing/swapping costs '+cost+' AP.'};
-     const slot=rules.props.includes('Strapped')?'strapped':rules.twoHanded?'main':command.slot==='off'?'off':'main';
+     const slot=rules.props.includes('Strapped')?(['off','lstrapped'].includes(command.slot)?'lstrapped':'strapped'):rules.twoHanded?'main':command.slot==='off'?'off':'main';
      const equip={...record(state.equip)};for(const key of Object.keys(equip))if(equip[key]===item.id)delete equip[key];
-     equip[slot]=item.id;if(rules.twoHanded)delete equip.off;
+     equip[slot]=item.id;if(slot==='main'&&rules.twoHanded)delete equip.off;
      if(slot==='off'){const main=(state.items||[]).find(it=>it.id===equip.main);if(main&&window.WBCombat.weaponRules(state,main).twoHanded)delete equip.main;}
      const patch={...paid.patch,equip,equipmentProfiles:copy(state.equipmentProfiles||{})},next={...state,...patch};
      window.WBEquipment.capture(next);patch.equipmentProfiles=next.equipmentProfiles;

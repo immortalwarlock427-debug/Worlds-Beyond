@@ -4,12 +4,12 @@
 (function () {
   'use strict';
   const BASE = 'base';
-  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','pants'];
+  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','lstrapped','pants'];
   const FIT = {
     head: ['head'], amulet: ['amulet'], torso: ['torso'],
     rarm: ['arms'], larm: ['arms'], rring: ['ring'], lring: ['ring'],
     belt: ['belt'], rleg: ['legs'], lleg: ['legs'],
-    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],pants:['pants']
+    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],lstrapped:['onehand'],pants:['pants']
   };
   const PAIRS = {arms: ['rarm','larm'], ring: ['rring','lring'], legs: ['rleg','lleg']};
   const twoHanded=(state,item)=>window.WBCombat&&window.WBCombat.weaponRules?window.WBCombat.weaponRules(state,item).twoHanded:item.type==='twohand';

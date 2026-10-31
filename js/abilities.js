@@ -232,9 +232,9 @@
       hits:[...effects.filter(e=>e.k==='onhit').map(e=>String(e.text||'')),...(Array.isArray(weapon.signatures)?weapon.signatures:[]).map(x=>x+': '+(window.WBRulesCatalog?.signatures?.[x]||'resolve its property at the table.')) ]};
   }
   function weaponAttackPlan(state,slot) {
-    if(!['main','off','dual','strapped'].includes(slot))return {ok:false,message:'Choose a weapon in hand or strapped attachment.'};
+    if(!['main','off','dual','strapped','lstrapped'].includes(slot))return {ok:false,message:'Choose a weapon in hand or strapped attachment.'};
     const equip=state.equip||{},main=weaponSource(state,equip.main),off=weaponSource(state,equip.off);
-    const source=slot==='off'?off:slot==='strapped'?weaponSource(state,equip.strapped):main;
+    const source=slot==='off'?off:['strapped','lstrapped'].includes(slot)?weaponSource(state,equip[slot]):main;
     if(!source||slot==='off'&&main&&main.twoHanded||slot==='dual'&&(!off||!main.light||!off.light||main.twoHanded||off.twoHanded||main.weaponId===off.weaponId))
       return {ok:false,message:'Dual attacks require a Light weapon in each hand. Other weapons can attack separately.'};
     if(!window.WBCombat.parseDamageDice(source.dice)||slot==='dual'&&!window.WBCombat.parseDamageDice(off.dice))return {ok:false,message:'Check the weapon damage dice before attacking.'};

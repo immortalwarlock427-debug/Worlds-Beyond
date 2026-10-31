@@ -27,8 +27,8 @@ test('removing Health gear can down a character without spending Mercy or prompt
  await tab(page,'overview');await expect(page.locator('#dyingTitle')).toHaveText('Dying');expect(await page.evaluate(key=>localStorage.getItem(key),game)).toBe(before);
 });
 test('current equipment presets include armor, prices, Light properties and the strapped crossbow',async({page})=>{
- await seed(page);await tab(page,'equipment');await expect(page.locator('#catalogPreset option')).toHaveCount(71);
- const value=await page.locator('#catalogPreset option').filter({hasText:'Hand Crossbow'}).getAttribute('value');await page.locator('#catalogPreset').selectOption(value);await page.locator('#catalogAdd').click();
+ await seed(page);await tab(page,'equipment');await page.locator('[data-category="ranged"]').click();await expect(page.locator('#catalogPreset option')).toHaveCount(13);
+ const value=await page.locator('#catalogPreset option').filter({hasText:'Hand Crossbow'}).getAttribute('value');await page.locator('#catalogPreset').selectOption(value);await page.locator('#forgeSubmit').click();
  await expect.poll(async()=>(await saved(page)).items.length).toBe(1);const item=(await saved(page)).items[0];expect(item.price).toBe('35 gc');expect(item.properties).toContain('Strapped');expect(item.loadingCapacity).toBe(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
 });
@@ -66,7 +66,7 @@ test('explicit Draw and Drink buttons commit discounted AP with gear or quantity
  await page.locator('#toastActions [data-act="consumable-heal"]').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('9');expect((await saved(page)).apAvail).toBe(11);
 });
 test('Forge uses editable numeric multipliers without a material taxonomy',async({page})=>{
- await seed(page);await tab(page,'equipment');await page.locator('#forgeType [data-type="onehand"]').click();await page.locator('#forgeName').fill('Custom blade');await page.locator('#forgeDmg').fill('1d6');
+ await seed(page);await tab(page,'equipment');await page.locator('[data-category="melee"]').click();await page.locator('#forgeType [data-type="onehand"]').click();await page.locator('#forgeName').fill('Custom blade');await page.locator('#forgeDmg').fill('1d6');
  await page.locator('.rule-editor > summary').click();await expect(page.locator('#forgeMetal')).toHaveCount(0);await page.locator('#forgeDamageMultiplier').fill('1.5');await page.locator('#forgeSubmit').click();
  await expect.poll(async()=>(await saved(page)).items.length).toBe(1);const item=(await saved(page)).items[0];expect(item.diceMultiplier).toBe(1.5);expect(item.metal).toBeUndefined();
  await page.locator('[data-draw-weapon="'+item.id+'"][data-hand="main"]').click();await page.locator('#toastClose').click();await page.locator('#attacks .atk-dmg[data-slot="main"]').click();await expect(page.locator('#toastTotal')).toHaveText('14');

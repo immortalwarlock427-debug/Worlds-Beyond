@@ -8,7 +8,7 @@
   const STATS = ['STR','VIT','DEX','AGL','INT','WIS','CHA','FTH'];
   const ASI_LEVELS = [4,8,12,16,19];
   const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring',
-    'belt','rleg','lleg','main','off','strapped','pants'];
+    'belt','rleg','lleg','main','off','strapped','lstrapped','pants'];
   const record = obj => obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
   const isSet = v => v != null && String(v).trim() !== '';
   const num = v => {

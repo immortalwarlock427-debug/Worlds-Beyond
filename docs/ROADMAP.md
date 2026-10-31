@@ -25,7 +25,7 @@ Delivery sequence:
 - Implemented: a free dice box and the newest 20 timestamped roll results, saved with the character; history details cannot replay costs or effects.
 - Implemented: shared Health damage/healing/correction, stability, Trauma and treatment commands with existing recovery/death rules, source-derived values and read-only rendering.
 - Implemented: atomic turn/long-rest orchestration with existing timing, source-derived maxima and scoped rest Undo.
-- Implemented: shared manual runtime tracker corrections, effect ending, current-stat rules/save migration, weapon properties, armor classes, scaled dice, condition presets, table equipment, inventory and explicit recovery/item actions.
+- Implemented: shared manual runtime tracker corrections, effect ending, current-stat rules/save migration, weapon properties, armor classes, scaled dice, condition presets, four categorized equipment-base lists with editable defaults and relevant Forge fields, left/right strapped attachments, inventory and explicit recovery/item actions.
 - Next: real-phone rules playtesting and broader transaction Undo. Currency, Temporary Health, innate defenses, exhaustion require any missing setting/rule decisions first. AP growth is now confirmed in CONTEXT.
 
 Keep each stage in a separate reviewable PR; do not implement unapproved mechanics or automatic multiplayer as part of the sheet work.

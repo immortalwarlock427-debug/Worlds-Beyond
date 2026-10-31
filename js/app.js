@@ -28,7 +28,8 @@
     { k: 'lleg',   n: 'Left Leg',   fits: 'legs' },
     { k: 'main',   n: 'Main Hand',  fits: 'onehand twohand' },
     { k: 'off',    n: 'Off Hand',   fits: 'onehand shield' },
-    { k: 'strapped', n:'Strapped attachment',fits:'onehand' },
+    { k: 'strapped', n:'Right strapped',fits:'onehand' },
+    { k: 'lstrapped', n:'Left strapped',fits:'onehand' },
     { k:'pants',n:'Pants',fits:'pants' }
   ];
   const ORDER = SLOTS.map((s) => s.k);
@@ -160,7 +161,7 @@
   const singularitySelections={};
   function singularityChoice(slot) {
     const selected=singularitySelections[slot];
-    const ids=[state.equip.main||'',state.equip.off||''].join('|');
+    const ids=['main','off','strapped','lstrapped'].map(key=>state.equip[key]||'').join('|');
     if(selected&&selected.ids!==ids){delete singularitySelections[slot];return '';}
     return selected?selected.hand:'';
   }
@@ -1904,10 +1905,10 @@
   function equip(id, slot) {
     const it = itemById(id);
     if (!it) return;
-    if(window.WBCombat.weaponProperties(it).includes('Strapped'))slot='strapped';
+    if(window.WBCombat.weaponProperties(it).includes('Strapped'))slot=['off','lstrapped'].includes(slot)?'lstrapped':'strapped';
     else if (it.type === 'twohand') slot = 'main';
     if (isPair(it)) slot = PAIRS[it.type].a;
-    if (!fits(it.type, slot)) return;
+    if (!fits(it.type, slot)||['strapped','lstrapped'].includes(slot)&&!window.WBCombat.weaponProperties(it).includes('Strapped')) return;
     const from = slotOf(id);
     const prev = state.equip[slot];
     if (from) delete state.equip[from];
@@ -1918,7 +1919,7 @@
       if (p && fits(p.type, from) && !isPair(p)) state.equip[from] = prev;
     }
     // A two-handed weapon needs both hands; a weapon in the off hand puts a two-handed one away.
-    if (window.WBCombat.weaponRules(state,it).twoHanded) toPack('off');
+    if (slot==='main'&&window.WBCombat.weaponRules(state,it).twoHanded) toPack('off');
     if (slot === 'off') { const m = itemById(state.equip.main); if (m && m.type === 'twohand') toPack('main'); }
     // A set fills both slots; a single piece in a set's second slot puts the set away.
     if (isPair(it)) toPack(PAIRS[it.type].b);
@@ -2006,6 +2007,13 @@
       (ab.length ? '<span class="card-abils">' + chips + '</span>' : '') +
       '</div>';
   }
+  function drawButtonsHTML(item){
+    if(!TYPES[item.type].weapon)return '';
+    const rules=window.WBCombat.weaponRules(state,item),strapped=rules.props.includes('Strapped');
+    return '<div class="atk-btns"><button type="button" class="btn" data-draw-weapon="'+esc(item.id)+'" data-hand="main">'+
+      (strapped?'Attach right':'Draw/swap')+' (DEX-discounted 2 AP; Quickdraw free)</button>'+
+      (rules.twoHanded&&!strapped?'':'<button type="button" class="btn" data-draw-weapon="'+esc(item.id)+'" data-hand="off">'+(strapped?'Attach left':'Draw off hand')+'</button>')+'</div>';
+  }
   function renderEquip() {
     renderEquipmentProfile();
     SLOTS.forEach((s) => {
@@ -2059,7 +2067,7 @@
 
     const loose = state.items.filter((it) => !slotOf(it.id));
     packEl.innerHTML = loose.length
-      ? loose.map((it)=>cardHTML(it,false)+(TYPES[it.type].weapon?'<div class="atk-btns"><button type="button" class="btn" data-draw-weapon="'+esc(it.id)+'" data-hand="main">Draw/swap (DEX-discounted 2 AP; Quickdraw free)</button><button type="button" class="btn" data-draw-weapon="'+esc(it.id)+'" data-hand="off">Draw off hand</button></div>':'')).join('')
+      ? loose.map(it=>cardHTML(it,false)+drawButtonsHTML(it)).join('')
       : '<p class="pack-empty">' + (state.items.length ? "You're wearing everything you own." : 'Your pack is empty. Forge a piece to fill it.') + '</p>';
     $('#packCount').textContent = loose.length === 1 ? '1 piece' : loose.length + ' pieces';
     // Attacks with what's in your hands. With a weapon in each hand you can attack with either, at full damage,
@@ -2067,7 +2075,8 @@
     const mainW = itemById(state.equip.main);
     const offW = itemById(state.equip.off);
     const dual = dualReady();
-    const held = [];const strapped=itemById(state.equip.strapped);if(strapped)held.push(['strapped',strapped]);
+    $('#mountApproach').closest('label').hidden=!wornItems().some(item=>TYPES[item.type].weapon&&window.WBCombat.weaponProperties(item).includes('Mount'));
+    const held = [];for(const slot of ['strapped','lstrapped']){const item=itemById(state.equip[slot]);if(item)held.push([slot,item]);}
     if (mainW && TYPES[mainW.type].weapon) held.push(['main', mainW]);
     if (offW && TYPES[offW.type].weapon && !(mainW && window.WBCombat.weaponRules(state,mainW).twoHanded)) held.push(['off', offW]);
     const extraOf = (fx) => fx.filter((e) => e.k === 'dmg').map((e) => ' + ' + e.dice + (e.dt ? ' ' + e.dt : '')).join('');
@@ -2086,7 +2095,7 @@
       const fx = effectsFor(w);
       const hits = fx.filter((e) => e.k === 'onhit').map((e) => e.text);
       return '<div class="atk">' +
-        '<div class="atk-top"><span class="atk-name">' + (slot==='strapped'?'Strapped: ':dual?(slot==='main'?'Main hand: ':'Off hand: '):'') + esc(w.name) + '</span><span class="atk-ap">' + apCost(m) + ' AP</span></div>' +
+        '<div class="atk-top"><span class="atk-name">' + (['strapped','lstrapped'].includes(slot)?SLOT_BY[slot].n+': ':dual?(slot==='main'?'Main hand: ':'Off hand: '):'') + esc(w.name) + '</span><span class="atk-ap">' + apCost(m) + ' AP</span></div>' +
         '<div class="atk-line">Attack ' + fmt(atkMod(w)) + ' · Damage ' + esc(source.dice) + modText(source.damageModifier + sumEff(fx, 'flat')) + esc(extraOf(fx)) + ' · ' + source.stat + ' · Range ' + rangeOf(w) + ' ft</div>' +
         (hits.length ? '<div class="atk-eff">On hit: ' + esc(hits.join(', ')) + '</div>' : '') +
         singularitySelect(slot)+'<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="' + slot + '">Attack</button><button type="button" class="btn atk-dmg" data-slot="' + slot + '">Damage</button>' + oppBtn(slot) + '</div>' +
@@ -2119,7 +2128,7 @@
     const use=event.target.closest('[data-weapon-use]');if(use){const item=itemById(use.dataset.weaponUse);if(item)item.attackMode=use.value;refreshAll();save();return;}
     const mode=event.target.closest('[data-weapon-mode]');if(mode){state.weaponRollModes={...state.weaponRollModes,[mode.dataset.weaponMode]:mode.value};save();return;}
     const select=event.target.closest('[data-singularity-slot]');if(!select)return;
-    singularitySelections[select.dataset.singularitySlot]={hand:select.value,ids:[state.equip.main||'',state.equip.off||''].join('|')};
+    singularitySelections[select.dataset.singularitySlot]={hand:select.value,ids:['main','off','strapped','lstrapped'].map(key=>state.equip[key]||'').join('|')};
     renderMap();
   });
 
@@ -2130,11 +2139,82 @@
   const forgeEl = $('#forge');
   const abilRows = $('#abilRows');
   const MAX_ABILS = 4;
-  $('#catalogPreset').innerHTML='<option value="">Choose an equipment preset</option>'+window.WBRulesCatalog.equipment.map((item,index)=>'<option value="'+index+'">'+esc(item.name+' · '+item.price)+'</option>').join('');
-  $('#catalogAdd').addEventListener('click',()=>{const selected=$('#catalogPreset').value;if(selected==='')return;const preset=window.WBRulesCatalog.equipment[Number(selected)];if(!preset)return;state.items.push({...JSON.parse(JSON.stringify(preset)),id:newId()});refreshAll();save();});
   let forgeType = 'head';
   let editingId = null;
   let abilSeq = 0;
+  let forgeCategory='armor',baseEquipment='';
+  const armorTypes=['head','torso','arms','legs','pants'];
+  const forgeNumbers=[['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],
+    ['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],
+    ['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']];
+  const catalogCategory=item=>TYPES[item.type]?.weapon?((item.properties||[]).includes('Ranged')?'ranged':'melee'):item.type==='shield'?'shield':'armor';
+  function renderCatalog(){
+    $('#catalogCategory').querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.category===forgeCategory)));
+    $('#catalogPreset').innerHTML='<option value="">Custom item — no table base</option>'+window.WBRulesCatalog.equipment.flatMap((item,index)=>
+      catalogCategory(item)===forgeCategory?['<option value="'+index+'">'+esc(item.name+' · '+item.price)+'</option>']:[]).join('');
+    const index=window.WBRulesCatalog.equipment.findIndex(item=>item.name===baseEquipment&&catalogCategory(item)===forgeCategory);
+    $('#catalogPreset').value=index<0?'':String(index);$('#catalogAdd').disabled=index<0;
+  }
+  function syncForgeFields(){
+    const weapon=!!TYPES[forgeType].weapon,armor=armorTypes.includes(forgeType),shield=forgeType==='shield';
+    const has=property=>!!document.querySelector('[data-weapon-property="'+property+'"]:checked');
+    const field=(id,visible)=>{const input=$('#'+id);input.closest('label,.field').hidden=!visible;input.disabled=!visible;};
+    $('#weaponRow').hidden=!weapon;$('#shieldRow').hidden=!shield;
+    $('#weaponRow').querySelectorAll('input').forEach(input=>input.disabled=!weapon);
+    $('#shieldRow').querySelectorAll('input').forEach(input=>input.disabled=!shield);
+    $('#forgeTypeLabel').textContent=weapon?'Hands':'Wear location';$('#forgeTypeField').hidden=shield;
+    $('#forgeType').querySelectorAll('button').forEach(button=>button.hidden=weapon?!TYPES[button.dataset.type].weapon:button.dataset.type==='shield'||!!TYPES[button.dataset.type].weapon);
+    $('#forgeRulesSummary').textContent=weapon?'Weapon properties':shield?'Shield settings':armor?'Armor settings':'Item settings';
+    for(const id of ['forgeFamily','forgeDamageMultiplier','forgeDamageType'])field(id,weapon);
+    for(const id of ['forgeThrownRange','forgeThrownLongRange'])field(id,weapon&&has('Thrown'));
+    for(const id of ['forgeGrip','forgeVersatile'])field(id,weapon&&has('Versatile'));
+    field('forgeLongRange',weapon&&has('Ranged'));field('forgeLoading',weapon&&has('Loading'));field('forgeMounted',weapon&&has('Mount'));
+    field('forgeWeight',armor);field('forgeLightEv',armor&&$('#forgeWeight').value==='light');field('forgeBlockMultiplier',shield);
+    field('forgeCustomArmor',!armor&&!shield);field('forgeAr',armor||shield||$('#forgeCustomArmor').checked);
+    field('forgeBackpack',$('#forgeBackpackEnabled').checked);field('forgeAmmo',$('#forgeAmmoEnabled').checked);
+    $('#forgeProperties').hidden=!weapon;$('#forgeProperties').disabled=!weapon;
+    $('#forgeSignatures').hidden=!weapon&&!shield;$('#forgeSignatures').disabled=!weapon&&!shield;
+    $('#forgeSignatures').querySelectorAll('label').forEach(label=>{
+      const input=label.querySelector('input'),visible=weapon||shield&&['Bulwark','Quickdraw'].includes(input.dataset.signature);
+      label.hidden=!visible;input.disabled=!visible;
+    });
+    $('#forgePropertyNote').hidden=!weapon;
+  }
+  function fillForgeMechanics(item){
+    $('#forgePrice').value=item.price||'';$('#forgeDamageType').value=item.damageType||'';
+    const props=window.WBCombat.weaponProperties(item);$('#forgeFamily').value=['Paragon','Heavy','Finesse','Balanced'].find(p=>props.includes(p))||'Balanced';
+    document.querySelectorAll('[data-weapon-property]').forEach(input=>input.checked=props.includes(input.dataset.weaponProperty));
+    document.querySelectorAll('[data-signature]').forEach(input=>input.checked=(item.signatures||[]).includes(input.dataset.signature));
+    for(const [id,key] of forgeNumbers)$('#'+id).value=item[key]??'';
+    $('#forgeVersatile').value=item.versatileDice||'';$('#forgeWeight').value=item.armorWeight||'';
+    $('#forgeGrip').checked=!!item.twoHandedGrip;$('#forgeMounted').checked=!!item.mounted;
+    $('#forgeBackpackEnabled').checked=item.backpackBonus!=null;$('#forgeAmmoEnabled').checked=item.ammoQuantity!=null;
+    $('#forgeCustomArmor').checked=!armorTypes.includes(item.type)&&item.type!=='shield'&&!!item.ar;
+    $('#forgeAr').value=String(item.ar||0);$('#forgeDmg').value=item.dmg||'';$('#forgeRange').value=item.range??'';
+    $('#forgeBlock').value=item.block||'';$('#forgeSet').checked=isPair(item);setForgeStat(item.stat);setForgeType(item.type);
+  }
+  function loadForgeBase(){
+    const value=$('#catalogPreset').value;if(value==='')return;
+    const item=window.WBRulesCatalog.equipment[Number(value)];if(!item)return;
+    const name=$('#forgeName');if(!name.value.trim()||name.value.trim()===baseEquipment)name.value=item.name;
+    baseEquipment=item.name;fillForgeMechanics(item);$('#catalogAdd').disabled=false;
+    $('#catalogNote').textContent=item.name+' base stats loaded. Edit any value, then '+(editingId?'save changes.':'add it to your pack.');
+  }
+  $('#catalogPreset').addEventListener('change',()=>{
+    if($('#catalogPreset').value===''){baseEquipment='';$('#catalogAdd').disabled=true;$('#catalogNote').textContent='Custom item: your current draft values remain editable.';}
+    else loadForgeBase();
+  });
+  $('#catalogAdd').addEventListener('click',loadForgeBase);
+  $('#catalogCategory').addEventListener('click',event=>{
+    const button=event.target.closest('[data-category]');if(!button||button.dataset.category===forgeCategory)return;
+    if($('#forgeName').value.trim()===baseEquipment)$('#forgeName').value='';
+    forgeCategory=button.dataset.category;baseEquipment='';renderCatalog();
+    const weapon=['melee','ranged'].includes(forgeCategory);
+    document.querySelector('[data-weapon-property="Ranged"]').checked=forgeCategory==='ranged';
+    setForgeType(weapon?(TYPES[forgeType].weapon?forgeType:'onehand'):forgeCategory==='shield'?'shield':TYPES[forgeType].weapon||forgeType==='shield'?'head':forgeType);
+    $('#catalogNote').textContent='Choose a base item to fill its table stats, or keep editing this custom item.';
+  });
+  forgeEl.addEventListener('change',syncForgeFields);
   function setForgeType(t) {
     forgeType = TYPES[t] ? t : 'head';
     $('#forgeType').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.type === forgeType)));
@@ -2143,6 +2223,7 @@
     $('#shieldRow').hidden = forgeType !== 'shield';
     $('#setRow').hidden = !PAIRS[forgeType];
     if (PAIRS[forgeType]) $('#setLab').textContent = 'Set: worn on ' + PAIRS[forgeType].on;
+    syncForgeFields();
   }
   let forgeStat = 'STR';
   function setForgeStat(st) {
@@ -2286,10 +2367,13 @@
     effParams(row, sel.value, readEff(row));
   });
   function resetForge() {
-    editingId = null;
-    for(const id of ['forgeDamageMultiplier','forgeThrownRange','forgeThrownLongRange','forgePrice','forgeVersatile','forgeLongRange','forgeLoading','forgeLightEv','forgeBlockMultiplier','forgeSlots','forgeBackpack','forgeAmmo'])$('#'+id).value='';
+    editingId = null;baseEquipment='';renderCatalog();
+    $('#catalogNote').textContent='Choose a table item to fill its base stats, then edit any value. Custom items start without a preset.';
+    for(const id of ['forgeDamageType','forgeDamageMultiplier','forgeThrownRange','forgeThrownLongRange','forgePrice','forgeVersatile','forgeLongRange','forgeLoading','forgeLightEv','forgeBlockMultiplier','forgeSlots','forgeBackpack','forgeAmmo'])$('#'+id).value='';
     $('#forgeFamily').value='Balanced';$('#forgeWeight').value='';$('#forgeGrip').checked=false;$('#forgeMounted').checked=false;
     document.querySelectorAll('[data-weapon-property],[data-signature]').forEach(input=>input.checked=false);
+    document.querySelector('[data-weapon-property="Ranged"]').checked=forgeCategory==='ranged';
+    for(const id of ['forgeCustomArmor','forgeBackpackEnabled','forgeAmmoEnabled'])$('#'+id).checked=false;
     $('#forgeName').value = '';
     $('#forgeAr').value = '';
     $('#forgeDmg').value = '';
@@ -2307,7 +2391,7 @@
     $('#forgeSubmit').textContent = 'Add to pack';
     $('#forgeCancel').hidden = true;
     $('#forgeError').hidden = true;
-    forgeEl.classList.remove('editing');
+    forgeEl.classList.remove('editing');syncForgeFields();
   }
   function startEdit(id) {
     const it = itemById(id);
@@ -2315,17 +2399,9 @@
     resetForge();
     editingId = id;
     $('#forgeName').value = it.name;
-    $('#forgePrice').value=it.price||'';
-    const props=window.WBCombat.weaponProperties(it);$('#forgeFamily').value=['Paragon','Heavy','Finesse','Balanced'].find(p=>props.includes(p))||'Balanced';
-    document.querySelectorAll('[data-weapon-property]').forEach(input=>input.checked=props.includes(input.dataset.weaponProperty));
-    document.querySelectorAll('[data-signature]').forEach(input=>input.checked=(it.signatures||[]).includes(input.dataset.signature));
-    for(const [id,key] of [['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeVersatile','versatileDice'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']])$('#'+id).value=it[key]??'';
-    $('#forgeWeight').value=it.armorWeight||'';$('#forgeGrip').checked=!!it.twoHandedGrip;$('#forgeMounted').checked=!!it.mounted;
-    $('#forgeAr').value = String(it.ar);
-    setForgeType(it.type);
-    if (TYPES[it.type].weapon) { $('#forgeDmg').value = it.dmg || ''; $('#forgeRange').value = it.range ? String(it.range) : ''; setForgeStat(it.stat); }
-    if (it.type === 'shield') $('#forgeBlock').value = it.block || '';
-    $('#forgeSet').checked = isPair(it);
+    baseEquipment=typeof it.baseEquipment==='string'?it.baseEquipment:'';
+    forgeCategory=catalogCategory(window.WBRulesCatalog.equipment.find(item=>item.name===baseEquipment)||it);renderCatalog();
+    fillForgeMechanics(it);
     (it.abilities || []).forEach((a,index) => addAbilRow(a, false,index));
     (it.bonuses || []).forEach((b) => addBonusRow(b, false));
     (it.effects || []).forEach((e) => addEffRow(e, false));
@@ -2348,13 +2424,14 @@
     syncAbilButton();
     $('#addAbil').focus();
   });
+  renderCatalog();syncForgeFields();
   $('#forgeCancel').addEventListener('click', () => { resetForge(); refreshAll(); });
   forgeEl.addEventListener('submit', (e) => {
     e.preventDefault();
     const nameEl = $('#forgeName');
     const arEl = $('#forgeAr');
     const errEl = $('#forgeError');
-    const arRaw = arEl.value.trim();
+    const arRaw = arEl.disabled?'':arEl.value.trim();
     const ar = num(arRaw);
     if (arRaw !== '' && (isNaN(ar) || !isFinite(ar))) {
       errEl.textContent = 'Armor needs to be a whole number, like 2.';
@@ -2426,17 +2503,21 @@
     const data = { name, type: forgeType, ar: arRaw === '' ? 0 : Math.round(ar), abilities, bonuses, effects };
     if (isW) { data.dmg = dmg; data.stat = forgeStat; }
     data.price=$('#forgePrice').value.trim();
-    data.properties=[$('#forgeFamily').value,...Array.from(document.querySelectorAll('[data-weapon-property]:checked'),i=>i.dataset.weaponProperty)];
-    data.signatures=Array.from(document.querySelectorAll('[data-signature]:checked'),i=>i.dataset.signature);
-    data.versatileDice=$('#forgeVersatile').value.trim();
+    data.baseEquipment=baseEquipment||undefined;
+    data.damageType=isW?$('#forgeDamageType').value.trim():undefined;
+    data.properties=isW?[$('#forgeFamily').value,...Array.from(document.querySelectorAll('[data-weapon-property]:checked'),i=>i.dataset.weaponProperty)]:undefined;
+    data.signatures=Array.from(document.querySelectorAll('[data-signature]:checked:not(:disabled)'),i=>i.dataset.signature);
+    data.versatileDice=$('#forgeVersatile').disabled?undefined:$('#forgeVersatile').value.trim();
     if(data.versatileDice&&!window.WBCombat.parseDamageDice(data.versatileDice)){errEl.textContent='Check the Versatile damage dice.';errEl.hidden=false;return;}
-    data.twoHandedGrip=$('#forgeGrip').checked;data.mounted=$('#forgeMounted').checked;data.armorWeight=$('#forgeWeight').value;
-    for(const [id,key] of [['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']]){
-      const input=$('#'+id);if(input.value!=='')data[key]=Math.max(0,['blockMultiplier','diceMultiplier'].includes(key)?(Number(input.value)||0):Math.round(Number(input.value)||0));
+    data.twoHandedGrip=isW&&!$('#forgeGrip').disabled&&$('#forgeGrip').checked;
+    data.mounted=isW&&!$('#forgeMounted').disabled&&$('#forgeMounted').checked;
+    data.armorWeight=$('#forgeWeight').disabled?undefined:$('#forgeWeight').value;
+    for(const [id,key] of forgeNumbers){
+      const input=$('#'+id);if(!input.disabled&&input.value!=='')data[key]=Math.max(0,['blockMultiplier','diceMultiplier'].includes(key)?(Number(input.value)||0):Math.round(Number(input.value)||0));
       else data[key]=undefined;
     }
 
-    if (isW && range > 5) data.range = range;
+    if (isW) data.range = range;
     if (blk) data.block = blk;
     const asSet = !!PAIRS[forgeType] && $('#forgeSet').checked;
     if (asSet) data.pair = true;
@@ -2449,7 +2530,7 @@
       if (!blk) delete it.block;
       if (!asSet) delete it.pair;
       const s = slotOf(it.id);
-      if (s && !fits(it.type, s)) toPack(s);
+      if (s && (!fits(it.type,s)||['strapped','lstrapped'].includes(s)&&!window.WBCombat.weaponProperties(it).includes('Strapped'))) toPack(s);
       { const mw = itemById(state.equip.main); if (mw && window.WBCombat.weaponRules(state,mw).twoHanded) toPack('off'); }
       fixPairs();
       flash = 'Saved ' + name + '.';
@@ -2471,7 +2552,8 @@
     const it = itemById(id);
     if (!it) return;
     SLOTS.forEach((s) => {
-      if (!fits(it.type, s.k) && !(it.type === 'twohand' && s.k === 'off')) return;
+      const strapped=window.WBCombat.weaponProperties(it).includes('Strapped');
+      if(['strapped','lstrapped'].includes(s.k)?!strapped:strapped||!fits(it.type,s.k)&&!(it.type==='twohand'&&s.k==='off'))return;
       document.querySelector('.slot[data-slot="' + s.k + '"]').classList.add('drop-ok');
       document.querySelectorAll('.figure .part[data-part="' + s.k + '"]').forEach((p) => p.classList.add('target'));
     });
@@ -3129,7 +3211,7 @@
     if (mainW && TYPES[mainW.type].weapon) out.push({ slot: 'main', w: mainW, label: mainW.name, range: rangeOf(mainW) });
     if (offW && TYPES[offW.type].weapon && !(mainW && window.WBCombat.weaponRules(state,mainW).twoHanded)) out.push({ slot: 'off', w: offW, label: offW.name, range: rangeOf(offW) });
     if (dual) out.push({ slot: 'dual', w: mainW, label: 'Both weapons', range: Math.min(rangeOf(mainW), rangeOf(offW)) });
-    const strapped=itemById(state.equip.strapped);if(strapped)out.push({slot:'strapped',w:strapped,label:strapped.name,range:rangeOf(strapped)});
+    for(const slot of ['strapped','lstrapped']){const item=itemById(state.equip[slot]);if(item)out.push({slot,w:item,label:SLOT_BY[slot].n+': '+item.name,range:rangeOf(item)});}
     return out;
   }
   const inReachFrom = (ms, from, f, range) => cheb(from, f) * SQ_FT <= range && sees(ms, from, f);
