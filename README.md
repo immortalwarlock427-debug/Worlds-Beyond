@@ -24,6 +24,8 @@ Overview, Attributes, Equipment, Abilities and Status Effects tabs provide edita
 
 For custom abilities, enter **Base AP cost** and optionally choose **Discounted by: STR, DEX, INT or FTH**. Cards and Overview favorites show the current price and its base. The discount uses your current modifier, with a minimum of half the base cost rounded up; negative modifiers increase the price, and blank/zero stays free. **None** keeps a flat cost and is the default for existing abilities.
 
+Expand **Optional rolls** on an ability to choose independent attack, damage bonus and save-DC stats, damage dice/type and the target save. **Use** pays its costs once, then opens the existing roll popup; damage follows without another payment. Attack rolls follow the bottom dice mode and offer critical damage on a natural 20. Wonder/Defy Fate do not apply to attacks. Save DCs are shown for the target to resolve at the table. Blank roll fields keep the existing tracker-only behavior.
+
 If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
 ## Offline DM Room

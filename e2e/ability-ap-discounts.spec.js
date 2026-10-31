@@ -18,7 +18,7 @@ async function overview(page){await page.locator('[data-sheet-tab="overview"]').
 
 test('phone editor, filters, favorite and library spend one price and preserve the option through files',async({page})=>{
  await seed(page);await library(page);
- await card(page).locator('summary').click();
+ await card(page).locator('.ability-summary').click();
  await expect(card(page).locator('[data-ability-prop="apDiscountStat"]')).toHaveValue('');
  await expect(badge(page)).toContainText('10 AP');
  await card(page).locator('[data-ability-prop="apDiscountStat"]').selectOption('STR');
@@ -36,7 +36,7 @@ test('phone editor, filters, favorite and library spend one price and preserve t
  await card(page).locator('.ability-quick-use').click();
  await expect.poll(async()=>(await saved(page)).apAvail).toBe(9);
  await page.locator('#abilityClearFilters').click();
- if(!await card(page).locator('details').evaluate(el=>el.open))await card(page).locator('summary').click();
+ if(!await card(page).locator('details.ability-card').evaluate(el=>el.open))await card(page).locator('.ability-summary').click();
  await card(page).locator('[data-ability-action="duplicate"]').click();
  await expect.poll(async()=>(await saved(page)).abilities.length).toBe(2);
  expect((await saved(page)).abilities.map(a=>[a.apCost,a.apDiscountStat])).toEqual([[10,'STR'],[10,'STR']]);
@@ -48,7 +48,7 @@ test('phone editor, filters, favorite and library spend one price and preserve t
  await page.locator('#importFile').setInputFiles({name:'discount-hero.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(exported))});
  await page.locator('#importYes').click();
  if(await page.locator('#characterMenu').evaluate(el=>el.open))await page.locator('#characterMenu > summary').click();
- await library(page);await card(page).locator('summary').click();
+ await library(page);await card(page).locator('.ability-summary').click();
  await expect(card(page).locator('[data-ability-prop="apDiscountStat"]')).toHaveValue('STR');
  await expect(card(page).locator('[data-ability-prop="apCost"]')).toHaveValue('10');
  await expect(badge(page)).toContainText('6 AP (10 base · STR)');
@@ -87,7 +87,7 @@ test('odd base costs stop at half rounded up and blank/zero remain free under a 
  await expect.poll(async()=>(await saved(page)).apAvail).toBe(0);
  await page.locator('[data-sheet-tab="attributes"]').click();
  await page.locator('#mod-STR').fill('-5');await page.locator('#mod-STR').blur();
- await library(page);await card(page).locator('summary').click();
+ await library(page);await card(page).locator('.ability-summary').click();
  for(const base of ['0','']){
   await card(page).locator('[data-ability-prop="apCost"]').fill(base);
   await card(page).locator('[data-ability-prop="apCost"]').blur();
