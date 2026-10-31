@@ -19,21 +19,9 @@
 - Shared Health is **implemented**: state-derived maximum/current/threshold/flags and typed damage, healing, manual current/max, stability, Trauma and treatment commands. Ordinary/potion healing share recovery/cap math. Metadata hydration is pure and applied at load/save, not rendering; no gameplay events or Trauma occur from repaint/configuration. Historical gear numbers are read consistently. Atomic turn/rest and scoped rest Undo are also implemented.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — manual runtime tracker controls
+## Current task — Oct 31 rules handoff
 
-**Scope:** migrate remaining manual runtime tracker corrections and effect-ending controls to the shared character command boundary: custom ability uses/cooldown/duration/held capacity, Wonder/reactions and existing end-effect actions. Reuse current helpers and manual editing rules without introducing costs, auto triggers or new restrictions. Keep configuration editors separate. Atomic StartTurn/LongRest/UndoLongRest are implemented; preserve their ordering, scoped receipt and legacy resource policies. Broader transaction-history Undo and unapproved B3 resource choices remain separate.
-
-**Preserve:**
-- Atomic turn/rest failure rollback, regeneration before timer expiry/max reconciliation, statuses before bleeding, one bleed, state-derived refill and selective rest Undo. No consumable refills, lost later notes/history/stock/status edits or persisted Undo receipts.
-- Shared Health derivation/commands, signed/full sentinels, history-based maxima, current VIT/gear/form effects, Death's Mercy, recovery Trauma, manual corrections and metadata-only flag hydration. No rendering-side Health writes or extra healing applications.
-- Free-dice validation, actual-roll capture without extra RNG, bounded primitive history, id/time-preserving revisions, read-only details and character-only persistence. Viewing history must never trigger Health actions.
-- Consumable quantity/definition commands, current-count edits, optional healing and single-application results, no rest/form refills, unknown metadata and manual corrections.
-- Notes fields and exact multiline text, narrative-only editing, legacy empty defaults and character replacement/reset behavior.
-- Equipment charge tracking and explicit outside-use choices. Missing metadata keeps legacy turn resets; do not infer an item ability stat. Keep both spent maps, Forge row remapping, current-bank manual corrections, hidden item balances and long-rest Undo.
-- Confirmed weapon milestones, actual natural dice, source damage snapshots, atomic AP/reaction + Singularity payment, one-hit Devastate and existing opportunity conversion.
-- All other milestone/custom ability flows, separate combat/outside allowances, idempotent StartCombat, combat-only scoped round refills and no refill on EndCombat.
-- Source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment, cloud revision receipts, stale-tab save protection and independent DM saves.
-- Relevant 390px browser interactions and existing regressions. Broader transaction Undo remains a subsequent focused slice; do not introduce unapproved game rules, automatic triggers or multiplayer.
+Synchronize the sheet with the current rules in CONTEXT before further automation. The DM authorized completing the handoff in one branch/PR with logical commits and no intermediate approval pauses. Preserve legacy v1 files and separate game data. Update derived numbers/migrate old pool data, replace Devastate with Titan's Might, add weapon properties/armor/Block/damage scaling and explicit sheet actions, then migrate remaining tracker controls. See CONTEXT for answered questions and unavailable source details. PR #36 remains untouched; spells and new multiplayer/map features stay deferred.
 
 ## Work protocol
 

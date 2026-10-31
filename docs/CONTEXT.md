@@ -66,43 +66,21 @@ The following features **already exist** in the live site:
 
 ## Core rules
 
-- **Stats:** STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Roll 2d6 + 1d12 eight times and assign. That averages 13.5,
-  which is fine for player characters; 12 is the base 0 and the average adventurer. 28 is the natural/mortal limit; effective scores **may exceed 28** through gear, forms and ability effects. Scores above 28 still unlock 21/28 milestones.
-- **Modifiers:** +1 per 3 points from 12 (13–15 is +1, 16–18 is +2, 9–11 is −1). STR and DEX use (score − 12) ÷ 2,
-  rounded down. Them falling behind at 13 is intended.
-- **Milestones** at 21 and 28 go by your current score, gear included: gear can unlock one and dropping below loses
-  it. That means AGL gear can grant extra reactions and Surge, which is fine.
-- **Outside combat:** once-per-combat abilities become once per long rest; once-per-round abilities get uses equal to
-  the stat's mod per long rest. Combat and outside allowances are separate; combat uses do not spend outside uses.
-- **Ability score increases:** levels 4, 8, 12, 16 and 19, 4 points each, max 2 in any one stat per level-up.
-- **Health:** level 1 = max hit die + half VIT (rounded down); each level after = roll the hit die + half VIT. The hit
-  die comes from VIT (table on the Stats page). Not retroactive: high starting stats grow faster.
-- **Mana / Holy Power:** from INT, or FTH for faith users. Level 1 = (stat − 12) × 3, then a per-level amount from the
-  Magic System table. Spells cost mana by spell level and tier (Lesser, Intermediate, Advanced).
-- **Natural Evasion** = 10 + AGL mod; an attack has to meet or beat it.
-- **Armor Rating** = VIT mod + worn armor, minimum 0. Adamantine Body (VIT 28) makes it half VIT (rounded down) + armor.
-- **Initiative** = d20 + WIS mod. **Movement** = 5 ft + 5 ft per AGL mod, per AP (minimum 5 ft). On a map every
-  square is 5 ft, diagonals included, and difficult terrain costs 10 ft a square. Diagonal moves are fine, but you
-  can't slip diagonally between two walls that touch at a corner. Taking stairs to another level costs nothing
-  beyond the move onto the stairs (sheet assumption). If something you couldn't see blocks your path, you stop next
-  to it and only pay for the distance you moved.
-- **Sight:** you see what's in line of sight if it's lit, or within your sight in the dark: the farther of your
-  darkvision and the light you carry (not the two added). The squares next to you are always seen. Maps are lit or
-  dark, dark maps have light sources, and magical darkness can't be seen into or through by anyone. Darkvision
-  differs by character (race, gear).
-- **Reactions:** 1, +1 at AGL 21, +1 at AGL 28. They come back at the start of your turn.
-- **Wonder:** reroll any non-attack d20, uses = FTH mod per long rest. Defy Fate (FTH 21) turns each use into an
-  automatic success on a failed save or check, Dodge and Parry included; on initiative it still just rerolls.
-- **Save DC** for an ability = 12 + that stat's mod unless it says otherwise (Commanding Presence uses 10 + 2× CHA mod).
-- **Concentration** (VIT): check whenever you take more damage than your VIT mod. DC 12 or half the damage taken,
-  whichever is higher.
-- **Crits:** a natural 20 always hits, can't be dodged (Block and Parry still work), and deals max dice + the dice
-  rolled again.
-- **Level cap:** depends on who's DMing.
+The Oct 31 handoff transcribes current Notion rules; the DM's answers in this session resolve its questions. These replace the previous advancement rules. Implementation status belongs above; these sections describe the target rules.
+
+- Stats: STR, VIT, DEX, AGL, INT, WIS, CHA, FTH. Keep the existing modifier chart, ASIs and hit-die chart. Effective scores include worn gear, forms and active numerical effects.
+- Maximum Health = current VIT × level + explicit Max Health bonuses. Maximum Mana/Holy Power = current INT/FTH × (level + 2) + explicit pool bonuses. Changes to a maximum adjust current by the same difference in either direction. A blank current means full. Manual maximum/current overrides remain supported.
+- Existing saves keep their current Health/Mana on first migration, with an old/new maximum notice and manual correction. Delete obsolete Health advancement rolls, lvGear snapshots and settled gear data. ASIs and stat history remain.
+- Hit dice heal on a short rest and no longer determine maximum Health. No new daily hit-die allowance is defined.
+- Natural Evasion = 12 + AGL modifier + gear/light-armor/ability bonuses. Save DC = 12 + relevant modifier, including Commanding Presence.
+- AP starts at 15, +2 at level 5 and every 5 levels after, including past level 20. Manual overrides remain available. Existing tracker display maximum is 40.
+- Reactions: 1, +1 at AGL 21, +1 at AGL 28. Surge grants 2 AP of free movement per turn. Wonder/Defy Fate keep existing rules.
+- Movement per AP = max(5, 5 + 5 × AGL modifier), plus explicit bonuses. Heavy armor doubles square costs. Eight-direction movement and existing visibility/occupancy rules remain.
+- Keep existing initiative, concentration, death threshold, Mercy, Trauma, healing and ASI rules unless stated below.
 
 | Stat | 21 | 28 |
 | --- | --- | --- |
-| STR | Devastate | Overwhelming Force |
+| STR | Titan's Might | Overwhelming Force |
 | VIT | Indomitable | Adamantine Body |
 | DEX | Parry | Singularity |
 | AGL | Surge | Flicker |
@@ -113,41 +91,23 @@ The following features **already exist** in the live site:
 
 ## Action Points and attacks
 
-- **AP:** start at 15. How AP grows with level is still undecided. Gear never raises AP or reactions directly.
-- **Costs:** a standard action is 10 AP and a spell is 11 AP. A stat's mod lowers the cost of actions in its area:
-  STR weapon attacks, shoves and grapples; DEX finesse attacks and hand actions; INT arcane spells and tactical
-  actions; FTH holy spells and prayers. The floor is half the normal cost, rounded up (weapon attack minimum 5,
-  spell minimum 6). **Custom abilities may choose None/STR/DEX/INT/FTH for an AP discount, with a minimum of half their base cost rounded up; blank/zero stays free. None retains the flat price.** VIT and AGL give no discounts; AGL sets movement.
-- **Weapon attack** = 10 − STR or DEX mod, minimum 5. One- and two-handed attacks cost the same.
-- **Dual wielding:** with a one-handed weapon in each hand you choose a main-hand attack, an off-hand attack or a
-  both-hands attack, all at the same AP. A one-hand attack does full damage, so an off-hand axe can be thrown on its
-  own. With both, each hand rolls to hit and the off-hand hit does half damage, rounded down.
-- **Opportunity attacks** use a reaction, not AP. They are the only attacks made with a reaction.
-- **Surge** (AGL 21): 2 AP of free movement each turn, plus an extra reaction.
-- **Command:** spend 5 AP to give an ally 2 + CHA mod AP (max 5). AP is only moved around, never created. Like
-  temporary Health it doesn't stack: you keep the highest Command you've received, and you use it on your own turn.
-- **Stabilize someone:** 5 AP, d20 + INT mod against DC 12.
-- **Milestone actions** Stratagem, Absolute Comprehension, Commanding Presence and Eyes of Truth cost 5 AP.
+- Action tiers: Free 0, Minor 2, Quick 5, Standard 10, Spell 11, Heavy 15, Extended 15+. AP discounts may use any stat except AGL. Minimum cost is half the base rounded up. Command remains a flat 5 AP; an ally receives 2 + CHA modifier, maximum 5, highest grant only.
+- Balanced uses STR or DEX; Heavy uses STR; Finesse uses DEX; Paragon uses either. Ranged/thrown use DEX, except ranged Paragon may use either. Paragon AP discount uses the chosen attack stat.
+- Heavy/Paragon double only the damage modifier. Heavy requires STR 21, Finesse DEX 21, Paragon both; below the requirement suggest disadvantage and allow manual adjustment.
+- Dual attacks require a Light weapon in each hand. Main damage includes its modifier; off-hand damage in a dual attack adds no modifier and is halved, rounded down. A single off-hand attack retains its modifier.
+- A natural 20 always hits and cannot be Dodged. Finesse/Paragon hits on natural 18–19 also critical, without natural-20 Dodge immunity. Critical damage uses maximum dice plus every rolled die; Fast Roll does not replace critical dice.
+- Weapon dice scale ×2/×3/×4/×5 at levels 5/10/15/20; flat bonuses/modifiers are added once. Fast Roll rolls the base dice once and multiplies. Block dice scale to 2/3/4/5 at the same levels. Above 20 these two tables remain at their last documented tier pending a separate answer.
+- Titan's Might replaces Devastate: once per round, after a melee hit, push 5 ft or try to knock prone for no AP; also permits grappling/shoving larger creatures within reason. Melee means a 5 ft weapon range, plus Reach. Outside combat use the separate STR-modifier allowance.
+- Singularity still declares before rolling, spends on a miss and affects one chosen dual hand. Narrative outcomes resolve at the table.
 
 ## Defenses
 
-Each defense uses a reaction. Order of a hit: the attack meets or beats Natural Evasion (or is a natural 20) → Dodge
-or Parry → resistance halves → Armor Rating comes off → Block → Overwhelming Force keeps it from dropping below half.
+Resistance halves damage first. Two-handed hits ignore half the target's Armor Rating, rounded down; Puncture ignores 2 more. Armor Rating then reduces the damage of every hit you take, followed by Block and the existing Overwhelming Force floor. Dodge/Parry retain their established contested/save behavior.
 
-- **Block:** needs arm guards, a weapon or a shield (not bare skin or clothes). Roll 1d4 + STR mod and take it off
-  the damage after Armor Rating. A shield replaces the 1d4 with its own Block die, from 1d6 (poor) up to 1d10 or
-  1d12 (fine). Covering all of it is a full block, which also stops on-hit effects that need to cut into you, like
-  poison. Works on physical things like swords and fireballs, not mind control. With a shield you can also block for
-  anyone you could reach with 1 AP of movement, after their Armor Rating.
-- **Dodge:** d20 + AGL mod; you must beat the attack roll (a tie hits, full damage). Against an area attack Dodge is
-  the save: meet the DC and take half. Mind control can't be dodged, and neither can a natural 20. After a failed
-  Dodge you can still Block with another reaction.
-- **Parry** (DEX 21): needs a weapon or shield in hand, once per round. d20 + DEX mod; beating the attack roll
-  negates its damage and any non-magical effects. Works for anyone you could reach with 1 AP of movement; you move
-  in front of the attack. Works against a natural 20 too.
-- **Resistance** halves the damage first, then Armor Rating comes off.
-- **Overwhelming Force** (STR 28): nothing can bring the damage below half, Armor Rating, Block and Parry included.
-  A successful Dodge still avoids it completely.
+- Armor Rating = VIT modifier + armor, minimum 0; Adamantine Body uses half current VIT rounded down + armor. All displays share the same derived value, including ability bonuses.
+- Block = level-scaled d4 dice + STR modifier, or the shield's die size. Rare-metal Block multipliers are explicit item settings. Two arm guards contribute the highest AR once; both special effects still apply. Leg AR requires a paired item or both leg guards.
+- Heavy/Medium/Light armor weight is stored per piece; the heaviest worn piece determines armor type. Light adds its Natural Evasion bonus. Heavy doubles square costs and reduces AGL by 1 per armor AR above 3, capped at −3. The penalty applies to the AGL score; derived modifiers/milestones follow that score. Without STR 21 heavy armor suggests disadvantage on attacks, Dodge and AGL saves, while player choice remains available.
+- Reactions cannot use the same defense kind twice against the same attack; the sheet should show reminders while retaining manual corrections.
 
 ## Death and dying
 
@@ -168,119 +128,22 @@ There are no death saves. At 0 Health or below you're unconscious and bleeding o
 
 ## Gear and weapons
 
-- **Slots:** head, amulet, torso, both arms, both rings, belt, both legs, plus main hand and off hand. A piece marked
-  as a set, like boots, fills both arms, both legs or both ring slots, and its armor, bonuses and effects count once.
-- **Weapons:** one-handed (you can hold two) or two-handed (takes both hands). Each uses STR or DEX (finesse), and has
-  a Range on the battlemap (5 ft unless set). Shields go in the off hand only. The Weapons page in Notion is about
-  4 years old and will be revised.
-- **Three main fighting styles:** two-handed (hits hardest, beats armor), one hand and shield (tanky, guards allies),
-  dual wielding (many consistent hits). Other side styles can exist.
-- **Gear bonuses** can raise stats, Max Health, Max Mana/Holy Power, Evasion, Initiative, Movement, Darkvision and
-  Light.
-- **Level-ups:** gear only counts toward a level-up's Health, Mana and hit die if you wore it through a long rest. It
-  never changes past levels.
-- **Item effects on the sheet:** extra damage dice + damage type, attack bonus, damage bonus, defense bonus (all or
-  Block/Dodge/Parry), resistance, on-hit reminder, a shield's Block die, and abilities with limited uses (per long
-  rest or per round). A weapon's effects only work for that weapon; effects on other gear work for all your attacks.
-  Anything more complex is handled at the table.
+- One shared inventory, separate worn profiles per form. Stat/Health/Mana bonuses use current gear and no longer depend on a long rest. Health/Mana decrease with their maximum on removal or form/portrait changes.
+- Losing Health from a maximum change is a direct life adjustment. It can cause unconsciousness and ends concentration at 0 or below; it is not damage, spends no Mercy, and causes no damage concentration check. Subsequent real damage can still use Mercy. Existing death threshold rules remain.
+- Weapons support Balanced, Heavy, Finesse, Paragon, Light, Two-handed, Versatile, Strapped, Reach, Thrown, Loading, Mount and normal/disadvantage range bands. Versatile has a separate two-handed dice expression. Reach adds 5 ft. Puncture changes Armor Rating; other signature properties give table reminders unless their complete rule is supplied.
+- Strapped hand crossbows stack with arm guards without occupying a hand. A separate strapped attachment is supported alongside ordinary arm slots.
+- Loading stores shots remaining and reload costs 5 AP. Quickdraw draw/swap is free. Mount bonuses use distance moved straight before the attack, +1 per 10 ft up to the attack modifier; unmounted use suggests disadvantage.
+- Inventory capacity = 10 + STR modifier, plus backpack bonus (normally +6). Worn/held gear is free; two-handed weapons and shields use 2 slots; ammunition and potions stack 5 per slot. Capacity is a warning, never an editing restriction.
+- Manual Bleeding is the status effect. Zero-Health loss is named Dying on the sheet to distinguish it. Burning requires the Shake It Off roll, and does not end merely by spending 5 AP.
+- Shake It Off: base 5 AP with VIT discount, d20 + VIT modifier against the effect DC; success ends an eligible Bleeding/Burning/Poisoned status. Preset conditions are editable and resolve at the table unless an explicit numeric behavior is defined.
 
-## Assumptions on the sheet (confirm or change)
+## Source limitations and pending rules
 
-- On an area Dodge, meeting the save DC counts as a success.
-- Adamantine Body's "half VIT" includes VIT from gear.
-- Anything in an arm slot counts as arm guards for Block.
-- Base Block die is 1d4 (not 1d6), so even a poor 1d6 shield is an upgrade.
-- Bleeding happens at the start of your turn.
-- Healing while negative counts up from the negative number (heal 10 at −8 → 2).
-- Death's Mercy applies again each new time you drop below 0 (it resets once you're back above 0).
-- You die at exactly the negative of your Death Threshold.
-- Indomitable's roll uses the VIT modifier, not the score.
-- Concentration DC halves the damage rounded down.
-- Stabilize costs a flat 5 AP; INT doesn't discount it.
-- The off-hand's half damage includes its extra damage dice; a both-hands attack's AP cost uses the main hand's stat.
-- Movement spends whole AP; feet left from an AP you started stay usable for the rest of that turn. Surge's 2 free AP
-  are used before your own.
-- CHA gives no discount on Command (flat 5 AP). At CHA 8 or lower it gives 0 AP, so the sheet won't spend it.
-- AP from a Command goes on top of your own (it can pass your max), is spent before your own AP, and is for your
-  next turn. It's gone at the start of the turn after.
-- A set counts its armor once for the whole pair.
-- Reach shading only shows on squares you've seen, so it doesn't give the layout away. Free placement ignores the fog.
-- **Decided occupancy rule:** standing enemies block; allies and downed creatures of either side can be crossed but never used as the destination. The DM and character-sheet pathfinders now share `WBRouting`.
-- A weapon reaches 5 ft unless its Range says otherwise, and needs line of sight; the square next to you always
-  counts as in sight. A both-hands attack needs the target in reach of both weapons.
-- Against an enemy on the map, Armor Rating comes off each hit separately (the off-hand after halving).
-- Gear can add to Darkvision; light from gear and light carried don't stack (the larger counts).
-- Attacks need a clear line to the target, not light.
-- The Barrow's light sources match its picture: braziers 20 ft, daylight on the stairs 15 ft, glowing fungus 10 ft,
-  candles in the niches and the sealed door's glow 5 ft.
+Notion was unavailable in this environment. The handoff and direct DM decisions are the sources for this update. Exact revised text for every milestone, full weapon/armor price tables, complete signature-property mechanics and daily short-rest limits were not supplied. Preserve verified mechanics, use clearly labeled reminders for narrative properties, and leave exact table presets/spells deferred. Block/weapon scaling above 20 remains capped at the last supplied tier; only AP was explicitly extended. Currency, Temporary Health, exhaustion and general custom-resource overflow decisions remain separate.
 
 ## Direction: customizable characters
 
 Eight stats, AP and the homebrew combat system are the core, while character resources, abilities, statuses, forms and transformations stay customizable. Those editors and automatic ability effects **are already implemented**; the unbuilt refinements are above.
-
-## Open design questions
-
-### Block scaling (proposal, not decided)
-
-Mix of both: **level sets how many Block dice you roll, gear sets the die size.** Arm guards or a weapon roll d4s;
-a shield swaps in its own die. Then STR mod is added as now. Shields stay worth having because their lead grows with
-level, and characters without a shield still scale a little. The cadence below (an extra die at 5, 10, 15, 20) is an
-example to tune.
-
-| Level | Block dice | Base (d4) | Poor shield (d6) | Good shield (d10) | Best shield (d12) |
-| --- | --- | --- | --- | --- | --- |
-| 1–4 | 1 | 2.5 | 3.5 | 5.5 | 6.5 |
-| 5–9 | 2 | 5 | 7 | 11 | 13 |
-| 10–14 | 3 | 7.5 | 10.5 | 16.5 | 19.5 |
-| 15–19 | 4 | 10 | 14 | 22 | 26 |
-| 20 | 5 | 12.5 | 17.5 | 27.5 | 32.5 |
-
-Averages before STR mod. Level-only scaling makes shields fall behind; gear-only means characters without shields
-never scale and it all depends on loot. Magic shields can still add a flat +Block (the Forge already supports it).
-Calibrate against typical monster damage per hit once that's set, for example Block ≈ a quarter of a same-level hit
-without a shield and about half with a good one. A bigger Block also means more full blocks, which stop poison and
-other on-hit effects, so tanks will shrug those off more often.
-
-### Two-handed vs dual wield damage (proposal, not decided)
-
-All attacks cost the same AP, so compare damage per attack. Dual wield ≈ 1.5× a one-hander, so the target is
-**two-handed = dual wield against an unarmored target**; armor then decides between them, because flat Armor Rating
-eats many small hits. Two parts:
-
-1. Two-handed dice average about 1.5× the one-handed die of the same tier.
-2. Current two-handed attacks add the STR or DEX modifier once. The historical 1.5× modifier comparison below is balance analysis only, not an approved rule; no modifier change is scheduled. Resolve the alternatives with the DM before changing code or Notion.
-
-| One-handed | Average | Two-handed target | Dice that fit |
-| --- | --- | --- | --- |
-| 1d6 | 3.5 | 5.25 | 1d10 (5.5) |
-| 1d8 | 4.5 | 6.75 | 2d6 (7) or 1d12 (6.5) |
-| 1d10 | 5.5 | 8.25 | 2d8 (9) or 1d8 + 1d6 (8) |
-| 1d12 | 6.5 | 9.75 | 1d10 + 1d8 (10) |
-
-Expected damage per attack, every swing hitting, 1d8 one-handers vs a 2d6 two-hander:
-
-| Mod | Enemy Armor Rating | Dual wield | Two-handed (1× mod) | Two-handed (1.5× mod) | One hand + shield |
-| --- | --- | --- | --- | --- | --- |
-| +3 | 0 | 11.0 | 10.0 | 11.0 | 7.5 |
-| +3 | 6 | 1.9 | 4.0 | 5.0 | 1.9 |
-| +6 | 0 | 15.5 | 13.0 | 16.0 | 10.5 |
-| +6 | 6 | 4.6 | 7.0 | 10.0 | 4.5 |
-
-With 1.5× mod, two-handed matches dual wield against no armor at every level and pulls well ahead against armor. With
-1× mod, dual wield is better against lightly armored crowds and two-handed against armored targets, which is also a
-valid split. Either way, Armor Rating 6+ shuts down one-handed hits, so monster Armor Rating and player damage need
-tuning together.
-
-### Still open
-
-- How AP grows with level.
-- What WIS actions exist.
-- AP costs of smaller actions.
-- More weapon categories, and revising the old Weapons page.
-- Exhaustion revamp.
-- If you ever want stat rolls to average 12: 1d10 + 1d12 (flat, more extremes) or 4d6 − 2 (bell-shaped). Currently
-  keeping 2d6 + 1d12.
-
 
 ## Roadmap and website plan
 

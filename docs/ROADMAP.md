@@ -25,7 +25,7 @@ Delivery sequence:
 - Implemented: a free dice box and the newest 20 timestamped roll results, saved with the character; history details cannot replay costs or effects.
 - Implemented: shared Health damage/healing/correction, stability, Trauma and treatment commands with existing recovery/death rules, source-derived values and read-only rendering.
 - Implemented: atomic turn/long-rest orchestration with existing timing, source-derived maxima and scoped rest Undo.
-- Next: shared manual runtime tracker corrections and effect-ending controls, preserving trust-based editing. Currency, Temporary Health, innate defenses, AP growth and exhaustion require any missing setting/rule decisions first.
+- Next: shared manual runtime tracker corrections and effect-ending controls, preserving trust-based editing. Currency, Temporary Health, innate defenses, exhaustion require any missing setting/rule decisions first. AP growth is now confirmed in CONTEXT.
 
 Keep each stage in a separate reviewable PR; do not implement unapproved mechanics or automatic multiplayer as part of the sheet work.
 
@@ -57,8 +57,6 @@ See [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md) for acceptance criteria, sample rul
 - Cloud portrait object storage and carefully designed optional synchronization after secure ownership/conflict handling.
 - Advanced automation: OR logic, reaction suggestions, hit/crit/kill triggers, other-character actions, shared rule templates and additional formulas.
 
-## Unresolved gameplay rules — no implementation without a decision
+## Unresolved gameplay rules
 
-- Rage model: genuine 100 → 200 overcharge or full-200 maximum with threshold marker.
-- Whether excess survives maximum drop; typed corrections trigger automation; automatic form-entry cost default; simultaneous Manual + Automatic mode. See the exact distinctions in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md).
-- AP growth per level; Block dice and shield scaling; two-handed/dual-wield balance; small action AP costs; WIS actions; Exhaustion redesign. See [CONTEXT.md](CONTEXT.md) for those proposed mechanics.
+Current AP growth, Block scaling through 20, weapon property rules, Heavy double damage modifier, Two-handed Armor Rating reduction and action tiers are specified in CONTEXT. AP continues after 20; other above-20 tables await a separate decision. Remaining resource overflow, automation, Currency, Temporary Health and exhaustion choices are independent of this rules migration.
