@@ -18,9 +18,9 @@ function setup(){
 }
 function freeze(x){if(x&&typeof x==='object'){Object.values(x).forEach(freeze);Object.freeze(x);}return x;}
 
-test('seven built-in actions derive without creating custom abilities or spending counters during render',()=>{
+test('built-in actions derive without creating custom abilities or spending counters during render',()=>{
  const {state,abilities}=setup();freeze(state);const before=JSON.stringify(state);
- const actions=abilities.milestoneActions(state);assert.equal(actions.length,7);assert.equal(actions.every(a=>a.unlocked),true);
+ const actions=abilities.milestoneActions(state);assert.equal(actions.length,9);assert.equal(actions.every(a=>a.unlocked),true);
  assert.equal(state.abilities.length,1);assert.deepEqual(plain(state.milestoneUses),{});
  assert.equal(JSON.stringify(state),before);assert.equal(abilities.milestoneAction(state,'bad'),null);
 });

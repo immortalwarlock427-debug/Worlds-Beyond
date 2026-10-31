@@ -130,6 +130,11 @@
   function trackerAvailable(current,max) {
     return current == null ? max : Math.max(0,Math.min(current,max));
   }
+  function reactionMaximum(state,abilityBonus=0,formBonus=0) {
+    const agl=effectiveScore(state,'AGL',level(state),abilityBonus,formBonus);
+    const automatic=1+(agl!=null&&agl>=21?1:0)+(agl!=null&&agl>=28?1:0);
+    return trackerMax(record(state.over).reactMax,automatic);
+  }
   function givenAp(state) {
     return state.apGiven && state.apGiven.n > 0 ? state.apGiven.n : 0;
   }
@@ -253,6 +258,7 @@
   function criticalTotal(rolled, diceMaximum, critical) {
     return rolled + (critical ? diceMaximum : 0);
   }
+  function weaponCritical(naturalDie,criticalOnHit) { return naturalDie===20||criticalOnHit===true; }
   function damagePacket(baseRoll, statModifier, flatBonus, extraRolls) {
     const weaponDmg = Math.max(0,baseRoll+statModifier+flatBonus);
     const extras = (extraRolls || []).map(value => Math.max(0,value));
@@ -326,10 +332,10 @@
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
-    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,commandingPresenceDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,givenAp,apAvailable,
+    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,commandingPresenceDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,reactionMaximum,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
     hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
-    attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,
+    attackHits,dualHits,criticalTotal,weaponCritical,damagePacket,offhandDamage,
     armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
     defenseResult,deathThreshold,diesAt,damageHealth
   };

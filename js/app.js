@@ -153,6 +153,13 @@
   let drag = null;
   let flash = '';
   let pendingFocus = null;
+  const singularitySelections={};
+  function singularityChoice(slot) {
+    const selected=singularitySelections[slot];
+    const ids=[state.equip.main||'',state.equip.off||''].join('|');
+    if(selected&&selected.ids!==ids){delete singularitySelections[slot];return '';}
+    return selected?selected.hand:'';
+  }
 
   // Equipment helpers (declared early so loading can validate saved data)
   function itemById(id) { return state.items.find((it) => it.id === id) || null; }
@@ -595,7 +602,7 @@
     armor: () => Math.max(0, armorTotal() + vitArmor() + window.WBAbilities.effectBonus(state, 'armor')),
     init: () => fmt(mod('WIS') + gear('init')),
     speed: () => Math.max(0, Math.max(5, 5 * (1 + mod('AGL'))) + gear('move')),
-    reactMax: () => 1 + (reached('AGL', 21) ? 1 : 0) + (reached('AGL', 28) ? 1 : 0),
+    reactMax: () => window.WBCombat.reactionMaximum(state,window.WBAbilities.effectBonus(state,'stat','AGL'),window.WBAbilities.formStatBonus(state,'AGL')),
     wonderMax: () => Math.max(0, mod('FTH'))
   };
   STATS.forEach((s) => {
@@ -1336,13 +1343,17 @@
       if (rl > 0) acts.push(['block', 'Block it (' + rl + (rl === 1 ? ' reaction' : ' reactions') + ' left)']);
     }
     if (r.kind === 'attack' && (!foe || r.hit) && (r.weapon || r.abilityRoll && r.abilityRoll.damage)) {
-      acts.push([r.abilityRoll?'ability-dmg':'dmg', 'Roll damage']);
-      if (r.d20 === 20) acts.push([r.abilityRoll?'ability-crit':'crit', 'Roll critical damage']);
+      if(r.weaponAttack&&r.weaponAttack.singularityHand)acts.push(['crit','Roll critical damage (Singularity)']);
+      else {
+        acts.push([r.abilityRoll?'ability-dmg':'dmg', 'Roll damage']);
+        if (r.d20 === 20) acts.push([r.abilityRoll?'ability-crit':'crit', 'Roll critical damage']);
+      }
     }
     if (r.kind === 'dual') {
-      const c = (d) => (d === 20 ? ' (crit)' : '');
-      const both = r.dual.a === 20 && r.dual.b === 20 ? ' (both crit)' : r.dual.a === 20 ? ' (main crit)' : r.dual.b === 20 ? ' (off-hand crit)' : '';
-      if (!foe) acts.push(['dualboth', 'Damage: both hit' + both], ['dualmain', 'Main hand only' + c(r.dual.a)], ['dualoff', 'Off-hand only' + c(r.dual.b)]);
+      const chosen=r.weaponAttack&&r.weaponAttack.singularityHand;
+      const mainCrit=window.WBCombat.weaponCritical(r.dual.a,chosen==='main'),offCrit=window.WBCombat.weaponCritical(r.dual.b,chosen==='off');
+      const both = mainCrit && offCrit ? ' (both crit)' : mainCrit ? ' (main crit)' : offCrit ? ' (off-hand crit)' : '';
+      if (!foe) acts.push(['dualboth', 'Damage: both hit' + both], ['dualmain', 'Main hand only' + (mainCrit?' (crit)':'')], ['dualoff', 'Off-hand only' + (offCrit?' (crit)':'')]);
       else if (r.mainHit && r.offHit) acts.push(['dualboth', 'Roll damage, both hit' + both]);
       else if (r.mainHit) acts.push(['dualmain', 'Roll damage, main hand' + c(r.dual.a)]);
       else if (r.offHit) acts.push(['dualoff', 'Roll damage, off-hand' + c(r.dual.b)]);
@@ -1350,6 +1361,15 @@
     if ((r.kind === 'attack' || r.kind === 'dual') && r.apSpent && reactTracker.avail() > 0) acts.push(['toreact', 'It was an opportunity attack (use a reaction, get ' + r.apSpent + ' AP back)']);
     if (take != null && take > 0 && !(df && df.ally)) acts.push(['take', 'Take ' + take + ' damage']);
     if (foe && r.kind === 'damage' && r.hurt > 0) acts.push(['hurt', 'Take ' + r.hurt + ' off ' + foe.name + '’s Health']);
+    if(r.kind==='damage'&&r.attackDamage&&!r.devastateApplied){
+      const milestone=window.WBAbilities.milestoneAction(state,'devastate');
+      if(milestone.unlocked&&milestone.usage.remaining>0){
+        for(const hand of ['main','off']){
+          const data=r.attackDamage[hand];
+          if(data&&data.source.stat==='STR')acts.push(['devastate-'+hand,'Devastate'+(r.attackDamage.dual?' '+(hand==='main'?'main hand':'off hand'):'')+modText(data.source.damageModifier)]);
+        }
+      }
+    }
     $('#toastActions').innerHTML = acts.map((a) => '<button type="button" class="btn' + (a[0] === 'wonder' || a[0] === 'defy' ? ' strong' : '') + '" data-act="' + a[0] + '">' + esc(a[1]) + '</button>').join('');
     toastEl.hidden = false;
     toastEl.classList.remove('pop-in');
@@ -1385,33 +1405,36 @@
     return { t: t + flat, math: math + (flat ? modText(flat) : '') };
   }
   // Damage for one weapon: its dice and modifier, plus extra dice from it and from worn gear.
-  function damageOf(w, crit) {
-    const fx = effectsFor(w);
-    const m = mod(w.stat);
-    const fb = sumEff(fx, 'flat');
-    const base = rollSet(w.dmg, crit);
-    const extras = fx.filter((e) => e.k === 'dmg').map((e) => ({
-      effect: e, roll: rollSet(e.dice, crit)
-    }));
+  function damageOf(w, crit, source) {
+    source=source||window.WBAbilities.weaponSource(state,w&&w.id);
+    if(!source)return null;
+    const m=source.damageModifier,fb=source.flatBonus;
+    const base = rollSet(source.dice, crit);
+    const extras = source.extras.map(e => ({ effect:{dt:e.type}, roll:rollSet(e.dice,crit) }));
     const packet = window.WBCombat.damagePacket(base.t, m, fb, extras.map(x => x.roll.t));
     let math = base.math + modText(m) + (fb ? modText(fb) : '');
+    const baseMath=math,extraMath=[];
     const split = [];
     extras.forEach((x, i) => {
       math += ', ' + x.roll.math + (x.effect.dt ? ' ' + x.effect.dt : '');
+      extraMath.push(x.roll.math+(x.effect.dt?' '+x.effect.dt:''));
       split.push(packet.extras[i] + (x.effect.dt ? ' ' + x.effect.dt : ' extra'));
     });
-    const hits = fx.filter((e) => e.k === 'onhit').map((e) => e.text);
-    return { total: packet.total, math, weaponDmg: packet.weaponDmg, split, hits };
+    const hits = source.hits;
+    return { total: packet.total, math, weaponDmg: packet.weaponDmg, split, hits,
+      data:{source,baseRoll:base.t,baseMath,extraMath,extras:extras.map(x=>x.roll.t),critical:crit,devastateBonus:0} };
   }
-  function rollDamage(w, crit, foeId) {
-    const d = damageOf(w, crit);
+  function rollDamage(w, crit, foeId, weaponAttack) {
+    const d = damageOf(w, crit,weaponAttack&&weaponAttack.main);
+    if(!d)return;
     const notes = [];
     if (d.split.length) notes.push(d.weaponDmg + ' weapon', ...d.split);
     if (d.hits.length) notes.push('On hit: ' + d.hits.join(', '));
     const foe = foeId ? foeById(foeId) : null;
     // Against a target from the map, its Armor Rating comes off the hit.
     const hurt = foe ? window.WBCombat.armorDamage(d.total, foe.ar) : null;
-    showRoll({ title: w.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w, note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
+    showRoll({ title: d.data.source.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w,
+      attackDamage:{main:d.data,off:null,dual:false},note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
   }
   function abilitySaveNote(plan) {
     return plan.save?(plan.save.targetStat?plan.save.targetStat+' save':'Target save')+' DC '+plan.save.dc+
@@ -1429,9 +1452,12 @@
     const packet=window.WBCombat.damagePacket(base.t,damage.modifier,damage.flatBonus,extras.map(extra=>extra.roll.t));
     let math=(base.math||'0')+(damage.modifier?modText(damage.modifier):'')+(damage.flatBonus?modText(damage.flatBonus):'');
     if(damage.type)math+=' '+damage.type;
-    extras.forEach(extra=>{math+=', '+extra.roll.math+(extra.type?' '+extra.type:'');});
+    const baseMath=math,extraMath=[];
+    extras.forEach(extra=>{const text=extra.roll.math+(extra.type?' '+extra.type:'');math+=', '+text;extraMath.push(text);});
     const notes=['Ability costs paid once.',abilitySaveNote(plan),...damage.hits.map(text=>'On hit: '+text)].filter(Boolean);
-    showRoll({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · ')});
+    const data=plan.attack?{main:{source:{stat:damage.stat,damageModifier:damage.modifier,flatBonus:damage.flatBonus},
+      baseRoll:base.t,baseMath,extraMath,extras:extras.map(extra=>extra.roll.t),devastateBonus:0},off:null,dual:false}:null;
+    showRoll({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · '),attackDamage:data});
   }
 
   // Dual wielding: one attack that swings both weapons. Each rolls to hit; the off-hand hit does half damage, rounded down.
@@ -1441,12 +1467,12 @@
     return !!(mw && ow && TYPES[mw.type].weapon && mw.type !== 'twohand' && TYPES[ow.type].weapon);
   }
   function rollDual(extra) {
-    const mw = itemById(state.equip.main);
-    const ow = itemById(state.equip.off);
+    const plan=extra&&extra.weaponAttack||window.WBAbilities.weaponAttackPlan(state,'dual');
+    if(!plan.ok)return;
     const a = rollD20(advMode());
     const b = rollD20(advMode());
-    const ma = atkMod(mw);
-    const oa = atkMod(ow);
+    const ma = plan.main.attackModifier;
+    const oa = plan.off.attackModifier;
     const notes = [];
     if (extra && extra.note) notes.push(extra.note);
     [['Main hand', a.d], ['Off-hand', b.d]].forEach(([n, d]) => { if (d === 20) notes.push(n + ' natural 20'); if (d === 1) notes.push(n + ' natural 1'); });
@@ -1457,10 +1483,9 @@
       note: notes.join(' · ') || undefined
     }));
   }
-  function rollDualDamage(mainHit, offHit, mainCrit, offCrit, foeId) {
-    const mw = itemById(state.equip.main);
-    const ow = itemById(state.equip.off);
-    if (!mw || !ow) return;
+  function rollDualDamage(mainHit, offHit, mainCrit, offCrit, foeId, weaponAttack) {
+    const plan=weaponAttack||window.WBAbilities.weaponAttackPlan(state,'dual');
+    if(!plan.ok)return;
     const foe = foeId ? foeById(foeId) : null;
     const parts = [];
     const hits = [];
@@ -1468,15 +1493,16 @@
     // Against a target from the map, its Armor Rating comes off each hit separately (the off-hand after halving).
     let mainTotal = 0;
     let offTotal = 0;
+    const damage={main:null,off:null,dual:true};
     if (mainHit) {
-      const d = damageOf(mw, mainCrit);
+      const d = damageOf(null, mainCrit,plan.main);damage.main=d.data;
       total += d.total;
       mainTotal = d.total;
       parts.push('Main hand' + (mainCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total);
       hits.push(...d.hits);
     }
     if (offHit) {
-      const d = damageOf(ow, offCrit);
+      const d = damageOf(null, offCrit,plan.off);damage.off=d.data;
       const half = window.WBCombat.offhandDamage(d.total);
       total += half;
       offTotal = d.total;
@@ -1486,19 +1512,40 @@
     const hurt = foe ? window.WBCombat.dualArmorDamage(mainTotal, offTotal, foe.ar, mainHit, offHit) : 0;
     const uniq = hits.filter((h, i) => hits.indexOf(h) === i);
     showRoll({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
-      foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
+      attackDamage:damage,foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
+  }
+  function applyDevastate(roll,hand) {
+    const data=roll.attackDamage&&roll.attackDamage[hand];
+    if(!data||roll.devastateApplied)return;
+    const result=formEntryControls.execute({type:'ApplyDevastate',damageSource:data.source});
+    if(!result.ok){showRoll({...roll,note:result.message});return;}
+    const damage={...roll.attackDamage,[hand]:{...data,devastateBonus:result.devastateBonus}};
+    const total=d=>d?window.WBCombat.damagePacket(d.baseRoll,d.source.damageModifier+d.devastateBonus,d.source.flatBonus,d.extras).total:0;
+    const main=total(damage.main),off=total(damage.off),parts=[];
+    for(const side of ['main','off']){
+      const d=damage[side];if(!d)continue;
+      const value=total(d),applied=side===hand;
+      let text=d.baseMath+(applied?modText(d.devastateBonus)+' Devastate':'')+d.extraMath.map(x=>', '+x).join('');
+      if(damage.dual)text=(side==='main'?'Main hand':'Off-hand')+': '+text+' = '+value+(side==='off'?', halved to '+window.WBCombat.offhandDamage(value):'');
+      parts.push(text);
+    }
+    const foe=roll.foe?foeById(roll.foe):null;
+    const hurt=foe?(damage.dual?window.WBCombat.dualArmorDamage(main,off,foe.ar,!!damage.main,!!damage.off):window.WBCombat.armorDamage(main,foe.ar)):null;
+    refreshAll();save();
+    showRoll({...roll,attackDamage:damage,devastateApplied:true,total:main+(damage.dual?window.WBCombat.offhandDamage(off):0),
+      math:parts.join(' · '),hurt,note:[roll.note,'Devastate: original STR damage modifier applied twice.'].filter(Boolean).join(' · ')});
   }
 
   // Opportunity attacks are the only attacks that use a reaction instead of AP.
   function opportunity(slot, foeId) {
-    const rl = reactTracker.avail();
-    if (rl < 1) { showRoll({ kind: 'notice', title: 'Opportunity attack', math: 'No reactions left. They come back at the start of your turn.' }); return; }
-    spendReaction();
-    const note = 'Opportunity attack, used a reaction (' + reactTracker.avail() + ' left)';
+    const result=formEntryControls.execute({type:'BeginWeaponAttack',slot,payment:'reaction',singularityHand:singularityChoice(slot)});
+    if(!result.ok){showRoll({kind:'notice',title:'Opportunity attack',math:result.message});return;}
+    const plan=result.weaponAttack;delete singularitySelections[slot];refreshAll();save();
+    const note = 'Opportunity attack, used a reaction (' + reactTracker.avail() + ' left)'+(plan.singularityHand?' · Singularity: '+plan.singularityHand+' hand, spent even on a miss':'');
     const foe = foeId ? foeById(foeId) : null;
-    if (slot === 'dual') { rollDual({ note, foe: foe ? foe.id : null }); return; }
+    if (slot === 'dual') { rollDual({ note,weaponAttack:plan,foe: foe ? foe.id : null }); return; }
     const w = itemById(state.equip[slot]);
-    if (w) rollCheck(w.name + ' opportunity attack' + (foe ? ' on ' + foe.name : ''), atkMod(w), 'attack', { weapon: w, note, foe: foe ? foe.id : null });
+    if (w) rollCheck(plan.main.name + ' opportunity attack' + (foe ? ' on ' + foe.name : ''), plan.main.attackModifier, 'attack', { weapon: w,weaponAttack:plan,note,foe: foe ? foe.id : null });
   }
   // An attack with what's in one hand, or both when dual wielding. It costs AP; damage doesn't, since it follows
   // the attack, and dual wielding costs the same as one attack. With a target from the battlemap, the roll is
@@ -1517,15 +1564,13 @@
         acts: rl ? [['opp', 'It’s an opportunity attack (use a reaction, ' + rl + ' left)']] : [] });
       return;
     }
-    spendAp(cost);
-    apTracker.render();
-    renderGiven();
-    renderMove();
-    save();
-    const note = 'Spent ' + cost + ' AP, ' + leftText();
-    if (dual) rollDual({ apSpent: cost, note, foe: foe ? foe.id : null });
-    else rollCheck(name, atkMod(w), 'attack', { weapon: w, apSpent: cost, note, foe: foe ? foe.id : null });
-    renderMap();
+    const result=formEntryControls.execute({type:'BeginWeaponAttack',slot,payment:'ap',singularityHand:singularityChoice(slot)});
+    if(!result.ok){showRoll({kind:'notice',title:name,math:result.message});return;}
+    const plan=result.weaponAttack;delete singularitySelections[slot];
+    refreshAll();save();
+    const note = 'Spent ' + cost + ' AP, ' + leftText()+(plan.singularityHand?' · Singularity: '+plan.singularityHand+' hand, spent even on a miss':'');
+    if (dual) rollDual({ apSpent: cost,weaponAttack:plan,note,foe: foe ? foe.id : null });
+    else rollCheck(name, plan.main.attackModifier, 'attack', { weapon: w,weaponAttack:plan,apSpent: cost,note,foe: foe ? foe.id : null });
   }
   function onRollButton(b) {
     if (b.classList.contains('roll-stat')) {
@@ -1567,14 +1612,18 @@
       showRoll(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
     } else if (act === 'defy') {
       showRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
+    } else if (act === 'devastate-main' || act === 'devastate-off') {
+      applyDevastate(r,act==='devastate-main'?'main':'off');
     } else if (act === 'ability-dmg' || act === 'ability-crit') {
       rollAbilityDamage(r.abilityRoll,act==='ability-crit');
     } else if (act === 'dmg') {
-      rollDamage(r.weapon, false, r.foe);
+      rollDamage(r.weapon, false, r.foe,r.weaponAttack);
     } else if (act === 'crit') {
-      rollDamage(r.weapon, true, r.foe);
+      rollDamage(r.weapon, true, r.foe,r.weaponAttack);
     } else if (act === 'dualboth' || act === 'dualmain' || act === 'dualoff') {
-      rollDualDamage(act !== 'dualoff', act !== 'dualmain', r.dual.a === 20, r.dual.b === 20, r.foe);
+      const chosen=r.weaponAttack&&r.weaponAttack.singularityHand;
+      rollDualDamage(act !== 'dualoff', act !== 'dualmain',window.WBCombat.weaponCritical(r.dual.a,chosen==='main'),
+        window.WBCombat.weaponCritical(r.dual.b,chosen==='off'),r.foe,r.weaponAttack);
     } else if (act === 'hurt') {
       const f = foeById(r.foe);
       if (!f) return;
@@ -2096,6 +2145,15 @@
     if (offW && TYPES[offW.type].weapon && !(mainW && mainW.type === 'twohand')) held.push(['off', offW]);
     const extraOf = (fx) => fx.filter((e) => e.k === 'dmg').map((e) => ' + ' + e.dice + (e.dt ? ' ' + e.dt : '')).join('');
     const oppBtn = (slot) => '<button type="button" class="btn atk-opp" data-slot="' + slot + '">Opportunity attack</button>';
+    const singularity=window.WBAbilities.milestoneAction(state,'singularity');
+    const singularitySelect=slot=>{
+      const selected=singularityChoice(slot);if(!singularity.unlocked&&!selected)return '';
+      const hands=slot==='dual'?['main','off']:[slot],available=singularity.unlocked&&singularity.usage.remaining>0;
+      return '<label class="weapon-milestone"><span>Singularity · '+(singularity.unlocked?singularity.usage.remaining+'/'+singularity.usage.maximum+' uses / '+singularity.usage.period:'requires DEX 28')+'</span>'+
+        '<select data-singularity-slot="'+slot+'" aria-label="Singularity for '+(slot==='dual'?'dual attack':slot+' hand')+'">'+
+        '<option value="">None</option>'+hands.map(hand=>'<option value="'+hand+'"'+(selected===hand?' selected':'')+(available?'':' disabled')+'>'+
+        (slot==='dual'?(hand==='main'?'Main hand':'Off hand'):'This attack')+'</option>').join('')+'</select></label>';
+    };
     let atkHtml = held.map(([slot, w]) => {
       const m = mod(w.stat);
       const fx = effectsFor(w);
@@ -2104,7 +2162,7 @@
         '<div class="atk-top"><span class="atk-name">' + (dual ? (slot === 'main' ? 'Main hand: ' : 'Off hand: ') : '') + esc(w.name) + '</span><span class="atk-ap">' + apCost(m) + ' AP</span></div>' +
         '<div class="atk-line">Attack ' + fmt(atkMod(w)) + ' · Damage ' + esc(w.dmg) + modText(m + sumEff(fx, 'flat')) + esc(extraOf(fx)) + ' · ' + w.stat + ' · Range ' + rangeOf(w) + ' ft</div>' +
         (hits.length ? '<div class="atk-eff">On hit: ' + esc(hits.join(', ')) + '</div>' : '') +
-        '<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="' + slot + '">Attack</button><button type="button" class="btn atk-dmg" data-slot="' + slot + '">Damage</button>' + oppBtn(slot) + '</div>' +
+        singularitySelect(slot)+'<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="' + slot + '">Attack</button><button type="button" class="btn atk-dmg" data-slot="' + slot + '">Damage</button>' + oppBtn(slot) + '</div>' +
       '</div>';
     }).join('');
     if (dual) {
@@ -2115,13 +2173,18 @@
         '<div class="atk-sub">Main hand: ' + line(mainW) + '</div>' +
         '<div class="atk-sub">Off-hand: ' + line(offW) + ', then halved</div>' +
         (hits.length ? '<div class="atk-eff">On hit: ' + esc(hits.join(', ')) + '</div>' : '') +
-        '<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="dual">Attack with both</button><button type="button" class="btn atk-dmg" data-slot="dual">Damage</button>' + oppBtn('dual') + '</div>' +
+        singularitySelect('dual')+'<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="dual">Attack with both</button><button type="button" class="btn atk-dmg" data-slot="dual">Damage</button>' + oppBtn('dual') + '</div>' +
       '</div>';
     }
     $('#attacks').innerHTML = atkHtml || '<p class="atk-empty">No weapon in hand.</p>';
     $('#dollAr').textContent = String(Math.max(0, armorTotal() + vitArmor()));
     $('#dollWorn').textContent = (adamantine() ? 'Half VIT ' + sgn(vitArmor()) : 'VIT mod ' + fmt(mod('VIT'))) + (worn.length ? ', ' + sgn(armorTotal()) + ' from ' + worn.length + (worn.length === 1 ? ' piece' : ' pieces') + ' worn' : ', nothing worn yet');
   }
+  $('#attacks').addEventListener('change',event=>{
+    const select=event.target.closest('[data-singularity-slot]');if(!select)return;
+    singularitySelections[select.dataset.singularitySlot]={hand:select.value,ids:[state.equip.main||'',state.equip.off||''].join('|')};
+    renderMap();
+  });
 
   // Forge: make a new piece or edit an existing one
   const forgeEl = $('#forge');
@@ -3717,7 +3780,8 @@
     else {
       btns = opts.map((o) => {
         const ok = !walk && dist <= o.range && seeIt;
-        return '<button type="button" class="btn' + (ok ? ' strong' : '') + '" data-foe-atk="' + o.slot + '"' + (ok ? '' : ' disabled') + '>' + esc(o.label) + ' · ' + apCost(mod(o.w.stat)) + ' AP</button>';
+        return '<button type="button" class="btn' + (ok ? ' strong' : '') + '" data-foe-atk="' + o.slot + '"' + (ok ? '' : ' disabled') + '>' + esc(o.label) + ' · ' + apCost(mod(o.w.stat)) +
+          ' AP'+(singularityChoice(o.slot)?' · Singularity ('+singularityChoice(o.slot)+' hand)':'')+'</button>';
       }).join('');
       const best = Math.max(...opts.map((o) => o.range));
       if (dist > best || !seeIt) {

@@ -56,7 +56,10 @@
    const configured=manaMax!=null&&Number.isFinite(manaMax)&&manaMax>0;
    const mana=Object.freeze({kind:fields.manaKind==='holy'?'holy':'mana',
      automaticMax,max:manaMax,current,visible,configured,available:visible&&configured});
-   return {resources,ap,mana};
+   const reactionMax=combat.reactionMaximum(state,window.WBAbilities.effectBonus(state,'stat','AGL'),window.WBAbilities.formStatBonus(state,'AGL'));
+   const reactions=Object.freeze({max:reactionMax,current:combat.trackerAvailable(state.reactAvail==null?null:
+     finite(state.reactAvail)?numeric(state.reactAvail):0,reactionMax)});
+   return {resources,ap,mana,reactions};
  }
  const poolTypes=new Set(['SpendAP','RefundAP','SetAPCurrent','SetAPMaximum',
    'SpendMana','SetManaCurrent','SetManaMaximum','SpendPools']);
@@ -276,6 +279,34 @@
    return {ok:true,state:{...state,...patch},patch,events,message:result.message,milestonePlan:milestone.plan,
      log:events.map(e=>'UseMilestone: '+e.type)};
  }
+ function beginWeaponAttack(state,command){
+   const plan=window.WBAbilities.weaponAttackPlan(state,command.slot);
+   if(!plan.ok)return {ok:false,error:'INVALID_WEAPON',message:plan.message};
+   const payment=command.payment===undefined?'ap':command.payment;
+   if(!['ap','reaction'].includes(payment))return {ok:false,error:'INVALID_PAYMENT',message:'Choose AP or a reaction for this weapon attack.'};
+   const before=derive(state);
+   let patch={},events=[];
+   if(payment==='ap'){
+     const paid=applyPools(state,{type:'SpendAP',amount:plan.apCost});
+     if(!paid.ok)return {ok:false,error:paid.error,message:'Not enough AP for this weapon attack.'};
+     patch=paid.patch;events=paid.events.map(e=>({...e,command:'BeginWeaponAttack'}));
+   }else{
+     if(before.reactions.current<1)return {ok:false,error:'INSUFFICIENT_REACTIONS',message:'No reactions left. They come back at the start of your turn.'};
+     patch.reactAvail=before.reactions.current-1;
+     events.push({type:'reactions.changed',previous:before.reactions.current,current:patch.reactAvail,command:'BeginWeaponAttack'});
+   }
+   const singularityHand=command.singularityHand||'';
+   if(singularityHand){
+     if(!['main','off'].includes(singularityHand)||!plan.dual&&singularityHand!==command.slot)
+       return {ok:false,error:'INVALID_SINGULARITY_HAND',message:'Choose one hand making this weapon attack.'};
+     const used=applyMilestone({...state,...patch},{type:'UseMilestone',milestoneId:'singularity'});
+     if(!used.ok)return used;
+     patch={...patch,...used.patch};events.push(...used.events.map(e=>({...e,command:'BeginWeaponAttack'})));
+   }
+   const weaponAttack={...plan,payment,apSpent:payment==='ap'?plan.apCost:0,singularityHand};
+   events.push({type:'weapon.attack.prepared',slot:plan.slot,payment,command:'BeginWeaponAttack'});
+   return {ok:true,state:{...state,...patch},patch,events,weaponAttack,message:'Weapon attack prepared.',log:events.map(e=>'BeginWeaponAttack: '+e.type)};
+ }
  function apply(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
@@ -283,6 +314,16 @@
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
    if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
    if(command.type==='UseMilestone'||command.type==='SetMilestoneUses')return applyMilestone(state,command);
+   if(command.type==='ApplyDevastate'){
+     const source=record(command.damageSource);
+     if(source.stat!=='STR'||typeof source.damageModifier!=='number'||!Number.isFinite(source.damageModifier))
+       return {ok:false,error:'INVALID_DEVASTATE_SOURCE',message:'Devastate requires STR-based attack damage.'};
+     const result=applyMilestone(state,{type:'UseMilestone',milestoneId:'devastate'});
+     if(!result.ok)return result;
+     const events=result.events.map(e=>({...e,command:'ApplyDevastate'}));
+     return {...result,devastateBonus:source.damageModifier,events,log:events.map(e=>'ApplyDevastate: '+e.type)};
+   }
+   if(command.type==='BeginWeaponAttack')return beginWeaponAttack(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;
