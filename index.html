@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-turn-rest-v42">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-current-rules-v45">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 52</p>
+    <p class="meta">Homebrew rules · Draft 53</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -133,7 +133,7 @@
     <div class="status-panel">
       <div class="status-section-head"><h3>Conditions and other effects</h3><span class="status-help">Record poison, blessings, injuries, and custom effects</span></div>
       <div class="status-list" id="statusManualList"></div>
-      <form id="statusAddForm" class="status-form">
+      <form id="statusAddForm" class="status-form"><label>Preset<select id="statusPreset"></select></label>
         <h4>Add a condition or effect</h4>
         <div class="status-form-grid">
           <label class="ability-field"><span class="foot-label">Name</span><input id="statusName" type="text" maxlength="100" placeholder="e.g. Poisoned" required></label>
@@ -216,7 +216,7 @@
     <div class="foes" id="foesSec">
       <div class="foes-head">
         <span class="foot-label">Enemies</span>
-        <p class="note">Hits go by the Evasion you enter and damage comes off their Health after their Armor Rating. Their Dodge, Block and resistances are still the DM&rsquo;s call. Drag an enemy to move it.</p>
+        <p class="note">Hits use the Evasion you enter. Damage reduces their Health after their Armor Rating. Their Dodge, Block and resistances are still the DM&rsquo;s call. Drag an enemy to move it.</p>
         <button type="button" class="btn" id="foeAdd">Add enemy</button>
       </div>
       <form class="foe-form" id="foeForm" hidden autocomplete="off">
@@ -238,6 +238,7 @@
 
 
   <section data-sheet-section="overview" aria-labelledby="vitalsHead">
+
     <div class="sec-head">
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="vitalsHead">Vitals</h2><button type="button" class="btn-link" id="editCharacterDetails">Character details</button>
@@ -254,7 +255,7 @@
         </div>
         <div class="bar"><span id="hpBar"></span></div>
         <div class="health-tools"><button type="button" class="btn-link" id="goDamage">Take damage &darr;</button><details class="health-details"><summary>Health &amp; recovery</summary>
-            <div class="hp-act">
+            <button type="button" class="btn" id="shortRest">Short rest hit die</button><div class="hp-act">
               <input id="hpAmt" type="number" inputmode="numeric" min="0" placeholder="Healing" aria-label="Amount of healing" autocomplete="off">
               <button type="button" class="btn heal" id="hpHeal">Heal</button>
             </div>
@@ -278,7 +279,7 @@
             </div>
           </details></div>
         <div class="dying" id="dying" hidden>
-          <div class="dying-top"><span class="dying-title" id="dyingTitle">Bleeding out</span><span class="dying-sub" id="dyingSub">Unconscious</span></div>
+          <div class="dying-top"><span class="dying-title" id="dyingTitle">Dying</span><span class="dying-sub" id="dyingSub">Unconscious</span></div>
           <div class="bar death"><span id="deathBar"></span></div>
           <p class="dying-txt" id="dyingTxt"></p>
           <div class="dying-acts" id="dyingActs">
@@ -313,7 +314,7 @@
           <p class="tr-src">Spend given AP before your own.</p><p class="tr-src">1, plus 1 at AGL 21 and 1 at AGL 28. Back at the start of your turn.</p><div class="acts-row">
             <div class="act">
               <button type="button" class="btn" id="stabBtn">Stabilize someone</button>
-              <span class="tr-src">5 AP · d20 + INT mod against DC 12. On a success they stop bleeding.</span>
+              <span class="tr-src">5 AP · d20 + INT mod against DC 12. On a success they stabilize.</span>
             </div>
             <div class="act">
               <button type="button" class="btn" id="cmdBtn">Command an ally</button>
@@ -334,6 +335,7 @@
       <div class="favorite-heading"><h3>Favorite abilities</h3><a href="#sheet/abilities">Manage favorites</a></div>
       <p id="favoriteFeedback" class="ability-feedback" role="status" aria-live="polite"></p>
       <div id="favoriteList" class="favorite-list"></div>
+    <aside id="vitalMigration" class="save-recovery" hidden><p id="vitalMigrationText"></p><button class="btn" type="button" id="vitalMigrationDismiss">Keep current values</button><a class="btn" href="#sheet/overview">Review Health and Mana</a></aside>
     </div>
     <details class="vitals-help"><summary>How these values work</summary>
       <p class="note">Start new combat restores combat and round uses. Ending combat restores nothing. Outside allowances are separate and return on long rest. AP, reactions, cooldowns and resources keep their values when combat starts or ends; use Start my turn when your turn begins.</p>
@@ -377,7 +379,7 @@
         <div class="rating">
           <label for="evasion">Natural Evasion</label>
           <div class="rating-val"><input id="evasion" data-auto type="number" inputmode="numeric" autocomplete="off"></div>
-          <span class="rsrc" id="evSrc">10 + AGL mod</span>
+          <span class="rsrc" id="evSrc">12 + AGL mod</span>
         </div>
         <div class="rating">
           <label for="armor">Armor Rating</label>
@@ -501,14 +503,15 @@
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="defHead">Defenses</h2>
     </div>
-    <p class="note">All damage comes in here. Enter it and press <b>Take the hit</b>, and your Armor Rating and resistances come off for you. To defend instead, also enter their attack roll (or the save DC for an area attack) and pick a defense. Each defense uses a reaction.</p>
-    <div class="incoming" id="incoming">
+    <p class="note">All damage comes in here. Enter it and press <b>Take the hit</b>, and your Armor Rating and resistances come off for you. To defend instead, also enter their attack roll (or the save DC for an area attack) and pick a defense. Each defense uses a reaction. Use each kind only once against the same attack; correct trackers if needed.</p>
+    <label class="chk"><input type="checkbox" id="armorDisadvantage" checked><span>Suggest Heavy armor disadvantage on ability attacks, Dodge and AGL checks (uncheck to override)</span></label><div class="incoming" id="incoming">
       <div class="field"><label for="incAtk" id="incAtkLab">Their attack roll</label><input id="incAtk" type="number" inputmode="numeric" placeholder="18" autocomplete="off"></div>
       <div class="field"><label for="incDmg">Damage</label><input id="incDmg" type="number" inputmode="numeric" placeholder="25" autocomplete="off"></div>
       <div class="field"><label for="incType">Damage type</label><input id="incType" type="text" list="dmgTypes" placeholder="Any" autocomplete="off" spellcheck="false"></div>
       <label class="chk" for="incArea"><input type="checkbox" id="incArea"><span>Area attack</span></label>
       <label class="chk" for="incNat" id="incNatLab"><input type="checkbox" id="incNat"><span>Natural 20</span></label>
       <label class="chk" for="incOF"><input type="checkbox" id="incOF"><span>Overwhelming Force</span></label>
+      <label class="chk"><input type="checkbox" id="incTwoHanded"><span>Two-handed hit</span></label><label class="chk"><input type="checkbox" id="incPuncture"><span>Puncture (ignore 2 AR)</span></label>
       <label class="chk" for="incNoAr"><input type="checkbox" id="incNoAr"><span>Armor doesn't apply</span></label>
       <label class="chk" for="incAlly" id="incAllyLab" hidden><input type="checkbox" id="incAlly"><span>Protecting an ally</span></label>
       <div class="take-row">
@@ -580,7 +583,7 @@
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="equipHead">Equipment</h2>
     </div>
-    <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm, leg pieces either leg and rings either hand, unless the piece is a set, like boots, which fills both. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Gear counts toward a level-up's Health, Mana and hit die once you've worn it through a long rest, and never changes levels you already have.</p>
+    <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm, leg pieces either leg and rings either hand, unless the piece is a set, like boots, which fills both. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Health and Mana use current stats and gear. Changes to a maximum move the current pool by the same amount. Hit dice heal on short rests.</p>
     <div class="consumables-panel" id="consumablesPanel" aria-labelledby="consumablesHead">
       <div class="consumables-heading"><h3 id="consumablesHead">Consumables</h3><button type="button" class="btn" id="consumableAdd">Add consumable</button></div>
       <p class="note">Use tracks one item. Optional healing rolls can be applied to your Health from the roll popup; listed AP costs and other effects are handled at the table.</p>
@@ -667,7 +670,7 @@
         </div>
         <div class="hands">
           <div class="slot hand" data-drop="slot" data-slot="main"></div>
-          <div class="slot hand" data-drop="slot" data-slot="off"></div>
+          <div class="slot hand" data-drop="slot" data-slot="off"></div><div class="slot hand" data-drop="slot" data-slot="strapped"></div><div class="slot hand" data-drop="slot" data-slot="pants"></div>
         </div>
         <div class="attacks" id="attacks"></div>
       </div>
@@ -698,7 +701,7 @@
             <span class="tr-title" id="forgeTitle">Forge a Piece</span>
             <span class="tr-src">Name it, choose where it's worn, then add an armor rating and any abilities, bonuses or effects.</span>
           </div>
-          <div class="forge-row">
+          <p id="inventorySlots" role="status"></p><label><input type="checkbox" id="fastRoll"> Fast Roll weapon and Block dice (criticals roll every die)</label><label>Mounted straight approach (ft)<input type="number" id="mountApproach" min="0" step="5"></label><div class="forge-row">
             <div class="field grow">
               <label for="forgeName">Name</label>
               <input id="forgeName" type="text" maxlength="40" placeholder="Helmet" autocomplete="off">
@@ -711,7 +714,7 @@
           <div class="field">
             <span class="flabel" id="forgeTypeLabel">Type</span>
             <div class="pick" id="forgeType" role="group" aria-labelledby="forgeTypeLabel">
-              <button type="button" data-type="head" aria-pressed="true">Head</button>
+              <button type="button" data-type="pants" aria-pressed="false">Pants</button><button type="button" data-type="head" aria-pressed="true">Head</button>
               <button type="button" data-type="torso" aria-pressed="false">Torso</button>
               <button type="button" data-type="arms" aria-pressed="false">Arms</button>
               <button type="button" data-type="legs" aria-pressed="false">Legs</button>
@@ -723,6 +726,25 @@
               <button type="button" data-type="shield" aria-pressed="false">Shield</button>
             </div>
           </div>
+          <label>Add from current equipment tables<select id="catalogPreset"></select></label><button type="button" class="btn" id="catalogAdd">Add preset to pack</button>
+          <details class="rule-editor"><summary>Weapon properties, armor and pack settings</summary>
+            <div class="rule-fields">
+              <label>Price<input id="forgePrice" placeholder="15 gc"></label><label>Weapon dice multiplier<input id="forgeDamageMultiplier" type="number" min="0" step="any" placeholder="1"></label><label>Thrown normal range<input id="forgeThrownRange" type="number" min="5"></label><label>Thrown long range<input id="forgeThrownLongRange" type="number" min="5"></label><label>Weapon family<select id="forgeFamily"><option>Balanced</option><option>Heavy</option><option>Finesse</option><option>Paragon</option></select></label>
+              <fieldset id="forgeProperties"><legend>Weapon properties</legend><label><input type="checkbox" data-weapon-property="Light">Light</label><label><input type="checkbox" data-weapon-property="Two-handed">Two-handed</label><label><input type="checkbox" data-weapon-property="Versatile">Versatile</label><label><input type="checkbox" data-weapon-property="Strapped">Strapped</label><label><input type="checkbox" data-weapon-property="Reach">Reach</label><label><input type="checkbox" data-weapon-property="Thrown">Thrown</label><label><input type="checkbox" data-weapon-property="Loading">Loading</label><label><input type="checkbox" data-weapon-property="Mount">Mount</label><label><input type="checkbox" data-weapon-property="Ranged">Ranged</label></fieldset>
+              <label>Two-handed grip (Versatile)<input id="forgeGrip" type="checkbox"></label>
+              <label>Two-handed damage dice<input id="forgeVersatile" placeholder="1d10"></label>
+              <label>Long range (disadvantage, ft)<input id="forgeLongRange" type="number" min="5" max="1000"></label>
+              <label>Shots before reload<input id="forgeLoading" type="number" min="1" max="1000" placeholder="1"></label>
+              <label>Mounted<input id="forgeMounted" type="checkbox"></label>
+              <label>Armor weight<select id="forgeWeight"><option value="">Unspecified</option><option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option></select></label>
+              <label>Light armor Evasion bonus<input id="forgeLightEv" type="number" min="0"></label>
+              <label>Shield Block multiplier<input id="forgeBlockMultiplier" type="number" min="0" step="any" placeholder="1"></label>
+              <label>Pack slots (blank = automatic)<input id="forgeSlots" type="number" min="0"></label>
+              <label>Backpack capacity bonus<input id="forgeBackpack" type="number" min="0" placeholder="6"></label>
+              <label>Ammunition quantity (stacks of 5)<input id="forgeAmmo" type="number" min="0"></label>
+              <fieldset id="forgeSignatures"><legend>Signature reminders</legend><label><input type="checkbox" data-signature="Sweep">Sweep</label><label><input type="checkbox" data-signature="Hook">Hook</label><label><input type="checkbox" data-signature="Stagger">Stagger</label><label><input type="checkbox" data-signature="Disarm">Disarm</label><label><input type="checkbox" data-signature="Entangle">Entangle</label><label><input type="checkbox" data-signature="Puncture">Puncture</label><label><input type="checkbox" data-signature="Sunder">Sunder</label><label><input type="checkbox" data-signature="Bleed">Bleed</label><label><input type="checkbox" data-signature="Pierce Through">Pierce Through</label><label><input type="checkbox" data-signature="Bulwark">Bulwark</label><label><input type="checkbox" data-signature="Quickdraw">Quickdraw</label><label><input type="checkbox" data-signature="Concealed">Concealed</label><label><input type="checkbox" data-signature="Silent">Silent</label><label><input type="checkbox" data-signature="Loud">Loud</label></fieldset>
+              <p>Property outcomes are resolved at the table. Puncture ignores 2 AR. Quickdraw makes draw/swap free. Set price-table values manually.</p>
+            </div></details>
           <div class="set-row" id="setRow" hidden>
             <label class="chk" for="forgeSet"><input type="checkbox" id="forgeSet"><span id="setLab">Set: worn on both legs</span></label>
             <p class="fhint">For a piece that only works as a pair, like boots. It fills both slots, and its armor, bonuses and effects count once for the whole set. Leave it off for something worn on one side, like a single gauntlet.</p>
@@ -851,7 +873,7 @@
           <tr>
             <th scope="col">Lv</th>
             <th scope="col">VIT</th>
-            <th scope="col">Roll</th>
+            <th scope="col">Hit die</th>
             <th scope="col">HP</th>
             <th scope="col" id="msHead">INT</th>
             <th scope="col" id="mpHead">Mana</th>
@@ -897,20 +919,21 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-turn-rest-v42"></script>
-<script src="js/game-state.js?v=20261031-turn-rest-v42"></script>
-<script src="js/maps.js?v=20261031-turn-rest-v42"></script>
-<script src="js/routing.js?v=20261031-turn-rest-v42"></script>
-<script src="js/combat-core.js?v=20261031-turn-rest-v42"></script>
-<script src="js/equipment-profiles.js?v=20261031-turn-rest-v42"></script>
-<script src="js/abilities.js?v=20261031-turn-rest-v42"></script>
-<script src="js/rolls.js?v=20261031-turn-rest-v42"></script>
-<script src="js/character-core.js?v=20261031-turn-rest-v42"></script>
-<script src="js/resources.js?v=20261031-turn-rest-v42"></script>
-<script src="js/encounter-actions.js?v=20261031-turn-rest-v42"></script>
-<script src="js/status.js?v=20261031-turn-rest-v42"></script>
-<script src="js/consumables.js?v=20261031-turn-rest-v42"></script>
-<script src="js/sheet-layout.js?v=20261031-turn-rest-v42"></script>
-<script src="js/app.js?v=20261031-turn-rest-v42"></script>
+<script src="js/persistence.js?v=20261031-current-rules-v45"></script>
+<script src="js/game-state.js?v=20261031-current-rules-v45"></script>
+<script src="js/maps.js?v=20261031-current-rules-v45"></script>
+<script src="js/routing.js?v=20261031-current-rules-v45"></script>
+<script src="js/combat-core.js?v=20261031-current-rules-v45"></script>
+<script src="js/equipment-profiles.js?v=20261031-current-rules-v45"></script>
+<script src="js/rules-catalog.js?v=20261031-current-rules-v45"></script>
+<script src="js/abilities.js?v=20261031-current-rules-v45"></script>
+<script src="js/rolls.js?v=20261031-current-rules-v45"></script>
+<script src="js/character-core.js?v=20261031-current-rules-v45"></script>
+<script src="js/resources.js?v=20261031-current-rules-v45"></script>
+<script src="js/encounter-actions.js?v=20261031-current-rules-v45"></script>
+<script src="js/status.js?v=20261031-current-rules-v45"></script>
+<script src="js/consumables.js?v=20261031-current-rules-v45"></script>
+<script src="js/sheet-layout.js?v=20261031-current-rules-v45"></script>
+<script src="js/app.js?v=20261031-current-rules-v45"></script>
 </body>
 </html>

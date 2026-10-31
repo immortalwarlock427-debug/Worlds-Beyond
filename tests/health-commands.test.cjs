@@ -15,19 +15,19 @@ function setup(){
  return {state,core:ctx.window.WBCharacter,combat:ctx.window.WBCombat,persistence:ctx.window.WBPersistence,
   apply:(s,type,extra={})=>ctx.window.WBCharacter.apply(s,{type,...extra})};
 }
-test('Health derives purely from history and current equipment; blank means full and live VIT boosts only change the threshold',()=>{
+test('Health uses current equipment/forms/effects for maximum and threshold, while blank means full',()=>{
  const {state,core}=setup();delete state.over.hpMax;state.fields.hpCur='';
  state.items=[{id:'helm',type:'head',bonuses:[{t:'VIT',v:2},{t:'hp',v:3}]}];state.equip={head:'helm'};
  state.abilityLoadouts=[{id:'loadhealth',statBonuses:{VIT:3}}];state.activeAbilityLoadoutId='loadhealth';
  state.abilities=[{durationLeft:1,effects:[{target:'stat',stat:'VIT',value:2}]}];freeze(state);const before=JSON.stringify(state);
- const h=core.derive(state).health;assert.equal(h.automaticMax,19);assert.equal(h.max,19);assert.equal(h.current,19);
+ const h=core.derive(state).health;assert.equal(h.automaticMax,26);assert.equal(h.max,26);assert.equal(h.current,26);
  assert.equal(h.vit,23);assert.equal(h.threshold,24);assert.equal(h.down,null);assert.equal(JSON.stringify(state),before);
 });
-test('historical string gear values and partial advancement use shared Health math without retroactive form boosts',()=>{
+test('obsolete advancement records cannot change current-stat Health',()=>{
  const {state,core}=setup();state.fields.level='2';delete state.over.hpMax;state.fields.hpCur='';
  state.lvGear={1:{VIT:'2'},2:{VIT:'4'}};state.rolls={2:'5'};
  state.items=[{id:'boots',type:'legs',pair:true,bonuses:[{t:'hp',v:3}]}];state.equip={rleg:'boots'};
- assert.equal(core.health(state).max,35);delete state.rolls[2];assert.equal(core.health(state).max,20);assert.deepEqual(plain(core.health(state).missing),[2]);
+ assert.equal(core.health(state).max,35);delete state.rolls[2];assert.equal(core.health(state).max,35);assert.deepEqual(plain(core.health(state).missing),[]);
 });
 test('unknown Health is never guessed as zero and unsupported manual maxima do not silently become automatic',()=>{
  const {state,core,apply}=setup();state.hist={};state.over={};state.fields.hpCur='';freeze(state);
@@ -39,7 +39,7 @@ test('unknown Health is never guessed as zero and unsupported manual maxima do n
 test("damage applies Death's Mercy once, then continues into negative Health and death without touching other records",()=>{
  const {state,apply}=setup();freeze(state);const before=JSON.stringify(state),r=apply(state,'DamageHealth',{amount:100});
  assert.equal(r.ok,true);assert.equal(r.state.fields.hpCur,'-8');assert.equal(r.healthPlan.mercyCapped,true);assert.equal(r.healthPlan.dead,false);
- assert.equal(r.healthPlan.concentrationDc,50);assert.equal(r.healthPlan.concentration,true);
+ assert.equal(r.healthPlan.concentrationDc,50);assert.equal(r.healthPlan.concentration,false);
  assert.equal(r.events.find(event=>event.type==='health.damaged').amount,100);assert.equal(r.events.find(event=>event.type==='health.damaged').applied,16);
  assert.deepEqual(plain(r.state.down),{mercy:true,stable:false});
  for(const key of ['items','equip','abilities','resources','consumables','rollHistory','futureState'])assert.equal(r.state[key],state[key]);
@@ -68,7 +68,7 @@ test('manual current/maximum corrections preserve full sentinels, excess and sig
  r=apply(r.state,'SetHealthCurrent',{value:''});assert.equal(r.state.fields.hpCur,'');assert.equal(core.health(r.state).current,20);
  r=apply(r.state,'SetHealthMaximum',{value:30});assert.equal(core.health(r.state).current,30);assert.equal(r.state.fields.hpCur,'');
  r=apply(r.state,'SetHealthMaximum',{value:''});assert.equal(r.state.over.hpMax,undefined);assert.equal(core.health(r.state).current,16);
- const fixed=apply(state,'SetHealthMaximum',{value:5});assert.equal(fixed.state.fields.hpCur,'8');assert.equal(core.health(fixed.state).current,8);
+ const fixed=apply(state,'SetHealthMaximum',{value:5});assert.equal(fixed.state.fields.hpCur,'-7');assert.equal(core.health(fixed.state).current,-7);
 });
 test('stability, Trauma and treatment share the same state without creating new treatment or death restrictions',()=>{
  const {state,apply}=setup();state.fields.hpCur='-2';state.down={mercy:true,stable:false,futureDown:{kept:true}};
@@ -79,7 +79,7 @@ test('stability, Trauma and treatment share the same state without creating new 
 });
 test('bleeding and damage prompts derive from incoming damage and effective VIT without drawing dice or dispatching effects',()=>{
  const {state,apply}=setup();state.hist.VIT={1:21};state.fields.hpCur='8';
- let r=apply(state,'DamageHealth',{amount:10});assert.equal(r.healthPlan.indomitable,true);assert.equal(r.healthPlan.concentration,true);
+ let r=apply(state,'DamageHealth',{amount:10});assert.equal(r.healthPlan.indomitable,true);assert.equal(r.healthPlan.concentration,false);
  r=apply(r.state,'DamageHealth',{amount:4,source:'bleeding'});assert.equal(r.healthPlan.concentration,false);assert.equal(r.healthPlan.bleeding,true);
  assert.equal(r.events.find(event=>event.type==='health.damaged').source,'bleeding');
 });

@@ -4,14 +4,15 @@
 (function () {
   'use strict';
   const BASE = 'base';
-  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off'];
+  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','pants'];
   const FIT = {
     head: ['head'], amulet: ['amulet'], torso: ['torso'],
     rarm: ['arms'], larm: ['arms'], rring: ['ring'], lring: ['ring'],
     belt: ['belt'], rleg: ['legs'], lleg: ['legs'],
-    main: ['onehand','twohand'], off: ['onehand','shield']
+    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],pants:['pants']
   };
   const PAIRS = {arms: ['rarm','larm'], ring: ['rring','lring'], legs: ['rleg','lleg']};
+  const twoHanded=(state,item)=>window.WBCombat&&window.WBCombat.weaponRules?window.WBCombat.weaponRules(state,item).twoHanded:item.type==='twohand';
   const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   const key = id => id || BASE;
   function sanitize(state, profile) {
@@ -25,7 +26,7 @@
       // occupies the offhand implicitly. Do not equip conflicting pieces.
       const pair = PAIRS[item.type];
       if (item.pair && pair && slot !== pair[0]) continue;
-      if (slot === 'off' && output.main && inventory.get(output.main).type === 'twohand') continue;
+      if (slot === 'off' && output.main && twoHanded(state,inventory.get(output.main))) continue;
       if (pair && slot === pair[1] && output[pair[0]]) {
         const first = inventory.get(output[pair[0]]);
         if (first && first.type === item.type && first.pair) continue;
@@ -33,7 +34,7 @@
       output[slot] = id;
       seen.add(id);
       if (item.pair && pair) delete output[pair[1]];
-      if (item.type === 'twohand') delete output.off;
+      if(slot==='main'&&twoHanded(state,item))delete output.off;
     }
     return output;
   }

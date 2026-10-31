@@ -41,21 +41,13 @@ test('AP derivation preserves blank/full sentinels and legacy tracker bounds wit
  assert.equal(api.derive(broken).ap.given,0);
 });
 
-test('Mana progression shares table thresholds and uses historical scores, ASI, snapshots and current pool gear',()=>{
- for(const [score,expected] of [[12,0],[13,6],[16,8],[19,10],[22,12],[25,14],[28,18],[40,18]])
-  assert.equal(combat.manaPerLevel(score),expected);
- const s=hero();
- assert.equal(api.derive(s).mana.max,28,'12 at first level, then 8 per level');
- s.lvGear={2:{INT:'3'}};
- s.items=[{id:'helm',type:'head',bonuses:[{t:'INT',v:12},{t:'mp',v:4},{t:'holy',v:7}]}];s.equip.head='helm';
- assert.equal(api.derive(s).mana.max,34,'only the historical snapshot and explicit pool bonus count');
- s.abilities=[{durationLeft:3,effects:[{target:'stat',stat:'INT',value:20}]}];
- s.abilityLoadouts=[{id:'form',statBonuses:{INT:20},manaMode:'show'}];s.activeAbilityLoadoutId='form';
- assert.equal(api.derive(s).mana.max,34,'current temporary/form stats are not retroactive advancement');
- s.fields.manaKind='holy';
- assert.equal(api.derive(s).mana.max,22,'FTH: 3 + 6 + 6, plus 7 worn Holy Power');
- s.fields.manaKind='mana';s.fields.level='4';s.hist.INT={1:'18'};s.lvGear={};s.asi={4:{INT:2}};
- assert.equal(api.derive(s).mana.max,48,'18 + 8 + 8 + 10 + 4 gear');
+test('Mana uses current stat, current effects and level while ignoring old advancement snapshots',()=>{
+ const s=hero();assert.equal(api.derive(s).mana.max,80);
+ s.lvGear={2:{INT:'3'}};s.items=[{id:'helm',type:'head',bonuses:[{t:'INT',v:12},{t:'mp',v:4},{t:'holy',v:7}]}];s.equip.head='helm';
+ assert.equal(api.derive(s).mana.max,144);
+ s.abilities=[{durationLeft:3,effects:[{target:'stat',stat:'INT',value:20}]}];s.abilityLoadouts=[{id:'form',statBonuses:{INT:20},manaMode:'show'}];s.activeAbilityLoadoutId='form';
+ assert.equal(api.derive(s).mana.max,344);s.fields.manaKind='holy';assert.equal(api.derive(s).mana.max,72);
+ s.fields.manaKind='mana';s.fields.level='4';s.hist.INT={1:'18'};s.lvGear={};s.asi={4:{INT:2}};assert.equal(api.derive(s).mana.max,436);
 });
 
 test('Mana manual overrides, blank/full and above-max corrections remain independent of visibility',()=>{
@@ -101,14 +93,14 @@ test('refunds fill personal AP first and preserve existing overflow/freshness be
 
 test('combined AP/Mana payments reject either insufficient pool without a partial patch',()=>{
  const s=freeze(hero()),original=JSON.stringify(s);
- for(const costs of [{ap:19,mana:1},{ap:2,mana:29}]){
+ for(const costs of [{ap:19,mana:1},{ap:2,mana:81}]){
   const r=api.apply(s,{type:'SpendPools',...costs});
   assert.equal(r.ok,false);assert.equal(r.patch,undefined);
   assert.equal(JSON.stringify(s),original);
  }
  const r=api.apply(s,{type:'SpendPools',ap:5,mana:9});
  assert.equal(r.state.apAvail,13);assert.equal(r.state.apGiven.n,0);
- assert.equal(r.state.fields.mpCur,'19');
+ assert.equal(r.state.fields.mpCur,'71');
  assert.equal(s.fields.mpCur,'');
  assert.deepEqual(Array.from(r.events,e=>e.type),['ap.changed','mana.changed']);
 });
@@ -137,7 +129,7 @@ test('manual AP/current/max edits and Mana overrides are pure corrections, not g
  const overridden=api.apply(s,{type:'SetManaMaximum',value:'55'});
  assert.equal(overridden.state.over.mpMax,'55');assert.equal(api.derive(overridden.state).mana.current,55);
  const cleared=api.apply(overridden.state,{type:'SetManaMaximum',value:''});
- assert.equal(cleared.state.over.mpMax,undefined);assert.equal(api.derive(cleared.state).mana.max,28);
+ assert.equal(cleared.state.over.mpMax,undefined);assert.equal(api.derive(cleared.state).mana.max,80);
 });
 
 test('malformed and negative payments reject without mutating a character or converting blank pools',()=>{
@@ -167,12 +159,12 @@ test('form entry plans blank Mana before equipment changes and leaves source/gea
  s.abilityLoadouts=[{id:'loadcostform',name:'Mage',manaMode:'hide',entryApCost:4,entryResourceId:'base-mana',entryResourceCost:6}];
  const controls=controlsFor(s);
  assert.equal(abilities.selectLoadout(s,'loadcostform',controls),true);
- assert.equal(s.fields.mpCur,'14','20 in the old profile minus 6, never 42 minus 6');
+ assert.equal(s.fields.mpCur,'50','56 in the source profile minus 6; this helper only commits the payment');
  assert.equal(s.apAvail,11);assert.equal(s.equip.head,'formhelm');
  assert.equal(abilities.selectLoadout(s,'loadcostform',controls),true);
- assert.equal(s.fields.mpCur,'14','reselecting the form is free');
+ assert.equal(s.fields.mpCur,'50','reselecting the form is free');
  assert.equal(abilities.selectLoadout(s,'',controls),true);
- assert.equal(s.fields.mpCur,'14','Base is free');
+ assert.equal(s.fields.mpCur,'50','Base is free');
  s.fields.mpCur='5';const before=JSON.stringify(s);
  assert.equal(abilities.selectLoadout(s,'loadcostform',controls),false);
  assert.equal(JSON.stringify(s),before);
@@ -185,10 +177,10 @@ test('linked portraits use the same planned payment, including a lower destinati
  s.equipmentProfiles={base:{head:'basehelm'},loadcostform:{}};
  s.abilityLoadouts=[{id:'loadcostform',name:'Mage',portraitId:'magepic',entryApCost:4,entryResourceId:'base-mana',entryResourceCost:6}];
  assert.equal(abilities.selectPortrait(s,'magepic',controlsFor(s)),true);
- assert.equal(s.fields.mpCur,'14');assert.equal(api.derive(s).mana.max,12);
+ assert.equal(s.fields.mpCur,'50');assert.equal(api.derive(s).mana.max,48);
  assert.equal(s.formId,'magepic');assert.equal(s.activeAbilityLoadoutId,'loadcostform');
  assert.equal(abilities.selectPortrait(s,'magepic',controlsFor(s)),true);
- assert.equal(s.fields.mpCur,'14');assert.equal(s.apAvail,11);
+ assert.equal(s.fields.mpCur,'50');assert.equal(s.apAvail,11);
 });
 
 test('a failed equipment switch cannot commit a previously planned AP/Mana payment',()=>{

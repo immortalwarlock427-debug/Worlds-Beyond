@@ -154,7 +154,7 @@
         '<label>HP<input type="number" name="hp" min="-1000000" max="1000000" value="' + actor.hp + '" required></label>' +
         '<label>Max HP<input type="number" name="maxHp" min="1" max="1000000" value="' + actor.maxHp + '" required></label>' +
         '<label>AR<input type="number" name="ar" min="0" max="1000000" value="' + actor.ar + '" required></label>' +
-        '<label>AP max<input type="number" name="apMax" min="0" max="40" value="' + actor.apMax + '" required></label>' +
+        '<label>AP max<input type="number" name="apMax" min="0" max="55" value="' + actor.apMax + '" required></label>' +
         '<label>Movement ft/AP<input type="number" name="speedFt" min="0" max="10000" value="' + actor.speedFt + '" required></label>' +
         '<label>Surge free AP<input type="number" name="surgeMax" min="0" max="2" value="' + actor.surgeMax + '" required></label>' +
         '<label>Death threshold<input type="number" name="deathThreshold" min="0" max="1000000" value="' +
