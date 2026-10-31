@@ -14,16 +14,7 @@
     { k: 'FTH', n: 'Faith',        g: 'ment', m: ['Defy Fate', 'Miracle'] }
   ];
   // Milestone text, copied from the stat pages in Game Systems.
-  const MS_DESC = {
-    STR: ["Once each round, you can add your Strength modifier to an attack's damage twice instead of once.", "Your weapon and unarmed attacks can't have their damage reduced below half by anything, blocks and parries included. A dodge still avoids them entirely, since the attack never connects, and this doesn't bypass immunities."],
-    VIT: ["Once per combat, when a status effect that physically restrains or damages you would take hold, such as stunned, paralyzed or restrained, you can negate it so it never affects you. Mind-based effects like charmed or frightened don't count. Also, when you're dropped below 0 Health, you can roll a d20 + your Vitality modifier against DC 12. On a success you stop bleeding, though you're still unconscious.", "Your Armor Rating becomes half your Vitality, rounded down, plus the armor you're wearing, instead of your Vitality modifier plus your armor."],
-    DEX: ["Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement, moving in front of the attack to do it. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.", "Once each round, before rolling a weapon attack (melee or ranged), you can concentrate all of your power into a single point. If the attack hits, it's a critical hit. If it misses, Singularity is spent for the round."],
-    AGL: ["Each turn, you get 2 AP of movement for free. You also gain an additional reaction.", "You move so fast that you can't be hit by opportunity attacks, and any attack that relies on sight to hit you rolls with disadvantage, whether it's melee, ranged or a spell. You also have advantage on saves against spells that need sight to target you. You also gain an additional reaction."],
-    INT: ["Once per round, for 5 AP, you can give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your Intelligence modifier.", "Once per round, for 5 AP, you can analyze a creature, ability, object or phenomenon you can perceive to learn one significant property, weakness or underlying principle, if one can be inferred from the information available."],
-    WIS: ["You have a supernatural sense for danger directed at you. Whenever you face a danger you don't know about, the GM secretly makes a Wisdom check for you against the danger's DC, like an ambusher's stealth roll or a trap's DC. On a success you aren't told what's wrong, only that something is, like a sudden aversion to drinking from a cup. Once per round, at no AP cost, you can also ask the GM whether a specific choice is dangerous, and you get a feeling back: good, bad or unsure.", "You naturally see through illusions and can see invisible creatures within 30 ft. Once per round, for 5 AP, you can attempt to perceive the true intent behind anything in sight, whether a creature (hostile, afraid, lying or hiding something) or the things around you, like what a trap or ritual is meant to do. Make a Wisdom check, contested by a creature's Charisma if it's hiding something, or against a DC the GM sets."],
-    CHA: ["Once per round, for 5 AP, you can force a creature within 60 ft that can perceive you to make a Charisma saving throw (DC 10 + double your Charisma modifier). On a failure, its attention is fixed on you until the start of your next turn, and it has disadvantage on attacks against anyone but you.", "You are immune to possession and to effects that forcibly alter your personality, memories or identity when they come from a source of your level or lower. Against higher-level sources, you have advantage to resist them."],
-    FTH: ["Your luck changes. Instead of rerolling, each use lets you treat a failed saving throw or ability check as a success. You still have a number of uses equal to your Faith modifier, regained on a long rest. Initiative is the exception: a use there still rerolls it.", "Once per long rest, at no AP cost, you can declare in one sentence a single restriction standing in the way of an action, such as a usage limit, an immunity or the limit of your own strength, and fate bends probability so the action can come to pass anyway. Miracle fails if the declaration is too broad or fundamentally impossible for you: it can push you past your limits, but it can't give you an ability you don't have, like flight. Miracle can't be used to get around its own limit."]
-  };
+  const MS_DESC = window.WBAbilities.milestoneDescriptions;
   const SLOTS = [
     { k: 'head',   n: 'Head',       fits: 'head' },
     { k: 'amulet', n: 'Amulet',     fits: 'amulet' },
@@ -128,7 +119,7 @@
     fields: {}, over: {}, hist: {}, rolls: {},
     pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
-    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
+    asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
   });
   function newCharId() { return 'c' + Date.now().toString(36) + randInt(1e6).toString(36); }
 
@@ -655,9 +646,14 @@
     commitPools: commitCharacter,
     execute: (command) => commitCharacter(window.WBCharacter.apply(state, command)),
     refresh: () => refreshAll(),
-    rollAbility: (plan) => rollAbility(plan)
+    rollAbility: (plan) => rollAbility(plan),
+    rollMilestone: (plan) => {
+      if(plan.kind==='check')rollCheck(plan.title,plan.modifier,'check',{note:plan.text});
+      else showRoll({kind:'notice',title:plan.title,total:plan.total,math:plan.text});
+    }
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
+  const milestoneManager = window.WBAbilities.initMilestones(() => state,save,formEntryControls);
   $('#combatToggle').addEventListener('click',()=>{
     const r=formEntryControls.execute({type:state.inCombat?'EndCombat':'StartCombat'});
     $('#combatFeedback').textContent=r.message;
@@ -974,7 +970,7 @@
   $('#longRest').addEventListener('click', () => {
     restUndo = {
       hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ abilities: state.abilities, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
+      other: JSON.stringify({ abilities: state.abilities, milestoneUses:state.milestoneUses, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
     };
     resourceManager.longRest();
     abilityLibrary.longRest();
@@ -4257,6 +4253,7 @@
     updateManaKind();
     resourceManager.render();
     abilityLibrary.render();
+    milestoneManager.render();
     statusManager.render();
     updatePool('hp');
     updatePool('mp');

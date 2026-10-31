@@ -17,11 +17,73 @@
     'attackStat','damageDice','damageType','damageStat','saveDcStat','targetSaveStat','usesPer','outsideUsesStat'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
+  const milestoneDescriptions = {
+    STR: ["Once each round, you can add your Strength modifier to an attack's damage twice instead of once.", "Your weapon and unarmed attacks can't have their damage reduced below half by anything, blocks and parries included. A dodge still avoids them entirely, since the attack never connects, and this doesn't bypass immunities."],
+    VIT: ["Once per combat, when a status effect that physically restrains or damages you would take hold, such as stunned, paralyzed or restrained, you can negate it so it never affects you. Mind-based effects like charmed or frightened don't count. Also, when you're dropped below 0 Health, you can roll a d20 + your Vitality modifier against DC 12. On a success you stop bleeding, though you're still unconscious.", "Your Armor Rating becomes half your Vitality, rounded down, plus the armor you're wearing, instead of your Vitality modifier plus your armor."],
+    DEX: ["Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement, moving in front of the attack to do it. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.", "Once each round, before rolling a weapon attack (melee or ranged), you can concentrate all of your power into a single point. If the attack hits, it's a critical hit. If it misses, Singularity is spent for the round."],
+    AGL: ["Each turn, you get 2 AP of movement for free. You also gain an additional reaction.", "You move so fast that you can't be hit by opportunity attacks, and any attack that relies on sight to hit you rolls with disadvantage, whether it's melee, ranged or a spell. You also have advantage on saves against spells that need sight to target you. You also gain an additional reaction."],
+    INT: ["Once per round, for 5 AP, you can give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your Intelligence modifier.", "Once per round, for 5 AP, you can analyze a creature, ability, object or phenomenon you can perceive to learn one significant property, weakness or underlying principle, if one can be inferred from the information available."],
+    WIS: ["You have a supernatural sense for danger directed at you. Whenever you face a danger you don't know about, the GM secretly makes a Wisdom check for you against the danger's DC, like an ambusher's stealth roll or a trap's DC. On a success you aren't told what's wrong, only that something is, like a sudden aversion to drinking from a cup. Once per round, at no AP cost, you can also ask the GM whether a specific choice is dangerous, and you get a feeling back: good, bad or unsure.", "You naturally see through illusions and can see invisible creatures within 30 ft. Once per round, for 5 AP, you can attempt to perceive the true intent behind anything in sight, whether a creature (hostile, afraid, lying or hiding something) or the things around you, like what a trap or ritual is meant to do. Make a Wisdom check, contested by a creature's Charisma if it's hiding something, or against a DC the GM sets."],
+    CHA: ["Once per round, for 5 AP, you can force a creature within 60 ft that can perceive you to make a Charisma saving throw (DC 10 + double your Charisma modifier). On a failure, its attention is fixed on you until the start of your next turn, and it has disadvantage on attacks against anyone but you.", "You are immune to possession and to effects that forcibly alter your personality, memories or identity when they come from a source of your level or lower. Against higher-level sources, you have advantage to resist them."],
+    FTH: ["Your luck changes. Instead of rerolling, each use lets you treat a failed saving throw or ability check as a success. You still have a number of uses equal to your Faith modifier, regained on a long rest. Initiative is the exception: a use there still rerolls it.", "Once per long rest, at no AP cost, you can declare in one sentence a single restriction standing in the way of an action, such as a usage limit, an immunity or the limit of your own strength, and fate bends probability so the action can come to pass anyway. Miracle fails if the declaration is too broad or fundamentally impossible for you: it can push you past your limits, but it can't give you an ability you don't have, like flight. Miracle can't be used to get around its own limit."]
+  };
   const DISCOUNT_STATS = ['STR', 'DEX', 'INT', 'FTH'];
   const discountStat = ability => DISCOUNT_STATS.includes(ability.apDiscountStat) ? ability.apDiscountStat : '';
   const rollStats = new Set(['attackStat','damageStat','saveDcStat','targetSaveStat']);
   const rollStat = value => STATS.includes(value)?value:'';
   const usesPer = ability => ['combat','round'].includes(ability.usesPer)?ability.usesPer:'rest';
+  const milestoneDefinitions = [
+    {id:'indomitable-status',name:'Indomitable: negate status',stat:'VIT',at:21,ap:0,per:'combat'},
+    {id:'stratagem',name:'Stratagem',stat:'INT',at:21,ap:5,per:'round'},
+    {id:'absolute-comprehension',name:'Absolute Comprehension',stat:'INT',at:28,ap:5,per:'round'},
+    {id:'sixth-sense',name:'Sixth Sense: ask about danger',stat:'WIS',at:21,ap:0,per:'round'},
+    {id:'eyes-of-truth',name:'Eyes of Truth',stat:'WIS',at:28,ap:5,per:'round'},
+    {id:'commanding-presence',name:'Commanding Presence',stat:'CHA',at:21,ap:5,per:'round'},
+    {id:'miracle',name:'Miracle',stat:'FTH',at:28,ap:0,per:'rest'}
+  ];
+  const milestoneData = state => state.milestoneUses && typeof state.milestoneUses==='object' && !Array.isArray(state.milestoneUses)?state.milestoneUses:{};
+  function milestoneAbility(state,id) {
+    const definition=milestoneDefinitions.find(d=>d.id===id);
+    if(!definition)return null;
+    const saved=milestoneData(state)[id]||{},left=optionalNumber(saved.usesLeft);
+    return {id:'@milestone/'+id,name:definition.name,type:'active',apCost:definition.ap,apDiscountStat:'',
+      uses:1,usesLeft:left===''?1:Math.min(1,left),usesPer:definition.per,
+      outsideUsesStat:definition.per==='round'?definition.stat:'',outsideUsesSpent:optionalNumber(saved.outsideUsesSpent)||0,
+      resourceId:'',resourceCost:'',cooldown:'',duration:'',cooldownLeft:0,durationLeft:0,
+      capacityMax:'',capacityCurrent:0,loadoutIds:[],effects:[]};
+  }
+  function milestoneAction(state,id) {
+    const definition=milestoneDefinitions.find(d=>d.id===id);
+    if(!definition)return null;
+    const combat=window.WBCombat,stat=definition.stat;
+    const score=combat.effectiveScore(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
+    const modifier=combat.modifier(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
+    const ability=milestoneAbility(state,id),plan={title:definition.name,kind:'notice',total:null,text:''};
+    if(id==='indomitable-status')plan.text='Negate one incoming status that physically restrains or damages you, such as stunned, paralyzed or restrained. Mind-based effects such as charmed or frightened do not count. Use when the status would take hold; resolve eligibility at the table.';
+    else if(id==='stratagem'){
+      plan.total=modifier;plan.text='Give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your INT modifier ('+(modifier>=0?'+':'')+modifier+').';
+    }else if(id==='sixth-sense')plan.text='Ask the GM whether one specific choice is dangerous. The answer is a feeling: good, bad or unsure. Your passive secret danger check is resolved by the GM.';
+    else if(id==='eyes-of-truth'){
+      plan.kind='check';plan.modifier=modifier;plan.text=milestoneDescriptions.WIS[1];
+    }else if(id==='commanding-presence'){
+      plan.total=combat.commandingPresenceDc(modifier);
+      plan.text='A creature within 60 ft that can perceive you makes a CHA save, DC '+plan.total+' (10 + 2 × CHA modifier). On failure, its attention is fixed on you until your next turn and it has disadvantage on attacks against others. Resolve the target’s save at the table.';
+    }else plan.text=milestoneDescriptions[stat][definition.at===28?1:0];
+    return {...definition,unlocked:score!=null&&score>=definition.at,ability,usage:usageState(state,ability),plan};
+  }
+  function milestoneActions(state) { return milestoneDefinitions.map(d=>milestoneAction(state,d.id)); }
+  function milestoneLifecycle(state,type) {
+    const original=milestoneData(state),updated={...original};
+    for(const d of milestoneDefinitions){
+      if(!Object.prototype.hasOwnProperty.call(original,d.id))continue;
+      const ability=milestoneAbility(state,d.id);
+      if(type==='StartCombat'&&d.per!=='rest')ability.usesLeft=1;
+      else if(type==='AdvanceAbilityTurn')advanceTurn({...state,abilities:[ability]});
+      else if(type==='RestAbilities')resetForRest({...state,abilities:[ability]});
+      updated[d.id]={...original[d.id],usesLeft:ability.usesLeft,outsideUsesSpent:ability.outsideUsesSpent};
+    }
+    return updated;
+  }
   function usageState(state,ability) {
     if(ability.uses===''||ability.uses==null)return {limited:false,maximum:null,remaining:null,period:'',outside:false};
     const per=usesPer(ability),outside=per!=='rest'&&state.inCombat!==true;
@@ -343,6 +405,7 @@
 
   function normalizeState(state) {
     state.inCombat=state.inCombat===true;
+    state.milestoneUses=milestoneData(state);
     const ids = new Set();
     state.abilityLoadouts = (Array.isArray(state.abilityLoadouts) ? state.abilityLoadouts : [])
       .filter(x => x && typeof x === 'object' && !Array.isArray(x) && clean(x.name,60).trim())
@@ -520,6 +583,37 @@
     }
   }
 
+  function initMilestones(getState,save,controls) {
+    const list=document.getElementById('milestoneList'),feedback=document.getElementById('milestoneFeedback');
+    const count=document.getElementById('milestoneCount'),locked=document.getElementById('milestoneLocked');
+    function render(){
+      const actions=milestoneActions(getState()),unlocked=actions.filter(a=>a.unlocked);
+      count.textContent=unlocked.length+' unlocked';
+      list.innerHTML=unlocked.length?unlocked.map(a=>
+        '<article class="milestone-action" data-milestone-id="'+a.id+'"><div class="milestone-action-head"><h3>'+esc(a.name)+'</h3>'+
+          '<span class="ability-tag">'+a.ap+' AP · '+a.usage.remaining+'/'+a.usage.maximum+' uses / '+a.usage.period+'</span></div>'+
+          '<p class="pool-src">'+esc(a.plan.text)+'</p><div class="milestone-action-controls">'+
+          '<button type="button" class="btn strong" data-milestone-use="'+a.id+'">Use '+esc(a.name)+'</button>'+
+          '<label class="ability-field"><span class="foot-label">Uses remaining</span><input type="number" min="0" max="'+a.usage.maximum+'" value="'+a.usage.remaining+'" data-milestone-remaining="'+a.id+'"></label>'+
+          '</div></article>').join(''):'<p class="pool-src">These actions unlock when their effective attribute reaches 21 or 28.</p>';
+      locked.innerHTML=actions.filter(a=>!a.unlocked).map(a=>'<li>'+esc(a.name)+' — '+a.stat+' '+a.at+'</li>').join('');
+    }
+    list.addEventListener('click',event=>{
+      const button=event.target.closest('[data-milestone-use]');if(!button)return;
+      const id=button.dataset.milestoneUse,result=controls.execute({type:'UseMilestone',milestoneId:id});
+      feedback.textContent=result.message;feedback.classList.toggle('ability-error',!result.ok);
+      if(result.ok){controls.refresh();save();controls.rollMilestone(result.milestonePlan);}
+      render();
+      const next=list.querySelector('[data-milestone-use="'+id+'"]');if(next)next.focus({preventScroll:true});
+    });
+    list.addEventListener('change',event=>{
+      const input=event.target.closest('[data-milestone-remaining]');if(!input)return;
+      const result=controls.execute({type:'SetMilestoneUses',milestoneId:input.dataset.milestoneRemaining,value:input.value});
+      feedback.textContent=result.message;feedback.classList.toggle('ability-error',!result.ok);
+      if(result.ok){controls.refresh();save();}render();
+    });
+    render();return {render};
+  }
   function init(getState, save, controls) {
     controls = controls || {};
     const execute=command=>typeof controls.execute==='function'?controls.execute(command):
@@ -1159,7 +1253,8 @@
   }
 
   window.WBAbilities = {
-    normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
+    normalizeState, init, initMilestones, activate, checkActivation, filterAbilities, loadoutVisible,
+    milestoneDescriptions, milestoneAbility, milestoneAction, milestoneActions, milestoneLifecycle,
     createLoadout, removeLoadout, setLoadoutMembership,
     formStatBonus, abilityApCost, abilityRollPlan, usageState, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,

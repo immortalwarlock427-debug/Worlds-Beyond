@@ -137,6 +137,14 @@
      if(JSON.stringify(previous)!==JSON.stringify(current))events.push({type:'ability.changed',abilityId:next.abilities[i].id,previous,current,command:type});
    }
    if(JSON.stringify(next.abilities)!==JSON.stringify(state.abilities||[]))patch.abilities=next.abilities;
+   const milestoneUses=abilities.milestoneLifecycle(next,type);
+   if(JSON.stringify(milestoneUses)!==JSON.stringify(state.milestoneUses||{})){
+     patch.milestoneUses=milestoneUses;
+     for(const [id,current] of Object.entries(milestoneUses)){
+       const previous=record(state.milestoneUses)[id];
+       if(JSON.stringify(previous)!==JSON.stringify(current))events.push({type:'milestone.changed',milestoneId:id,previous,current,command:type});
+     }
+   }
    return {ok:true,state:{...state,...patch},patch,events,log:events.map(e=>type+': '+e.type),
      message:type==='StartCombat'?'Combat started. Combat and round uses restored.':type==='EndCombat'?'Combat ended. Outside uses retained.':'Ability trackers updated.'};
  }
@@ -235,12 +243,46 @@
      ...(result.rollPlan?{rollPlan:result.rollPlan}:{}),
      log:[result.message,...events.map(e=>type+': '+e.type)]};
  }
+ function applyMilestone(state,command){
+   const id=command.milestoneId,abilities=window.WBAbilities;
+   const milestone=typeof id==='string'?abilities.milestoneAction(state,id):null;
+   if(!milestone)return {ok:false,error:'MILESTONE_NOT_FOUND',message:'Choose an existing milestone action.'};
+   const previous={...record(record(state.milestoneUses)[id])};
+   if(command.type==='SetMilestoneUses'){
+     const value=amount(command.value);
+     if(value===null)return {ok:false,error:'INVALID_VALUE',message:'Enter a nonnegative number of uses.'};
+     const remaining=Math.min(milestone.usage.maximum,Math.round(value));
+     const current={...previous,usesLeft:milestone.ability.usesLeft,outsideUsesSpent:milestone.ability.outsideUsesSpent};
+     if(milestone.usage.outside)current.outsideUsesSpent=milestone.usage.maximum-remaining;
+     else current.usesLeft=remaining;
+     const patch={milestoneUses:{...record(state.milestoneUses),[id]:current}};
+     const events=[{type:'milestone.changed',milestoneId:id,previous,current,source:'correction',command:command.type}];
+     return {ok:true,state:{...state,...patch},patch,events,log:[],message:'Adjusted '+milestone.name+' uses.'};
+   }
+   if(!milestone.unlocked)return {ok:false,error:'MILESTONE_LOCKED',message:milestone.name+' unlocks at '+milestone.stat+' '+milestone.at+'.'};
+   // Adapt built-in actions to the same atomic activation path, without adding
+   // generated entries to the player's editable Ability Library.
+   const working={...state,abilities:[milestone.ability,...(state.abilities||[])]};
+   const result=applyTransaction(working,{type:'ActivateAbility',abilityId:milestone.ability.id});
+   if(!result.ok)return result;
+   const used=result.state.abilities[0];
+   const current={...previous,usesLeft:used.usesLeft,outsideUsesSpent:used.outsideUsesSpent};
+   const patch={...result.patch,milestoneUses:{...record(state.milestoneUses),[id]:current}};
+   delete patch.abilities;
+   const events=result.events.map(event=>event.type==='ability.used'?
+     {type:'milestone.used',milestoneId:id,previous:{usesLeft:milestone.ability.usesLeft,outsideUsesSpent:milestone.ability.outsideUsesSpent},
+       current:{usesLeft:used.usesLeft,outsideUsesSpent:used.outsideUsesSpent},command:'UseMilestone'}:
+     {...event,command:'UseMilestone'});
+   return {ok:true,state:{...state,...patch},patch,events,message:result.message,milestonePlan:milestone.plan,
+     log:events.map(e=>'UseMilestone: '+e.type)};
+ }
  function apply(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
    if(poolTypes.has(command.type))return applyPools(state,command);
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
    if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
+   if(command.type==='UseMilestone'||command.type==='SetMilestoneUses')return applyMilestone(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;
