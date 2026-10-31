@@ -1,5 +1,5 @@
 /* Deterministic, DOM-free character command foundation.
- * Character payments and ability/form transactions. No automatic triggers.
+ * Character payments, consumable inventory and ability/form transactions. No automatic triggers.
  */
 (function(){
  'use strict';
@@ -338,6 +338,56 @@
    return {ok:true,state:{...state,...patch},patch,events,log:events.map(e=>command.type+': '+e.type),
      message:(correction?'Adjusted ':'Used ')+data.ability.name+'.',equipmentAbilityPlan:{name:data.ability.name,effect:String(data.definition.effect||'')}};
  }
+ const consumables=state=>state.consumables==null?[]:Array.isArray(state.consumables)?state.consumables:null;
+ const consumableQuantity=value=>finite(value)&&Number.isSafeInteger(numeric(value))&&numeric(value)>=0?numeric(value):null;
+ function consumableHealing(value){
+   if(value==null||typeof value==='string'&&value.trim()==='')return {ok:true,healing:null};
+   const healing=typeof value==='string'?window.WBCombat.parseDamageDice(value):null;
+   if(!healing||!Number.isSafeInteger(healing.maximum+healing.flat))
+     return {ok:false,error:'INVALID_HEALING_DICE',message:'Enter complete healing dice such as 2d6+2, or leave healing blank.'};
+   return {ok:true,healing};
+ }
+ const consumableTypes=new Set(['AddConsumable','EditConsumable','SetConsumableQuantity','UseConsumable','RemoveConsumable']);
+ function applyConsumable(state,command){
+   const list=consumables(state),type=command.type;
+   if(!list)return {ok:false,error:'UNSUPPORTED_CONSUMABLES',message:'The consumables in this save could not be read. Their saved data has been kept.'};
+   const data=record(command.consumable),id=type==='AddConsumable'?data.id:command.consumableId;
+   if(typeof id!=='string'||!id.trim())return {ok:false,error:'INVALID_CONSUMABLE_ID',message:'Choose an existing consumable.'};
+   const matches=list.map((item,index)=>item&&item.id===id?index:-1).filter(index=>index>=0);
+   if(type==='AddConsumable'&&matches.length)return {ok:false,error:'DUPLICATE_CONSUMABLE',message:'That consumable already exists.'};
+   if(type!=='AddConsumable'&&matches.length!==1)return {ok:false,error:'CONSUMABLE_NOT_FOUND',message:'Choose one existing consumable with a unique saved identifier.'};
+   const index=matches[0],previous=index===undefined?null:list[index];
+   let current,plan;
+   if(type==='AddConsumable'||type==='EditConsumable'){
+     if(typeof data.name!=='string'||!data.name.trim())return {ok:false,error:'INVALID_CONSUMABLE_NAME',message:'Give this consumable a name.'};
+     const roll=consumableHealing(data.healingDice);if(!roll.ok)return roll;
+     const quantity=type==='AddConsumable'?consumableQuantity(data.quantity):previous.quantity;
+     if(type==='AddConsumable'&&quantity===null)return {ok:false,error:'INVALID_QUANTITY',message:'Enter a whole quantity of zero or more.'};
+     current={...(previous||data),id,name:data.name.trim(),description:typeof data.description==='string'?data.description:'',
+       healingDice:typeof data.healingDice==='string'?data.healingDice.trim():'',quantity};
+   }else if(type==='SetConsumableQuantity'){
+     const quantity=consumableQuantity(command.value);
+     if(quantity===null)return {ok:false,error:'INVALID_QUANTITY',message:'Enter a whole quantity of zero or more.'};
+     current={...previous,quantity};
+   }else if(type==='UseConsumable'){
+     const quantity=consumableQuantity(previous.quantity);
+     if(quantity===null)return {ok:false,error:'INVALID_QUANTITY',message:'Set a whole quantity before using this consumable.'};
+     if(quantity===0)return {ok:false,error:'NO_CONSUMABLES_LEFT',message:'None of this consumable remain. Correct the quantity when you restock.'};
+     const roll=consumableHealing(previous.healingDice);if(!roll.ok)return roll;
+     current={...previous,quantity:quantity-1};
+     plan={id,name:String(previous.name||'Consumable'),description:typeof previous.description==='string'?previous.description:'',healing:roll.healing};
+   }
+   const next=list.slice();
+   if(type==='AddConsumable')next.push(current);
+   else if(type==='RemoveConsumable')next.splice(index,1);
+   else next[index]=current;
+   const patch={consumables:next};
+   const event={type:type==='UseConsumable'?'consumable.used':type==='SetConsumableQuantity'?'consumable.quantity.corrected':
+     type==='AddConsumable'?'consumable.added':type==='RemoveConsumable'?'consumable.removed':'consumable.edited',
+     consumableId:id,previous:previous||null,current:current||null,source:type==='UseConsumable'?'command':type==='SetConsumableQuantity'?'correction':'configuration',command:type};
+   return {ok:true,state:{...state,...patch},patch,events:[event],log:[type+': '+id],
+     ...(plan?{consumablePlan:plan}:{}),message:type==='UseConsumable'?'Used one '+plan.name+'.':'Consumables updated.'};
+ }
  function apply(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
@@ -356,6 +406,7 @@
    }
    if(command.type==='BeginWeaponAttack')return beginWeaponAttack(state,command);
    if(command.type==='UseEquipmentAbility'||command.type==='SetEquipmentAbilityUses')return applyEquipmentAbility(state,command);
+   if(consumableTypes.has(command.type))return applyConsumable(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;
@@ -415,5 +466,5 @@
    return {ok:true,state:next,events,log:events.map(e=>
      type+': '+e.resourceId+' '+e.previous+' -> '+e.current)};
  }
- window.WBCharacter={derive,apply};
+ window.WBCharacter={derive,apply,consumables,consumableQuantity};
 })();

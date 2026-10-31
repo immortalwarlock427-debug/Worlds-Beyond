@@ -12,6 +12,7 @@
 - `js/maps.js` defines `window.WB_MAPS`, the maps that come with the site. Add a map there; the app needs no change.
 - `js/status.js` owns the character-level status screen and manual condition timers. The status UI summarizes existing `js/abilities.js` effects without copying the effective stats into another save.
 - `js/abilities.js` owns the player-built Ability Library (search, categories, favorites, metadata); it stores data on the character, not the game, and does not change combat math.
+- `js/consumables.js` presents the separate consumable list/editor; all inventory mutations use `WBCharacter`, while optional dice and own-character healing stay in the app adapter.
 - `js/resources.js` owns the optional custom resource manager; its resources live on the character, not the game. Existing Mana/Holy Power values remain intact and may be hidden.
 - `js/app.js` is the main application script for now. Its sections, in order: rules data (stats, milestones, gear),
   loading and saving, rules math, pools, trackers, AP and movement, Command, defenses, dice and attacks, health and
@@ -29,6 +30,14 @@ Overview favorites render inside the existing `WBAbilities.init` controller and 
 The Notes sub-tab (`#sheet/notes`) adds five optional multiline fields in the existing `state.fields` map: `sessionNotes`, `backstory`, `personality`, `languages` and `allies`. `fillInputs` sets textarea values as plain text; absent legacy fields display empty. The selected tab scrolls into the phone navigation viewport for direct links; the dice-mode bar hides while writing notes without changing its stored setting. No new schema, storage key, parser, note collection or gameplay command is introduced. The regular `data-field` input handler saves narrative edits without running `refreshAll`, so typing preserves selection and textarea scroll and does not rebuild combat UI.
 
 The existing character repository and v1 envelope carry notes through local reload, export/import and owner-only manual cloud copies. Import/clear refill all inputs, preventing notes from the previous character leaking into an empty one. Notes are character-wide across forms and are outside turn/rest Undo ownership. They have no arbitrary text-length cap; ordinary browser/cloud document-size limits still apply. The existing stale-tab save guards apply unchanged, and note-only saves do not write unchanged game state.
+
+## Consumable inventory
+
+`state.consumables[]` is a character-wide list separate from worn `items` and form equipment profiles. Records store `id`, `name`, `description`, whole nonnegative `quantity` and optional `healingDice`. `WBCharacter` exposes Add/Edit/Remove/UseConsumable and SetConsumableQuantity commands. They copy only the collection/changed record, preserve unknown record fields, and return deterministic configuration/correction/use events. Definition edits always retain the latest quantity, independent of stale editor values. Unsupported collections and ambiguous ids reject writes; unknown array entries remain stored. Missing legacy lists display empty, with no new v1 envelope or storage key.
+
+Use validates quantity and the entire optional expression through `WBCombat.parseDamageDice` before spending one. Invalid/oversized rolls never become partial formulas or spend an item. The kernel returns a read-only healing plan, leaving dice and Health unchanged. No AP price is inferred from item text. `js/consumables.js` owns the Equipment list/editor and routes every quantity/definition/use change through these commands. Manual quantity corrections, depleted items and removal confirmation remain available; forms and lifecycle commands do not replenish stock.
+
+`app.js` draws optional healing rolls and opens the existing popup. Apply healing to me reuses `applyHeal`, including negative Health, recovery Trauma and the existing maximum policy. The transient result belongs to the current character, can apply at most once, and is cleared on import/reset. Unknown Health prompts for a value without spending another item; nonpositive results offer no healing action. Closing the roll retains the use. Other costs/effects resolve at the table. Full Health and turn/rest/transaction Undo migration remain separate; rest Undo deliberately does not overwrite later consumable edits. Local/v1/manual-cloud saves carry the same records and unchanged DM games are not written by inventory edits.
 
 ## Repository boundary (foundation refactor)
 

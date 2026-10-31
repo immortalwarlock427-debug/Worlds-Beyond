@@ -34,6 +34,8 @@ In **Abilities → Milestone actions**, effective attributes unlock milestone ac
 
 In **Equipment → Forge**, round-based item abilities have an **Outside combat** setting: keep their turn reset, use the same limit per long rest, or choose a stat modifier per long rest. Existing items keep their old setting until edited. Equipped abilities offer **Use**, pips and a remaining-use number; these track charges, while you apply listed costs/effects at the table. Configured combat/outside allowances stay separate through swaps, forms and turns. Renaming an item or removing an earlier ability keeps the surviving abilities’ spent counts.
 
+In **Equipment → Consumables**, add potions or other items with quantities, descriptions and optional healing dice (for example `2d6+2`). **Use** subtracts one and opens the result; **Apply healing to me** uses the existing Health rules once. Listed AP costs and other effects are handled at the table. Correct quantities directly in the list; editing a definition keeps the current count. Forms and rests do not refill consumables. The list travels with local saves, v1 files and manual Cloud Saves.
+
 If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
 ## Offline DM Room
