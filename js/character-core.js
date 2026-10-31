@@ -1,5 +1,5 @@
 /* Deterministic, DOM-free character command foundation.
- * Custom resources and AP/Mana payments. No automatic triggers in this module.
+ * Character payments and ability/form transactions. No automatic triggers.
  */
 (function(){
  'use strict';
@@ -115,10 +115,106 @@
      (e.type==='ap.changed'?e.previous.total:e.previous.current)+' -> '+
      (e.type==='ap.changed'?e.current.total:e.current.current))};
  }
+ const transactionTypes=new Set(['ActivateAbility','EnterForm','SelectPortrait']);
+ function applyTransaction(state,command){
+   const type=command.type,abilities=window.WBAbilities;
+   const reject=(error,message)=>({ok:false,error,message});
+   if(type==='ActivateAbility'&&typeof command.abilityId!=='string'||
+      type==='EnterForm'&&typeof command.formId!=='string'||
+      type==='SelectPortrait'&&typeof command.portraitId!=='string')
+     return reject('INVALID_COMMAND','Choose an existing ability, form or portrait.');
+   // Copy only paths owned by these operations. Portrait image strings, history
+   // and unknown data stay shared/read-only; no normalization or new ids here.
+   const next={...state};
+   for(const key of ['fields','apGiven','equip'])
+     if(state[key]&&typeof state[key]==='object')next[key]={...state[key]};
+   for(const key of ['abilities','resources'])
+     if(Array.isArray(state[key]))next[key]=state[key].map(item=>item?{...item}:item);
+   if(state.equipmentProfiles)next.equipmentProfiles=Object.fromEntries(
+     Object.entries(state.equipmentProfiles).map(([id,profile])=>[id,{...record(profile)}]));
+   // Existing WBAbilities/WBEquipment rules operate only on the private copy.
+   // Every payment uses B1's primitives; no external callbacks or DOM values.
+   const commit=result=>{
+     if(!result.ok)throw new Error(result.error);
+     Object.assign(next,result.patch);
+     return result;
+   };
+   const controls={
+     getAp:()=>derive(next).ap.total,
+     getMana:()=>{const mana=derive(next).mana;return mana.configured?mana.current:null;},
+     spendAp:n=>commit(applyPools(next,{type:'SpendAP',amount:n})),
+     spendMana:n=>commit(applyPools(next,{type:'SpendMana',amount:n})),
+     planPools:costs=>applyPools(next,{type:'SpendPools',...costs}),
+     commitPools:commit
+   };
+   let result;
+   try{
+     if(type==='ActivateAbility'){
+       result=abilities.activate(next,command.abilityId,controls);
+       if(!result.ok)return reject('ABILITY_REJECTED',result.message);
+     }else{
+       const formId=type==='EnterForm'?command.formId:abilities.portraitForm(next,command.portraitId);
+       if(formId===null)return reject('PORTRAIT_NOT_FOUND','That portrait no longer exists.');
+       const payment=abilities.entryCost(next,formId,controls);
+       if(!payment.ok)return reject('FORM_REJECTED',payment.message);
+       const switched=type==='EnterForm'?abilities.selectLoadout(next,formId,controls):
+         abilities.selectPortrait(next,command.portraitId,controls);
+       if(!switched)return reject('FORM_REJECTED','Could not switch forms. No costs were spent.');
+       const form=(next.abilityLoadouts||[]).find(f=>f.id===next.activeAbilityLoadoutId);
+       result={message:form?'Active form: '+form.name:'Base form: shared abilities only.'};
+     }
+   }catch(error){return reject('TRANSACTION_FAILED','The character change could not be completed. No costs were spent.');}
+   if(type==='ActivateAbility'){
+     const ability=next.abilities.find(a=>a.id===command.abilityId);
+     for(const key of ['usesLeft','capacityCurrent','cooldownLeft','durationLeft'])
+       if(ability[key]!=null&&(!finite(ability[key])||numeric(ability[key])<0))
+         return reject('INVALID_CHARACTER_STATE','This ability has unreadable tracker values. No costs were spent.');
+   }
+   for(const resource of (next.resources||[])){
+     const previous=(state.resources||[]).find(r=>r.id===resource.id);
+     if(previous&&previous.current!==resource.current&&
+       (!finite(resource.current)||numeric(resource.current)<0))
+       return reject('INVALID_CHARACTER_STATE','The resource balance could not be read. No costs were spent.');
+   }
+   const patch={};
+   for(const key of ['fields','apAvail','apGiven','abilities','resources','equip',
+     'equipmentProfiles','activeAbilityLoadoutId','formId'])
+     if(JSON.stringify(state[key])!==JSON.stringify(next[key]))patch[key]=next[key];
+   const before=derive(state),after=derive(next),events=[];
+   const emit=(event)=>events.push({...event,source:'command',command:type});
+   for(const pool of ['ap','mana'])
+     if(JSON.stringify(before[pool])!==JSON.stringify(after[pool]))
+       emit({type:pool+'.changed',previous:before[pool],current:after[pool]});
+   for(const [id,current] of Object.entries(after.resources)){
+     const previous=before.resources[id];
+     if(previous&&JSON.stringify(previous)!==JSON.stringify(current))
+       emit({type:'resource.changed',resourceId:id,previous:previous.current,current:current.current,
+         previousMaximum:previous.effectiveMax,currentMaximum:current.effectiveMax});
+   }
+   if(type==='ActivateAbility'){
+     const snapshot=s=>{
+       const a=s.abilities.find(a=>a.id===command.abilityId);
+       return {usesLeft:a.usesLeft,cooldownLeft:a.cooldownLeft,
+         durationLeft:a.durationLeft,capacityCurrent:a.capacityCurrent};
+     };
+     emit({type:'ability.used',abilityId:command.abilityId,previous:snapshot(state),current:snapshot(next)});
+   }else{
+     if(state.activeAbilityLoadoutId!==next.activeAbilityLoadoutId){
+       if(state.activeAbilityLoadoutId)emit({type:'form.left',formId:state.activeAbilityLoadoutId});
+       if(next.activeAbilityLoadoutId)emit({type:'form.entered',formId:next.activeAbilityLoadoutId});
+     }
+     if(state.formId!==next.formId)emit({type:'portrait.changed',previous:state.formId??null,current:next.formId??null});
+     if(JSON.stringify(record(state.equip))!==JSON.stringify(record(next.equip)))
+       emit({type:'equipment.changed',previous:{...record(state.equip)},current:{...record(next.equip)}});
+   }
+   return {ok:true,state:{...state,...patch},patch,events,message:result.message,
+     log:[result.message,...events.map(e=>type+': '+e.type)]};
+ }
  function apply(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
    if(poolTypes.has(command.type))return applyPools(state,command);
+   if(transactionTypes.has(command.type))return applyTransaction(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;

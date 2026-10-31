@@ -23,7 +23,12 @@ function harness() {
   const state={abilities:[],abilityLoadouts:[],activeAbilityLoadoutId:'',resources:[{id:'resabcdefg',name:'Energy',max:100,current:100}],showMana:true};
   api.normalizeState(state);
   let ap=30,saves=0;
-  const controls={getAp:()=>ap,spendAp:n=>{ap-=n},refresh(){}};
+  for(const name of ['combat-core','character-core'])vm.runInNewContext(read('js/'+name+'.js'),ctx);
+  const controls={getAp:()=>ap,spendAp:n=>{ap-=n},refresh(){},execute(command){
+    const result=ctx.window.WBCharacter.apply(state,command);
+    if(result.ok)Object.assign(state,result.patch);
+    return result;
+  }};
   const view=api.init(()=>state,()=>saves++,controls);
   return {api,state,el,view,controls,getAp:()=>ap,saves:()=>saves};
 }
@@ -356,16 +361,17 @@ test('when two ability forms share one portrait, clicking it preserves current m
   assert.equal(state.activeAbilityLoadoutId,a.id,'First matching form is fallback only');
 });
 
-test('Overview portrait switches call the ability manager and refresh derived sheet values', () => {
-  const app=read('js/app.js');
-  const abilities=read('js/abilities.js');
-  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
-  assert.match(app,/refreshAll\(\); \/\/ Updates stats, defenses, Movement, available abilities and portrait together/);
-  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, f\.id\)/);
-  assert.match(app,/window\.WBAbilities\.selectPortrait\(state, next\.id, formEntryControls\)/);
-  assert.match(abilities,/selectPortrait, configureLoadout/);
+test('portrait form resolution is read-only and prefers the active form when links are shared',()=>{
+  const {api,state}=harness();
+  state.portraits=[{id:'shared',name:'Shared'},{id:'base',name:'Base'}];
+  state.abilityLoadouts=[{id:'loadfirst',portraitId:'shared'},{id:'loadsecond',portraitId:'shared'}];
+  state.activeAbilityLoadoutId='loadsecond';
+  const before=JSON.stringify(state);
+  assert.equal(api.portraitForm(state,'shared'),'loadsecond');
+  assert.equal(api.portraitForm(state,'base'),'');
+  assert.equal(api.portraitForm(state,'missing'),null);
+  assert.equal(JSON.stringify(state),before);
 });
-
 
 test('form-specific resource costs block ability activation without spending AP', () => {
   const {api,state,controls,getAp}=harness();
@@ -571,12 +577,9 @@ test('Base always restores its equipment profile and unavailable entry costs do 
   assert.equal(api.selectLoadout(state,a.id,controls),false);
   assert.equal(JSON.stringify(state.equip),oldEquip);
 });
-test('cost editor and portrait events use the same form payment path',()=>{
- const js=read('js/abilities.js'),app=read('js/app.js');
+test('cost editor exposes independent AP and resource entry fields',()=>{
+ const js=read('js/abilities.js');
  assert.match(js,/data-loadout-entry-cost="entryApCost"/);
  assert.match(js,/data-loadout-entry-cost="entryResourceCost"/);
  assert.match(js,/data-loadout-entry-resource/);
- assert.match(js,/selectLoadout\(state,loadoutSelect\.value,controls\)/);
-  assert.match(app,/WBAbilities\.selectPortrait\(state, t\.dataset\.form, formEntryControls\)/);
- assert.match(app,/entryCost\(state,dest\?dest\.id:'',formEntryControls\)/);
 });

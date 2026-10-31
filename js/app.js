@@ -629,12 +629,21 @@
   const manaPool = $('#manaPool');
   const resourceManager = window.WBResources.init(() => state, save);
   const characterPools = () => window.WBCharacter.derive(state);
-  function commitPools(result) {
-    // Keep the root character object stable for the running ability/form editor.
-    if (result.ok) Object.assign(state, result.patch);
+  function commitCharacter(result) {
+    // Keep the root and existing ability/resource records stable for editors.
+    if (result.ok) for (const [key,value] of Object.entries(result.patch)) {
+      if ((key === 'abilities' || key === 'resources') && Array.isArray(state[key])) {
+        const existing = new Map(state[key].map(item => [item.id,item]));
+        const revised = value.map(item => {
+          const original = existing.get(item.id);
+          return original ? Object.assign(original,item) : item;
+        });
+        state[key].splice(0,state[key].length,...revised);
+      } else state[key] = value;
+    }
     return result;
   }
-  const applyPoolCommand = (command) => commitPools(window.WBCharacter.apply(state, command));
+  const applyPoolCommand = (command) => commitCharacter(window.WBCharacter.apply(state, command));
   const formEntryControls = {
     getAp: () => apHave(),
     spendAp: (cost) => spendAp(cost),
@@ -644,7 +653,8 @@
     },
     spendMana: (cost) => applyPoolCommand({ type: 'SpendMana', amount: cost }),
     planPools: (costs) => window.WBCharacter.apply(state, { type: 'SpendPools', ...costs }),
-    commitPools,
+    commitPools: commitCharacter,
+    execute: (command) => commitCharacter(window.WBCharacter.apply(state, command)),
     refresh: () => refreshAll()
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
@@ -2796,16 +2806,18 @@
   }
   const NO_ROOM = "There's no room left in this browser for that picture. Remove a form, or export your character to keep a copy.";
   function addForm(src) {
-    const prev = state.formId;
-    const prevAbilityForm = state.activeAbilityLoadoutId;
+    const previous = { formId:state.formId,activeAbilityLoadoutId:state.activeAbilityLoadoutId,
+      equip:state.equip,equipmentProfiles:state.equipmentProfiles };
     const f = { id: newId(), src, name: '' };
     state.portraits.push(f);
-    window.WBAbilities.selectPortrait(state, f.id);
+    const selection = formEntryControls.execute({type:'SelectPortrait',portraitId:f.id});
+    if (!selection.ok) {
+      state.portraits.pop();setStatus(selection.message,true);return;
+    }
     if (storeNow()) setStatus(DEFAULT_STATUS);
     else {
       state.portraits.pop();
-      state.formId = prev;
-      state.activeAbilityLoadoutId = prevAbilityForm;
+      Object.assign(state,previous);
       setStatus(NO_ROOM, true);
     }
     refreshAll();
@@ -2834,14 +2846,11 @@
     if (!t) return;
     if (t.classList.contains('form-add')) { $('#formFile').click(); return; }
     // Clicking a portrait is also a mechanical form switch, not just a picture swap.
-    const linked=(state.abilityLoadouts||[]).filter(f=>f.portraitId===t.dataset.form);
-    const dest=linked.find(f=>f.id===state.activeAbilityLoadoutId)||linked[0];
-    const check=window.WBAbilities.entryCost(state,dest?dest.id:'',formEntryControls);
-    if(!check.ok) {
-      showRoll({kind:'notice',title:'Cannot change form',math:check.message});
+    const result=formEntryControls.execute({type:'SelectPortrait',portraitId:t.dataset.form});
+    if(!result.ok) {
+      showRoll({kind:'notice',title:'Cannot change form',math:result.message});
       return;
     }
-    if (!window.WBAbilities.selectPortrait(state, t.dataset.form, formEntryControls)) return;
     refreshAll(); // Updates stats, defenses, Movement, available abilities and portrait together.
     save();
     const again = formStrip.querySelector('.form-thumb[aria-pressed="true"]');
@@ -2860,11 +2869,10 @@
     const i = state.portraits.indexOf(f);
     const remaining=state.portraits.filter(p=>p.id!==f.id);
     const nextCandidate=remaining[Math.max(0,i-1)];
-    const linked=nextCandidate?(state.abilityLoadouts||[]).filter(x=>x.portraitId===nextCandidate.id):[];
-    const dest=linked.find(x=>x.id===state.activeAbilityLoadoutId)||linked[0];
-    const check=window.WBAbilities.entryCost(state,dest?dest.id:'',formEntryControls);
-    if(!check.ok) {
-      showRoll({kind:'notice',title:'Cannot remove portrait',math:check.message});
+    const result=formEntryControls.execute(nextCandidate?
+      {type:'SelectPortrait',portraitId:nextCandidate.id}:{type:'EnterForm',formId:''});
+    if(!result.ok) {
+      showRoll({kind:'notice',title:'Cannot remove portrait',math:result.message});
       return;
     }
     state.portraits.splice(i, 1);
@@ -2872,12 +2880,7 @@
     state.abilityLoadouts.forEach(loadout => {
       if (loadout.portraitId === f.id) loadout.portraitId = '';
     });
-    const next = state.portraits[Math.max(0, i - 1)];
-    if (next) window.WBAbilities.selectPortrait(state, next.id, formEntryControls);
-    else {
-      state.formId = null;
-      window.WBAbilities.selectLoadout(state, '', formEntryControls);
-    }
+    if (!nextCandidate) state.formId = null;
     refreshAll();
     save();
   });

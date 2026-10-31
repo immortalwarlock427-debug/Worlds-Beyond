@@ -9,7 +9,7 @@ Future-facing development priorities for Worlds Beyond. Current shipped behavior
 - Optional AP and resource costs when entering forms, free-to-Base and linked portrait switching.
 - Supabase Auth and owner-only **manual** private cloud character Save/Restore across devices. No live multiplayer session.
 - GitHub CI with Node tests, Playwright browser interactions and 390px layout checks.
-- **PR #35 merged:** first pure `WBCharacter.derive/apply` resource-command slice, resource UI migration, and boosted resource-current preservation across reload. AP/Mana derivation, payment primitives and manual corrections now share the command boundary; full ability/form transactions are next.
+- **PR #35 merged:** first pure `WBCharacter.derive/apply` resource-command slice, resource UI migration, and boosted resource-current preservation across reload. AP/Mana derivation, payment primitives and manual corrections now share the command boundary; runtime ability/form transactions are implemented; broader lifecycle/Health/undo work remains.
 
 ## Character sheet first
 
@@ -36,8 +36,8 @@ Keep each stage in a separate reviewable PR; do not implement unapproved mechani
 ## Development queue — one narrow Codex PR per task
 
 1. **B1 — Implemented:** pure AP/Mana derivation, shared payment/correction commands, Command-first spending and source-profile form payments, with Node and phone interaction checks. Full character transactions remain B2 work.
-2. **B2 — Next:** migrate combined ability/form costs and activations through the same command path, then Health/damage/healing, turn/rest orchestration, emitted gameplay events, and transaction-level Undo in focused PRs. Avoid duplicated cost formulas or changing trust-based editability.
-3. **Stat discounts for custom ability AP (decided but not built):** None/STR/DEX/INT/FTH; effective cost `max(ceil(base AP/2), base AP − current effective mod)`, including negative modifiers. Implement alongside or immediately following ability command integration; cards, Use, Usable now and filters must agree.
+2. **B2 — Ability/form slice implemented:** runtime activations and form/portrait selection atomically commit costs, uses/capacity, cooldown/duration and gear/portrait changes. Health, turn/rest orchestration, manual tracker controls and transaction-level Undo remain focused follow-ups; they need not block the independent ability-discount task.
+3. **Next — stat discounts for custom ability AP (decided but not built):** None/STR/DEX/INT/FTH; effective cost `max(ceil(base AP/2), base AP − current effective mod)`, including negative modifiers. Implement alongside or immediately following ability command integration; cards, Use, Usable now and filters must agree.
 4. **B3 — Needs DM resource choices:** derive general `effects` on named forms, configure absolute hard cap and excess policy per resource, expand long-rest policy while preserving legacy defaults, display overflow/thresholds and protect unknown newer save fields. This is **not a Rage-specific feature**.
 5. **C — Automation engine:** ability-owned automatic/manual rules with genuine state-crossing or event triggers, AND requirements, own-character commands, deterministic FIFO event processing, cycle guard, rejection logs and tests.
 6. **D — Ability rule editor:** human-readable rule configuration, activation selector, Test/dry-run, enable/disable and activity log; robust mobile layout and persistence. Coordinate C/D to become usable together.
