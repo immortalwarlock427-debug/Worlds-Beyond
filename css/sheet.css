@@ -1375,3 +1375,96 @@ input[data-auto].ability-adjusted:not(.manual) { color: var(--verdigris); }
 .character-conflict { border: 1px solid var(--blood); padding: 16px; border-radius: 5px; overflow-wrap: anywhere; }
 .character-conflict[hidden] { display: none; }
 .character-conflict p { margin: 0 0 10px; }
+
+/* Character play starts with live controls; files and secondary views are disclosed. */
+.character-sheet { gap: 22px; }
+.character-sheet .masthead { margin-bottom: 0; }
+.character-sheet .masthead h1 { overflow-wrap: anywhere; }
+.sheet-tools { display: flex; align-items: start; gap: 12px; flex-wrap: wrap; }
+.save-status { flex: 1 1 160px; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+.save-status.error { color: var(--blood); }
+.character-menu { flex: 1 0 180px; min-width: 0; }
+.character-menu > summary, .character-reset > summary,
+.health-details > summary, .turn-actions > summary, .vitals-help > summary {
+  min-height: 44px; padding: 11px 0; cursor: pointer;
+  font: 700 14px var(--font-label); color: var(--brass);
+}
+.character-menu > summary { padding: 11px 14px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); }
+.character-menu summary:focus-visible, .health-details summary:focus-visible,
+.turn-actions summary:focus-visible, .vitals-help summary:focus-visible {
+  outline: 2px solid var(--brass); outline-offset: 2px;
+}
+.character-menu-content { display: grid; gap: 16px; padding: 16px; border: 1px solid var(--rule); border-radius: 4px; }
+.character-menu-content h2 { margin: 0; font: 18px var(--font-display); }
+.character-menu-content .sheet-actions { margin: 0; padding: 0; border: 0; }
+.character-menu-content .sheet-actions .foot-acts { width: 100%; }
+.character-menu-content .btn { min-height: 44px; }
+.character-menu-content > a { justify-self: start; text-decoration: none; }
+.character-menu-views { display: grid; gap: 12px; }
+.character-menu .views.main-views { position: static; margin: 0; padding: 0; box-shadow: none; }
+.character-menu .dm-launch { margin: 0; gap: 8px; }
+.character-reset { border-top: 1px solid var(--rule); padding-top: 8px; }
+.character-reset > summary { color: var(--blood); }
+.character-reset p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.character-sheet .sheet-tabs { top: 0; margin-top: 0; }
+.combat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.combat-grid .health { min-width: 0; }
+.health-details .pool-foot { padding-top: 8px; }
+.health-details .dt-row { margin-bottom: 8px; }
+.turn-actions { margin-top: 8px; border-top: 1px dashed var(--rule); }
+.turn-actions .acts-row { border: 0; padding-top: 4px; }
+.overview-favorites { margin-top: 20px; }
+.favorite-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.favorite-heading h3 { margin: 0; font: 20px var(--font-display); }
+.favorite-heading a { font-size: 14px; color: var(--brass); padding-block: 8px; }
+.favorite-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.favorite-ability { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); }
+.favorite-ability > div { flex: 1; min-width: 0; }
+.favorite-ability h4 { margin: 0; font: 700 16px var(--font-label); overflow-wrap: anywhere; }
+.favorite-ability p { margin: 4px 0 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.favorite-ability .btn { min-height: 44px; flex-shrink: 0; }
+.favorite-passive { font-size: 13px; color: var(--muted); }
+.favorite-empty { grid-column: 1/-1; margin: 0; color: var(--muted); font-size: 14px; }
+#favoriteFeedback:empty { display: none; }
+.vitals-help { margin-block: 10px; }
+.character-sheet .vitals-grid { padding-top: 16px; border-top: 1px solid var(--rule); }
+.character-sheet .vitals-grid .side-stack { grid-column: 1/-1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.health-tools { display: flex; align-items: start; gap: 12px; flex-wrap: wrap; }
+.health-tools > .btn-link { min-height: 44px; }
+.health-details { flex: 1 1 160px; }
+.health-details[open] { flex-basis: 100%; }
+@media (max-width: 820px) {
+  .combat-grid, .favorite-list, .character-sheet .vitals-grid .side-stack { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 540px) {
+  body.character-page {
+    margin: 0; padding-block: 12px 48px;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+  .character-sheet { position: relative; gap: 14px; padding: 12px; }
+  .character-sheet .masthead { padding-right: 100px; padding-bottom: 10px; }
+  .character-sheet .masthead h1 { font-size: 29px; line-height: 1.12; }
+  .character-sheet .masthead .eyebrow { font-size: 10px; }
+  .character-sheet .masthead .meta { display: none; }
+  .sheet-tools { display: contents; }
+  .character-menu { position: absolute; top: 12px; right: 12px; width: 90px; z-index: 80; }
+  .character-menu .menu-label-prefix { display: none; }
+  .character-menu-content { position: absolute; top: calc(100% + 8px); right: 0; width: calc(100vw - 50px); background: var(--sheet); box-shadow: 0 8px 24px var(--shadow); }
+  .save-status { flex-basis: 100%; margin: 0; font-size: 12px; }
+  .character-sheet .sheet-tabs { top: 0; margin: 0; padding-block: 4px; }
+  .character-sheet .sec-head { margin-bottom: 12px; gap: 8px; }
+  .character-sheet .sec-head h2 { font-size: 20px; }
+  .character-sheet .sec-head .btn-link { font-size: 13px; }
+  .combat-grid { gap: 14px; }
+  .combat-grid .tracker { gap: 8px; padding: 12px; }
+  .combat-grid .tr-src { font-size: 12px; }
+  .combat-grid .tr-title { letter-spacing: .1em; }
+  .combat-grid .tr-top.sub { padding-top: 6px; }
+  .combat-grid .pips { gap: 2px; }
+  .combat-grid .tr-foot .btn { min-height: 44px; white-space: nowrap; padding: 8px 10px; font-size: 12px; letter-spacing: .02em; }
+  .combat-grid .tr-foot .tr-count { font-size: 12px; }
+  .overview-favorites { margin-top: 14px; }
+  .favorite-heading h3 { font-size: 18px; }
+  .favorite-ability { padding: 10px; }
+}

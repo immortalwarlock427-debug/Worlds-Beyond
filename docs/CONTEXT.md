@@ -12,17 +12,18 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 
 ## How we play and work
 
+- **Delivery priority:** finish the character sheet, custom abilities and phone workflows before expanding battlemaps, the DM Room, player-versus-player combat or live sessions. Preserve shared DOM-free rules and separate saves so those later views can reuse the completed character features.
 - **In person:** each player has **their own phone** and character sheet. The DM uses a **computer and a phone**. All live-session designs must support separate devices, not assume shared browser storage.
 - **Trust-based sheet:** players can customize and correct stats, resources and abilities. **Do not add anti-cheat or restrictive gameplay validation unless explicitly asked.** Account privacy, server access control and preventing accidental shared-data overwrites are separate security requirements.
 - The DM levels characters at story milestones and discourages metagaming. Keep the interface editable/resettable for mistakes.
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 38)
+## What the site does (Draft 39)
 
 The following features **already exist** in the live site:
 
-- **Character interface:** Overview, Attributes, Equipment, Abilities and Status Effects sub-tabs, plus separate Battlemap; portraits, vitals, Death Threshold/Trauma, Mana/Holy Power, AP, reactions, Wonder, concentration, manual overrides, rests, advancement, export/import and clearing the sheet.
+- **Character interface:** Overview opens with Health, AP/reactions and current-form favorite abilities; profile details follow the live controls. Files and secondary views live in Character menu, with Clear sheet separated under Reset character. Favorite Use buttons share the Ability Library activation path. Overview, Attributes, Equipment, Abilities and Status Effects sub-tabs, plus separate Battlemap; portraits, vitals, Death Threshold/Trauma, Mana/Holy Power, AP, reactions, Wonder, concentration, manual overrides, rests, advancement, export/import and clearing the sheet.
 - **Shared combat core:** `WBCombat` handles effective stats, gear, Armor Rating, AP, Surge, attacks, dual hits/criticals, resistance, defenses and death calculations. Character progression and shared combat formulas are reusable; dice UI is separate.
 - **Equipment:** Pack, Forge, worn slots, weapon actions and bonuses. Named forms use one shared inventory but may wear different equipment profiles.
 - **Custom Ability Library:** create/edit/duplicate/delete/favorite, categories, search/sort/filters, compact display, optional AP/Mana/Holy Power/custom-resource costs, Use action, limited uses, held creations, cooldown, duration, ongoing numerical effects and turn/long-rest processing. Active effects support movement, Armor Rating, Evasion, stat scores and custom-resource maximums.

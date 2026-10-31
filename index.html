@@ -7,27 +7,64 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261030-review-safety-v28">
+<link rel="stylesheet" href="css/sheet.css?v=20261030-character-phone-v29">
 </head>
-<body>
-<main class="sheet">
+<body class="character-page">
+<main class="sheet character-sheet">
   <header class="masthead">
     <div>
       <p class="eyebrow">Character Sheet</p>
-      <h1>Worlds Beyond</h1>
+      <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 38</p>
+    <p class="meta">Homebrew rules · Draft 39</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
     </svg>
   </header>
 
-  <nav class="views main-views" id="viewNav" aria-label="Worlds Beyond destinations">
-    <button type="button" data-view="sheet" aria-pressed="true">Character Sheet</button>
-    <button type="button" data-view="map" aria-pressed="false">Battlemap</button>
-  </nav>
-  <div class="dm-launch"><a href="dm.html" class="btn">Open DM Room</a><a href="player.html" class="btn">Player Preview</a><a href="cloud.html" class="btn">Cloud Saves</a><span>Run encounters locally and preview a player's view in another tab.</span></div>
+  <div class="sheet-tools">
+    <details class="character-menu" id="characterMenu">
+      <summary aria-label="Character menu"><span class="menu-label-prefix">Character </span>Menu</summary>
+      <div class="character-menu-content">
+        <h2>Character files</h2>
+        <div class="foot sheet-actions" role="group" aria-label="Character files and reset">
+          <div class="foot-acts">
+            <span class="foot-acts" id="footBtns">
+              <button type="button" class="btn" id="exportBtn">Export character</button>
+              <button type="button" class="btn" id="importBtn">Import character</button>
+            </span>
+            <input type="file" id="importFile" accept=".json,application/json" class="sr-only" tabindex="-1" aria-hidden="true">
+            <div class="confirm" id="importConfirm" hidden>
+              <span id="importMsg"></span>
+              <button type="button" class="btn danger" id="importYes">Replace</button>
+              <button type="button" class="btn" id="importNo">Keep mine</button>
+            </div>
+          </div>
+        </div>
+        <a class="btn" href="cloud.html">Cloud Saves</a>
+        <div class="character-menu-views">
+          <h2>Other views</h2>
+          <nav class="views main-views" id="viewNav" aria-label="Worlds Beyond destinations">
+            <button type="button" data-view="sheet" aria-pressed="true">Character Sheet</button>
+            <button type="button" data-view="map" aria-pressed="false">Battlemap</button>
+          </nav>
+          <div class="dm-launch"><a href="dm.html" class="btn">Open DM Room</a><a href="player.html" class="btn">Player Preview</a></div>
+        </div>
+        <details class="character-reset" id="characterReset">
+          <summary>Reset character</summary>
+          <p>Start a blank sheet. Export a backup first if you want to keep this character.</p>
+          <button type="button" class="btn danger" id="clearBtn">Clear sheet</button>
+          <div class="confirm" id="clearConfirm" hidden>
+            <span>Clear this character, including custom resources and abilities, equipment, and portraits?</span>
+            <button type="button" class="btn danger" id="clearYes">Clear</button>
+            <button type="button" class="btn" id="clearNo">Keep</button>
+          </div>
+        </details>
+      </div>
+    </details>
+    <p id="saveStatus" class="save-status" role="status" aria-live="polite">Saves automatically in this browser.</p>
+  </div>
 
   <div id="characterConflict" class="character-conflict" role="alert" hidden>
     <p>Autosave is paused to protect the character saved on this device. Export any edits from this tab before reloading.</p>
@@ -36,27 +73,7 @@
     <button type="button" class="btn" id="replaceUnreadableCharacter" hidden>Replace unreadable save with this sheet</button>
   </div>
 
-  <div class="foot sheet-actions" role="group" aria-label="Character files and reset">
-    <p id="saveStatus">Saves automatically in this browser.</p>
-    <div class="foot-acts">
-      <span class="foot-acts" id="footBtns">
-        <button type="button" class="btn" id="exportBtn">Export character</button>
-        <button type="button" class="btn" id="importBtn">Import character</button>
-        <button type="button" class="btn" id="clearBtn">Clear sheet</button>
-      </span>
-      <input type="file" id="importFile" accept=".json,application/json" class="sr-only" tabindex="-1" aria-hidden="true">
-      <div class="confirm" id="clearConfirm" hidden>
-        <span>Clear this character, including custom resources and abilities, equipment, and portraits?</span>
-        <button type="button" class="btn danger" id="clearYes">Clear</button>
-        <button type="button" class="btn" id="clearNo">Keep</button>
-      </div>
-      <div class="confirm" id="importConfirm" hidden>
-        <span id="importMsg"></span>
-        <button type="button" class="btn danger" id="importYes">Replace</button>
-        <button type="button" class="btn" id="importNo">Keep mine</button>
-      </div>
-    </div>
-  </div>
+
 
   <nav class="sheet-tabs" id="sheetTabs" aria-label="Character sheet sections">
     <button type="button" data-sheet-tab="overview" aria-pressed="true">Overview</button>
@@ -183,7 +200,217 @@
     </div>
   </section>
 
-  <section class="top" data-sheet-section="overview" aria-label="Character">
+
+
+  <section data-sheet-section="overview" aria-labelledby="vitalsHead">
+    <div class="sec-head">
+      <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
+      <h2 id="vitalsHead">Vitals</h2><button type="button" class="btn-link" id="editCharacterDetails">Character details</button>
+    </div>
+    <div class="combat-grid">
+      <div class="pool health">
+        <div class="pool-top">
+          <span class="pool-name">Health</span>
+          <div class="pool-nums">
+            <input id="hpCur" data-field type="number" inputmode="numeric" aria-label="Current health">
+            <span class="slash">/</span>
+            <input id="hpMax" class="max" data-auto type="number" inputmode="numeric" aria-label="Maximum health">
+          </div>
+        </div>
+        <div class="bar"><span id="hpBar"></span></div>
+        <div class="health-tools"><button type="button" class="btn-link" id="goDamage">Take damage &darr;</button><details class="health-details"><summary>Health &amp; recovery</summary>
+            <div class="hp-act">
+              <input id="hpAmt" type="number" inputmode="numeric" min="0" placeholder="Healing" aria-label="Amount of healing" autocomplete="off">
+              <button type="button" class="btn heal" id="hpHeal">Heal</button>
+            </div>
+            <div class="pool-foot">
+              <div class="hit-die">
+                <label class="foot-label" for="hitDie">Hit Die</label>
+                <input id="hitDie" data-auto type="text" placeholder="—" autocomplete="off" spellcheck="false">
+              </div>
+              <span class="pool-src" id="hpRule"></span>
+            </div>
+            <div class="dt-row">
+              <span class="foot-label">Death Threshold</span>
+              <span class="dt-val" id="dtVal">—</span>
+              <span class="pool-src" id="dtSrc"></span>
+              <span class="trauma">
+                <span class="foot-label">Trauma</span>
+                <button type="button" class="xbtn" id="traumaDown" aria-label="Remove a Trauma">&minus;</button>
+                <b id="traumaN" aria-live="polite">0</b>
+                <button type="button" class="xbtn" id="traumaUp" aria-label="Add a Trauma">+</button>
+              </span>
+            </div>
+          </details></div>
+        <div class="dying" id="dying" hidden>
+          <div class="dying-top"><span class="dying-title" id="dyingTitle">Bleeding out</span><span class="dying-sub" id="dyingSub">Unconscious</span></div>
+          <div class="bar death"><span id="deathBar"></span></div>
+          <p class="dying-txt" id="dyingTxt"></p>
+          <div class="dying-acts" id="dyingActs">
+            <label class="chk" for="stableOn"><input type="checkbox" id="stableOn"><span>Stabilized</span></label>
+            <button type="button" class="btn" id="indomBtn" hidden>Indomitable roll</button>
+            <button type="button" class="btn" id="treatedBtn">Treated after combat: back to 1</button>
+          </div>
+        </div>
+      </div>
+      <div class="tracker" id="turnTracker">
+        <div class="tr-top">
+          <div class="tr-head"><span class="tr-title">Action Points</span></div>
+          <div class="tr-max"><label for="apMax">Max</label><input id="apMax" data-field type="number" inputmode="numeric" min="0" placeholder="15" autocomplete="off"></div>
+        </div>
+        <div class="pips" id="apPips" role="group" aria-label="Action points. Tap to spend or restore."></div>
+        <div class="given-row" id="givenRow" hidden>
+          <span class="foot-label">Given</span>
+          <div class="pips" id="givenPips" role="group" aria-label="AP an ally gave you with Command. Tap one to spend it."></div>
+          <span class="tr-src" id="givenTxt"></span>
+        </div>
+        <div class="tr-top sub">
+          <div class="tr-head"><span class="tr-title">Reactions</span></div>
+          <div class="tr-max"><label for="reactMax">Max</label><input id="reactMax" data-auto type="number" inputmode="numeric" min="0" autocomplete="off"></div>
+        </div>
+        <div class="pips" id="reactPips" role="group" aria-label="Reactions. Tap to spend or restore."></div>
+        <div class="tr-foot">
+          <span class="tr-count"><span id="apCount" aria-live="polite"></span> · <span id="reactCount" aria-live="polite"></span></span>
+          <button type="button" class="btn" id="turnReset">Start my turn</button>
+        </div>
+        <details class="turn-actions"><summary>Command &amp; other actions</summary>
+          <p class="tr-src">Spend given AP before your own.</p><p class="tr-src">1, plus 1 at AGL 21 and 1 at AGL 28. Back at the start of your turn.</p><div class="acts-row">
+            <div class="act">
+              <button type="button" class="btn" id="stabBtn">Stabilize someone</button>
+              <span class="tr-src">5 AP · d20 + INT mod against DC 12. On a success they stop bleeding.</span>
+            </div>
+            <div class="act">
+              <button type="button" class="btn" id="cmdBtn">Command an ally</button>
+              <span class="tr-src" id="cmdSrc">5 AP · they get 2 + CHA mod, up to 5</span>
+            </div>
+            <div class="act">
+              <span class="get-in">
+                <input id="getAmt" type="number" inputmode="numeric" min="1" max="5" placeholder="AP" aria-label="AP an ally gave you" autocomplete="off">
+                <button type="button" class="btn" id="getBtn">Receive</button>
+              </span>
+              <span class="tr-src">When an ally Commands you. Use it on your next turn, before your own AP. Like temporary Health it doesn&rsquo;t stack: you keep the highest.</span>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="overview-favorites" id="overviewFavorites">
+      <div class="favorite-heading"><h3>Favorite abilities</h3><a href="#sheet/abilities">Manage favorites</a></div>
+      <p id="favoriteFeedback" class="ability-feedback" role="status" aria-live="polite"></p>
+      <div id="favoriteList" class="favorite-list"></div>
+    </div>
+    <details class="vitals-help"><summary>How these values work</summary>
+      <p class="note">Evasion, Initiative, Movement, Hit Die, Reactions and Wonder fill in from your attributes, Armor Rating is your VIT mod (half your VIT once your VIT reaches 28) plus the armor you're wearing, and gear bonuses count while they're worn. Max Health and Mana add up from the Advancement table once you enter VIT and INT or FTH. Health can drop below 0: you bleed out at 4 a turn and die at your Death Threshold. Numbers in <b>brass</b> were typed over by hand. Clear one to go back to the automatic value.</p></details>
+    <div class="vitals-grid">
+      <div class="pools">
+        <div class="pool mana" id="manaPool">
+          <div class="pool-top">
+            <span class="pool-name" id="manaName">Mana</span>
+            <div class="pool-nums">
+              <input id="mpCur" data-field type="number" inputmode="numeric" aria-label="Current mana">
+              <span class="slash">/</span>
+              <input id="mpMax" class="max" data-auto type="number" inputmode="numeric" aria-label="Maximum mana">
+            </div>
+          </div>
+          <div class="bar"><span id="mpBar"></span></div>
+          <div class="pool-foot">
+            <div class="seg" role="group" aria-label="Pool type">
+              <button type="button" data-kind="mana" aria-pressed="true">Mana · INT</button>
+              <button type="button" data-kind="holy" aria-pressed="false">Holy Power · FTH</button>
+            </div>
+            <span class="pool-src" id="mpRule"></span>
+          </div>
+        </div>
+        <div class="custom-resources" id="resourceSection">
+          <div class="custom-resource-header"><h3>Custom Resources</h3><button type="button" class="btn strong" id="addResource">+ Add resource</button></div>
+          <p class="pool-src">Track Energy, Stamina, Heat or any other character-specific resource. You can assign each pool to specific ability forms; balances remain unchanged when you switch away.</p>
+          <label class="resource-mana-toggle"><input type="checkbox" id="showManaPool" checked> Show Mana / Holy Power by default (forms can override)</label>
+          <div class="resource-view-options">
+            <span id="resourceSummary" class="resource-form-summary" role="status" aria-live="polite"></span>
+            <label><input id="resourceShowAll" type="checkbox"> Show resources from other forms (organize)</label>
+          </div>
+          <div id="resourceList" class="resource-list"></div>
+        </div>
+        <div class="rest">
+          <button type="button" class="btn strong" id="longRest">Long rest</button>
+          <span class="pool-src">Refills Health, Mana or Holy Power, Wonder, AP, reactions and item uses, and locks in the gear you're wearing.</span>
+        </div>
+      </div>
+      <div class="ratings">
+        <div class="rating">
+          <label for="evasion">Natural Evasion</label>
+          <div class="rating-val"><input id="evasion" data-auto type="number" inputmode="numeric" autocomplete="off"></div>
+          <span class="rsrc" id="evSrc">10 + AGL mod</span>
+        </div>
+        <div class="rating">
+          <label for="armor">Armor Rating</label>
+          <div class="rating-val"><input id="armor" data-auto type="number" inputmode="numeric" autocomplete="off"></div>
+          <span class="rsrc" id="armorSrc">VIT mod + worn armor</span>
+        </div>
+        <div class="rating">
+          <label for="init">Initiative</label>
+          <div class="rating-val"><input id="init" data-auto type="text" inputmode="numeric" autocomplete="off"></div>
+          <span class="rsrc" id="initSrc">WIS mod</span>
+          <button type="button" class="mini-roll" id="rollInit"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"/><path d="M8 1.5L4.3 9.3h7.4z"/><path d="M4.3 9.3L8 14.5l3.7-5.2"/></svg>Roll</button>
+        </div>
+        <div class="rating">
+          <label for="speed">Movement</label>
+          <div class="rating-val"><input id="speed" data-auto type="number" inputmode="numeric" autocomplete="off"><span class="unit">ft / AP</span></div>
+          <span class="rsrc" id="moveSrc">5 ft + 5 per AGL mod</span>
+        </div>
+        <div class="rating">
+          <label for="darkvision">Darkvision</label>
+          <div class="rating-val"><input id="darkvision" data-field type="number" inputmode="numeric" min="0" step="5" placeholder="0" autocomplete="off"><span class="unit">ft</span></div>
+          <span class="rsrc" id="dvSrc">How far you see in the dark</span>
+        </div>
+        <div class="rating">
+          <label for="light">Light carried</label>
+          <div class="rating-val"><input id="light" data-field type="number" inputmode="numeric" min="0" step="5" placeholder="0" autocomplete="off"><span class="unit">ft</span></div>
+          <span class="rsrc" id="lightSrc">A torch, lantern or spell</span>
+        </div>
+        <div class="conc" id="concBox">
+          <label class="conc-toggle" for="concOn">
+            <input type="checkbox" id="concOn" class="sr-only">
+            <span class="sw" aria-hidden="true"></span>
+            <span class="conc-lab">Concentrating</span>
+          </label>
+          <input id="concWhat" data-field type="text" placeholder="On what?" aria-label="What you're concentrating on" autocomplete="off">
+          <button type="button" class="mini-roll" id="concRoll"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"/><path d="M8 1.5L4.3 9.3h7.4z"/><path d="M4.3 9.3L8 14.5l3.7-5.2"/></svg>VIT check</button>
+        </div>
+      </div>
+      <div class="side-stack">
+        <div class="tracker" id="moveBox">
+          <div class="tr-top">
+            <div class="tr-head"><span class="tr-title">Movement</span><span class="tr-src" id="moveRule"></span></div>
+            <span class="tr-count move-done" id="moveDone" aria-live="polite"></span>
+          </div>
+          <div class="given-row" id="surgeRow" hidden>
+            <span class="foot-label">Surge</span>
+            <div class="pips" id="surgePips" role="group" aria-label="Surge's free movement AP. Tap to mark used or ready."></div>
+            <span class="tr-src" id="surgeTxt"></span>
+          </div>
+          <p class="tr-src move-left" id="moveLeft" hidden></p>
+          <div class="move-act">
+            <span class="move-in"><input id="moveFt" type="number" inputmode="numeric" min="5" step="5" placeholder="30" aria-label="Feet to move" autocomplete="off"><span class="unit">ft</span></span>
+            <button type="button" class="btn strong" id="moveBtn">Move</button>
+          </div>
+          <p class="hint" id="movePlan" aria-live="polite"></p>
+        </div>
+        <div class="tracker">
+          <div class="tr-top">
+            <div class="tr-head"><span class="tr-title">Wonder</span><span class="tr-src">Reroll any non-attack d20. Uses equal FTH mod per long rest.</span></div>
+            <div class="tr-max"><label for="wonderMax">Max</label><input id="wonderMax" data-auto type="number" inputmode="numeric" min="0" autocomplete="off"></div>
+          </div>
+          <div class="pips" id="wonderPips" role="group" aria-label="Wonder uses. Tap to spend or restore."></div>
+          <div class="tr-foot">
+            <span class="tr-count" id="wonderCount" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="top" id="characterDetails" data-sheet-section="overview" aria-label="Character">
     <div class="identity">
       <div class="avatar">
         <span class="orbit" aria-hidden="true"></span>
@@ -229,207 +456,6 @@
       <div class="field"><label for="age">Age</label><input id="age" data-field type="text" placeholder="27" autocomplete="off"></div>
       <div class="field"><label for="height">Height</label><input id="height" data-field type="text" placeholder="5 ft 10 in" autocomplete="off"></div>
       <div class="field"><label for="weight">Weight</label><input id="weight" data-field type="text" placeholder="165 lb" autocomplete="off"></div>
-    </div>
-  </section>
-
-  <section data-sheet-section="overview" aria-labelledby="vitalsHead">
-    <div class="sec-head">
-      <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
-      <h2 id="vitalsHead">Vitals</h2>
-    </div>
-    <p class="note">Evasion, Initiative, Movement, Hit Die, Reactions and Wonder fill in from your attributes, Armor Rating is your VIT mod (half your VIT once your VIT reaches 28) plus the armor you're wearing, and gear bonuses count while they're worn. Max Health and Mana add up from the Advancement table once you enter VIT and INT or FTH. Health can drop below 0: you bleed out at 4 a turn and die at your Death Threshold. Numbers in <b>brass</b> were typed over by hand. Clear one to go back to the automatic value.</p>
-    <div class="vitals-grid">
-      <div class="pools">
-        <div class="pool health">
-          <div class="pool-top">
-            <span class="pool-name">Health</span>
-            <div class="pool-nums">
-              <input id="hpCur" data-field type="number" inputmode="numeric" aria-label="Current health">
-              <span class="slash">/</span>
-              <input id="hpMax" class="max" data-auto type="number" inputmode="numeric" aria-label="Maximum health">
-            </div>
-          </div>
-          <div class="bar"><span id="hpBar"></span></div>
-          <div class="pool-foot">
-            <div class="hit-die">
-              <label class="foot-label" for="hitDie">Hit Die</label>
-              <input id="hitDie" data-auto type="text" placeholder="—" autocomplete="off" spellcheck="false">
-            </div>
-            <span class="pool-src" id="hpRule"></span>
-          </div>
-          <div class="hp-act">
-            <input id="hpAmt" type="number" inputmode="numeric" min="0" placeholder="Healing" aria-label="Amount of healing" autocomplete="off">
-            <button type="button" class="btn heal" id="hpHeal">Heal</button>
-            <button type="button" class="btn-link" id="goDamage">Take damage &darr;</button>
-          </div>
-          <div class="dt-row">
-            <span class="foot-label">Death Threshold</span>
-            <span class="dt-val" id="dtVal">—</span>
-            <span class="pool-src" id="dtSrc"></span>
-            <span class="trauma">
-              <span class="foot-label">Trauma</span>
-              <button type="button" class="xbtn" id="traumaDown" aria-label="Remove a Trauma">&minus;</button>
-              <b id="traumaN" aria-live="polite">0</b>
-              <button type="button" class="xbtn" id="traumaUp" aria-label="Add a Trauma">+</button>
-            </span>
-          </div>
-          <div class="dying" id="dying" hidden>
-            <div class="dying-top"><span class="dying-title" id="dyingTitle">Bleeding out</span><span class="dying-sub" id="dyingSub">Unconscious</span></div>
-            <div class="bar death"><span id="deathBar"></span></div>
-            <p class="dying-txt" id="dyingTxt"></p>
-            <div class="dying-acts" id="dyingActs">
-              <label class="chk" for="stableOn"><input type="checkbox" id="stableOn"><span>Stabilized</span></label>
-              <button type="button" class="btn" id="indomBtn" hidden>Indomitable roll</button>
-              <button type="button" class="btn" id="treatedBtn">Treated after combat: back to 1</button>
-            </div>
-          </div>
-        </div>
-        <div class="pool mana" id="manaPool">
-          <div class="pool-top">
-            <span class="pool-name" id="manaName">Mana</span>
-            <div class="pool-nums">
-              <input id="mpCur" data-field type="number" inputmode="numeric" aria-label="Current mana">
-              <span class="slash">/</span>
-              <input id="mpMax" class="max" data-auto type="number" inputmode="numeric" aria-label="Maximum mana">
-            </div>
-          </div>
-          <div class="bar"><span id="mpBar"></span></div>
-          <div class="pool-foot">
-            <div class="seg" role="group" aria-label="Pool type">
-              <button type="button" data-kind="mana" aria-pressed="true">Mana · INT</button>
-              <button type="button" data-kind="holy" aria-pressed="false">Holy Power · FTH</button>
-            </div>
-            <span class="pool-src" id="mpRule"></span>
-          </div>
-        </div>
-        <div class="custom-resources" id="resourceSection">
-          <div class="custom-resource-header"><h3>Custom Resources</h3><button type="button" class="btn strong" id="addResource">+ Add resource</button></div>
-          <p class="pool-src">Track Energy, Stamina, Heat or any other character-specific resource. You can assign each pool to specific ability forms; balances remain unchanged when you switch away.</p>
-          <label class="resource-mana-toggle"><input type="checkbox" id="showManaPool" checked> Show Mana / Holy Power by default (forms can override)</label>
-          <div class="resource-view-options">
-            <span id="resourceSummary" class="resource-form-summary" role="status" aria-live="polite"></span>
-            <label><input id="resourceShowAll" type="checkbox"> Show resources from other forms (organize)</label>
-          </div>
-          <div id="resourceList" class="resource-list"></div>
-        </div>
-        <div class="rest">
-          <button type="button" class="btn strong" id="longRest">Long rest</button>
-          <span class="pool-src">Refills Health, Mana or Holy Power, Wonder, AP, reactions and item uses, and locks in the gear you're wearing.</span>
-        </div>
-      </div>
-
-      <div class="ratings">
-        <div class="rating">
-          <label for="evasion">Natural Evasion</label>
-          <div class="rating-val"><input id="evasion" data-auto type="number" inputmode="numeric" autocomplete="off"></div>
-          <span class="rsrc" id="evSrc">10 + AGL mod</span>
-        </div>
-        <div class="rating">
-          <label for="armor">Armor Rating</label>
-          <div class="rating-val"><input id="armor" data-auto type="number" inputmode="numeric" autocomplete="off"></div>
-          <span class="rsrc" id="armorSrc">VIT mod + worn armor</span>
-        </div>
-        <div class="rating">
-          <label for="init">Initiative</label>
-          <div class="rating-val"><input id="init" data-auto type="text" inputmode="numeric" autocomplete="off"></div>
-          <span class="rsrc" id="initSrc">WIS mod</span>
-          <button type="button" class="mini-roll" id="rollInit"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"/><path d="M8 1.5L4.3 9.3h7.4z"/><path d="M4.3 9.3L8 14.5l3.7-5.2"/></svg>Roll</button>
-        </div>
-        <div class="rating">
-          <label for="speed">Movement</label>
-          <div class="rating-val"><input id="speed" data-auto type="number" inputmode="numeric" autocomplete="off"><span class="unit">ft / AP</span></div>
-          <span class="rsrc" id="moveSrc">5 ft + 5 per AGL mod</span>
-        </div>
-        <div class="rating">
-          <label for="darkvision">Darkvision</label>
-          <div class="rating-val"><input id="darkvision" data-field type="number" inputmode="numeric" min="0" step="5" placeholder="0" autocomplete="off"><span class="unit">ft</span></div>
-          <span class="rsrc" id="dvSrc">How far you see in the dark</span>
-        </div>
-        <div class="rating">
-          <label for="light">Light carried</label>
-          <div class="rating-val"><input id="light" data-field type="number" inputmode="numeric" min="0" step="5" placeholder="0" autocomplete="off"><span class="unit">ft</span></div>
-          <span class="rsrc" id="lightSrc">A torch, lantern or spell</span>
-        </div>
-        <div class="conc" id="concBox">
-          <label class="conc-toggle" for="concOn">
-            <input type="checkbox" id="concOn" class="sr-only">
-            <span class="sw" aria-hidden="true"></span>
-            <span class="conc-lab">Concentrating</span>
-          </label>
-          <input id="concWhat" data-field type="text" placeholder="On what?" aria-label="What you're concentrating on" autocomplete="off">
-          <button type="button" class="mini-roll" id="concRoll"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"/><path d="M8 1.5L4.3 9.3h7.4z"/><path d="M4.3 9.3L8 14.5l3.7-5.2"/></svg>VIT check</button>
-        </div>
-      </div>
-
-      <div class="tracker">
-        <div class="tr-top">
-          <div class="tr-head"><span class="tr-title">Action Points</span><span class="tr-src">Starts at 15 and grows with level.</span></div>
-          <div class="tr-max"><label for="apMax">Max</label><input id="apMax" data-field type="number" inputmode="numeric" min="0" placeholder="15" autocomplete="off"></div>
-        </div>
-        <div class="pips" id="apPips" role="group" aria-label="Action points. Tap to spend or restore."></div>
-        <div class="given-row" id="givenRow" hidden>
-          <span class="foot-label">Given</span>
-          <div class="pips" id="givenPips" role="group" aria-label="AP an ally gave you with Command. Tap one to spend it."></div>
-          <span class="tr-src" id="givenTxt"></span>
-        </div>
-        <div class="tr-top sub">
-          <div class="tr-head"><span class="tr-title">Reactions</span><span class="tr-src">1, plus 1 at AGL 21 and 1 at AGL 28. Back at the start of your turn.</span></div>
-          <div class="tr-max"><label for="reactMax">Max</label><input id="reactMax" data-auto type="number" inputmode="numeric" min="0" autocomplete="off"></div>
-        </div>
-        <div class="pips" id="reactPips" role="group" aria-label="Reactions. Tap to spend or restore."></div>
-        <div class="tr-foot">
-          <span class="tr-count"><span id="apCount" aria-live="polite"></span> · <span id="reactCount" aria-live="polite"></span></span>
-          <button type="button" class="btn" id="turnReset">Start of my turn</button>
-        </div>
-        <div class="acts-row">
-          <div class="act">
-            <button type="button" class="btn" id="stabBtn">Stabilize someone</button>
-            <span class="tr-src">5 AP · d20 + INT mod against DC 12. On a success they stop bleeding.</span>
-          </div>
-          <div class="act">
-            <button type="button" class="btn" id="cmdBtn">Command an ally</button>
-            <span class="tr-src" id="cmdSrc">5 AP · they get 2 + CHA mod, up to 5</span>
-          </div>
-          <div class="act">
-            <span class="get-in">
-              <input id="getAmt" type="number" inputmode="numeric" min="1" max="5" placeholder="AP" aria-label="AP an ally gave you" autocomplete="off">
-              <button type="button" class="btn" id="getBtn">Receive</button>
-            </span>
-            <span class="tr-src">When an ally Commands you. Use it on your next turn, before your own AP. Like temporary Health it doesn&rsquo;t stack: you keep the highest.</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="side-stack">
-      <div class="tracker" id="moveBox">
-        <div class="tr-top">
-          <div class="tr-head"><span class="tr-title">Movement</span><span class="tr-src" id="moveRule"></span></div>
-          <span class="tr-count move-done" id="moveDone" aria-live="polite"></span>
-        </div>
-        <div class="given-row" id="surgeRow" hidden>
-          <span class="foot-label">Surge</span>
-          <div class="pips" id="surgePips" role="group" aria-label="Surge's free movement AP. Tap to mark used or ready."></div>
-          <span class="tr-src" id="surgeTxt"></span>
-        </div>
-        <p class="tr-src move-left" id="moveLeft" hidden></p>
-        <div class="move-act">
-          <span class="move-in"><input id="moveFt" type="number" inputmode="numeric" min="5" step="5" placeholder="30" aria-label="Feet to move" autocomplete="off"><span class="unit">ft</span></span>
-          <button type="button" class="btn strong" id="moveBtn">Move</button>
-        </div>
-        <p class="hint" id="movePlan" aria-live="polite"></p>
-      </div>
-
-      <div class="tracker">
-        <div class="tr-top">
-          <div class="tr-head"><span class="tr-title">Wonder</span><span class="tr-src">Reroll any non-attack d20. Uses equal FTH mod per long rest.</span></div>
-          <div class="tr-max"><label for="wonderMax">Max</label><input id="wonderMax" data-auto type="number" inputmode="numeric" min="0" autocomplete="off"></div>
-        </div>
-        <div class="pips" id="wonderPips" role="group" aria-label="Wonder uses. Tap to spend or restore."></div>
-        <div class="tr-foot">
-          <span class="tr-count" id="wonderCount" aria-live="polite"></span>
-        </div>
-      </div>
-      </div>
     </div>
   </section>
 
@@ -809,17 +835,18 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261030-review-safety-v28"></script>
-<script src="js/game-state.js?v=20261030-review-safety-v28"></script>
-<script src="js/maps.js?v=20261030-review-safety-v28"></script>
-<script src="js/routing.js?v=20261030-review-safety-v28"></script>
-<script src="js/character-core.js?v=20261030-review-safety-v28"></script>
-<script src="js/resources.js?v=20261030-review-safety-v28"></script>
-<script src="js/equipment-profiles.js?v=20261030-review-safety-v28"></script>
-<script src="js/abilities.js?v=20261030-review-safety-v28"></script>
-<script src="js/combat-core.js?v=20261030-review-safety-v28"></script>
-<script src="js/encounter-actions.js?v=20261030-review-safety-v28"></script>
-<script src="js/status.js?v=20261030-review-safety-v28"></script>
-<script src="js/app.js?v=20261030-review-safety-v28"></script>
+<script src="js/persistence.js?v=20261030-character-phone-v29"></script>
+<script src="js/game-state.js?v=20261030-character-phone-v29"></script>
+<script src="js/maps.js?v=20261030-character-phone-v29"></script>
+<script src="js/routing.js?v=20261030-character-phone-v29"></script>
+<script src="js/character-core.js?v=20261030-character-phone-v29"></script>
+<script src="js/resources.js?v=20261030-character-phone-v29"></script>
+<script src="js/equipment-profiles.js?v=20261030-character-phone-v29"></script>
+<script src="js/abilities.js?v=20261030-character-phone-v29"></script>
+<script src="js/combat-core.js?v=20261030-character-phone-v29"></script>
+<script src="js/encounter-actions.js?v=20261030-character-phone-v29"></script>
+<script src="js/status.js?v=20261030-character-phone-v29"></script>
+<script src="js/sheet-layout.js?v=20261030-character-phone-v29"></script>
+<script src="js/app.js?v=20261030-character-phone-v29"></script>
 </body>
 </html>

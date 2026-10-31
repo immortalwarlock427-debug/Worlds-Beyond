@@ -11,6 +11,19 @@ Future-facing development priorities for Worlds Beyond. Current shipped behavior
 - GitHub CI with Node tests, Playwright browser interactions and 390px layout checks.
 - **PR #35 merged:** first pure `WBCharacter.derive/apply` resource-command slice, resource UI migration, and boosted resource-current preservation across reload. **Only resources are migrated so far**.
 
+## Character sheet first
+
+Finish the player character sheet before expanding battlemap, DM, PvP or live-session features. Keep their shared rules and save boundaries compatible; maintain regression coverage for the existing views.
+
+Delivery sequence:
+- Phone Overview and navigation: Health, AP/reactions and current-form favorite abilities first; file actions in Character menu, reset separated, profile details still editable.
+- B1/B2 below: shared AP/Mana commands and atomic ability/form payments, followed by the already-decided ability AP discounts.
+- Optional rolls on ability cards, with attack stat, AP-discount stat and save-DC/target-save fields kept independent. Reuse shared combat math; Wonder/Defy Fate must not apply to attack rolls. Spells should use the ability system instead of a parallel spell list.
+- Explicit combat/rest lifecycle, then milestone use/AP tracking. Narrative milestones still require table judgment; entering/leaving combat must not become an accidental refill loop. Final reset semantics need a focused design before coding.
+- Character notes, consumables, roll history and free dice. Currency, Temporary Health, innate defenses, AP growth and exhaustion require any missing setting/rule decisions first.
+
+Keep each stage in a separate reviewable PR; do not implement unapproved mechanics or automatic multiplayer as part of the sheet work.
+
 ## Save safety and release follow-up
 
 - **Phone backups:** keep JSON export/cloud-save guidance visible. A manifest, Home Screen instructions, a user-initiated persistent-storage request and per-character backup status deserve a separate mobile UX change. Browser storage and Home Screen installation are not guaranteed backups; test on real Safari before making retention promises.

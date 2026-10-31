@@ -115,12 +115,8 @@ test('optional uses remain blank for unlimited abilities, while zero remains an 
   assert.match(html, /Uses \/ charges \(blank = unlimited\)/);
 });
 
-test('character file actions are grouped at the top with unique IDs and confirmations', () => {
+test('character file controls retain unique IDs and replacement confirmations', () => {
   const html = read('index.html');
-  const navIndex = html.indexOf('id="viewNav"');
-  const actionIndex = html.indexOf('class="foot sheet-actions"');
-  const mapIndex = html.indexOf('id="mapSec"');
-  assert.ok(navIndex < actionIndex && actionIndex < mapIndex);
   for (const id of ['exportBtn', 'importBtn', 'clearBtn', 'clearConfirm', 'importConfirm', 'footBtns', 'importFile', 'saveStatus']) {
     assert.equal((html.match(new RegExp('id="' + id + '"', 'g')) || []).length, 1, id + ' should be unique');
   }

@@ -336,6 +336,7 @@
   function blockCharacterWrites() {
     characterWritesBlocked = true;
     clearTimeout(saveTimer);
+    $('#characterMenu').open = false;
     $('#characterConflict').hidden = false;
     setStatus(characterLoadFailed
       ? 'The saved character could not be read. Its stored data has been kept; export the saved data before replacing it.'
@@ -4141,6 +4142,7 @@
   }
   function refreshAll() {
     log = computeLog();
+    $('#sheetCharacterName').textContent = String(state.fields.charName || '').trim() || 'Worlds Beyond';
     const active = document.activeElement;
     if (levelInput !== active) levelInput.value = String(level());
     STATS.forEach((s) => {
@@ -4346,11 +4348,13 @@
     refreshAll();
   }
   clearBtn.addEventListener('click', () => {
+    clearBtn.hidden = true;
     footBtns.hidden = true;
     clearConfirm.hidden = false;
     $('#clearNo').focus();
   });
   $('#clearNo').addEventListener('click', () => {
+    clearBtn.hidden = false;
     clearConfirm.hidden = true;
     footBtns.hidden = false;
     clearBtn.focus();
@@ -4368,6 +4372,7 @@
     state.id = newCharId();
     resetSession();
     clearConfirm.hidden = true;
+    clearBtn.hidden = false;
     footBtns.hidden = false;
     setStatus('Sheet cleared.');
   });
@@ -4427,6 +4432,8 @@
       const st = window.WBPersistence.parseCharacterFile(String(reader.result));
       if (!st) { setStatus('That file isn\u2019t a Worlds Beyond character.', true); return; }
       pendingImport = st;
+      $('#characterMenu').open = true;
+      $('#characterReset').open = false;
       const nm = st.fields && isSet(st.fields.charName) ? String(st.fields.charName).trim() : 'the character in that file';
       $('#importMsg').textContent = 'Replace this sheet with ' + nm + '? Export the current character first if you want to keep it.';
       footBtns.hidden = true;

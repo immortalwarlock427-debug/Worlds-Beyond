@@ -1,4 +1,5 @@
 const {test, expect} = require('@playwright/test');
+const {openCharacterMenu} = require('./helpers/sheet.cjs');
 
 // These are real browser interactions on a locally served copy of Worlds Beyond.
 // Each test has a fresh Playwright context (including localStorage and cookies).
@@ -15,6 +16,7 @@ async function createExport(page,name='Browser Test Hero'){
   await page.locator('#charName').blur();
   await settled(page,character,s=>s?.fields?.charName===name);
   const downloadPromise=page.waitForEvent('download');
+  await openCharacterMenu(page);
   await page.locator('#exportBtn').click();
   return (await downloadPromise).path();
 }
@@ -71,6 +73,7 @@ test('character autosave preserves a newer DM encounter from another local view'
   await page.locator('#charName').blur();
   await settled(page,character,s=>s?.fields?.charName==='Concurrent Save Tester');
   await expect.poll(async()=>(await game(page))?.encounter?.id).toBe('concurrent-encounter');
+  await openCharacterMenu(page);
   await page.locator('[data-view="map"]').click();
   await page.locator('#mapPick').selectOption('stone-hall');
   await settled(page,game,g=>g?.map?.id==='stone-hall' &&
