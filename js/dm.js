@@ -28,7 +28,7 @@
     INVALID_HEALING: 'Enter a valid nonnegative healing amount.',
     INVALID_HEALTH: 'Enter a valid whole-number Health value.',
     INVALID_AP_COST: 'Enter an AP cost between 1 and 40.',
-    INVALID_AP_AMOUNT: 'Enter an AP grant between 1 and 40.',
+    INVALID_AP_AMOUNT: 'Enter Command AP between 1 and 5; only the highest grant is kept.',
     AP_CAP: 'Given AP would exceed the allowed maximum.',
     INVALID_INITIATIVE: 'Enter a whole-number initiative total.',
     NOT_CURRENT_TURN: 'Only the current combatant can spend AP or end their turn.',
@@ -180,8 +180,8 @@
           '<label>Spend AP<input type="number" name="cost" min="1" max="40" value="1" required></label>' +
           '<button class="btn" type="submit"' + (current ? '' : ' disabled') + '>Spend AP</button></form>' +
         '<form data-dm-action="grantap" data-actor="' + quote(actor.id) + '">' +
-          '<label>Give AP<input type="number" name="amount" min="1" max="40" value="1" required></label>' +
-          '<button class="btn" type="submit">Grant AP</button></form>' +
+          '<label>Command AP<input type="number" name="amount" min="1" max="5" value="1" required></label>' +
+          '<button class="btn" type="submit">Grant Command AP</button></form>' +
         (actor.hp <= 0 ? '<button class="btn" data-dm-click="stable" data-actor="' +
           quote(actor.id) + '" data-stable="' + (actor.down && actor.down.stable ? 'false' : 'true') +
           '" type="button">' + (actor.down && actor.down.stable ? 'Resume bleeding' : 'Stabilize') + '</button>' : '') +

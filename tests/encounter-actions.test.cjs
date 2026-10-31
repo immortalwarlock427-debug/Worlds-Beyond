@@ -163,3 +163,24 @@ test('unregistered inherited object keys cannot masquerade as encounter actors',
   assert.equal(r.state.actors.constructor.name, 'Valid character');
   assert.equal(e.normalizeEncounter(r.state).actors.constructor.name, 'Valid character');
 });
+
+test('Command grants keep the highest pool, cap at five, and never spend personal AP',()=>{
+ let {e,state}=setup();
+ const original=plain(state);
+ state=command(e,state,'GrantAP',{actorId:'hero',amount:3}).state;
+ assert.deepEqual(plain(state.actors.hero.apGiven),{n:3,fresh:true});
+ assert.deepEqual(plain(original.actors.hero.apGiven),null);
+ for(const amount of [2,3,5,1]){
+   const prior=state.actors.hero.apGiven.n;
+   const result=command(e,state,'GrantAP',{actorId:'hero',amount});
+   assert.equal(result.ok,true);
+   state=result.state;
+   assert.equal(state.actors.hero.apGiven.n,Math.max(prior,amount));
+   assert.equal(state.actors.hero.apAvail,original.actors.hero.apAvail);
+ }
+ const snapshot=JSON.stringify(state);
+ for(const amount of [0,6,40,1.5]){
+   assert.equal(command(e,state,'GrantAP',{actorId:'hero',amount}).error,'INVALID_AP_AMOUNT');
+   assert.equal(JSON.stringify(state),snapshot);
+ }
+});
