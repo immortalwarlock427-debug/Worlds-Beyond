@@ -4211,17 +4211,21 @@
   }
   // Independent destinations: Character Sheet (with its own sub-tabs) and Battlemap.
   // Keep old #sheet, #status and #map URLs usable alongside #sheet/abilities etc.
-  const SHEET_TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses'];
+  const SHEET_TABS = ['overview', 'attributes', 'equipment', 'abilities', 'statuses', 'notes'];
   let activeSheetTab = 'overview';
   function setView(destination, tab) {
     view = destination === 'map' ? 'map' : 'sheet';
     if (tab && SHEET_TABS.includes(tab)) activeSheetTab = tab;
     const onSheet = view === 'sheet';
     mainEl.classList.toggle('view-map', !onSheet);
+    mainEl.classList.toggle('view-notes', onSheet && activeSheetTab === 'notes');
     document.querySelectorAll('#viewNav button').forEach(b =>
       b.setAttribute('aria-pressed', String(b.dataset.view === view)));
-    document.querySelectorAll('#sheetTabs button').forEach(b =>
-      b.setAttribute('aria-pressed', String(b.dataset.sheetTab === activeSheetTab)));
+    document.querySelectorAll('#sheetTabs button').forEach(b => {
+      const active = b.dataset.sheetTab === activeSheetTab;
+      b.setAttribute('aria-pressed', String(active));
+      if (onSheet && active && b.scrollIntoView) b.scrollIntoView({block:'nearest',inline:'nearest'});
+    });
     document.querySelectorAll('[data-sheet-section]').forEach(section => {
       section.hidden = !onSheet || section.dataset.sheetSection !== activeSheetTab;
     });
@@ -4400,6 +4404,9 @@
       if (t.id === 'mpCur') applyPoolCommand({ type: 'SetManaCurrent', value: t.value });
       else if (t.id === 'apMax') applyPoolCommand({ type: 'SetAPMaximum', value: t.value });
       else state.fields[t.id] = t.value;
+      // Narrative edits use the same save path without rebuilding gameplay UI
+      // on every keystroke or disturbing the textarea selection/scroll position.
+      if (t.hasAttribute('data-character-note')) { save(); return; }
     } else if (t.hasAttribute('data-auto')) {
       // An automatically buffed Movement field displays the effective value.
       // Focusing it for editing shows its unbuffed base; only intentional edits

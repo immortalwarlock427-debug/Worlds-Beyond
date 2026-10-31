@@ -20,7 +20,9 @@ Run `npm install`, `npx playwright install chromium`, and `npm test`. The browse
 
 Overview starts with Health, AP/reactions and your current-form favorite abilities. Star abilities in the Abilities tab, then use them directly from Overview with the same costs, cooldowns and limited uses. **Character details** takes you to the editable name, portrait and profile below. **Character menu** holds Export/Import, Cloud Saves and secondary views; Clear sheet is separated under **Reset character** and still requires confirmation.
 
-Overview, Attributes, Equipment, Abilities and Status Effects tabs provide editable stats, advancement, Health/Mana, AP, reactions, Wonder, defenses, equipment/Forge, custom resources, custom abilities and timed effects. Named forms can link portraits, select different worn gear and charge optional entry costs. Returning to Base is free. The separate Battlemap supports fog, light, terrain, targeting and AP-based movement.
+Overview, Attributes, Equipment, Abilities, Status Effects and Notes tabs provide editable stats, advancement, Health/Mana, AP, reactions, Wonder, defenses, equipment/Forge, custom resources, custom abilities and timed effects. Named forms can link portraits, select different worn gear and charge optional entry costs. Returning to Base is free. The separate Battlemap supports fog, light, terrain, targeting and AP-based movement.
+
+Use **Notes** for session reminders, backstory, personality, languages and allies/connections. Notes save with your character, including JSON exports/imports and manual Cloud Saves. Session notes appear first on phones; the fields are plain text and do not change stats or ability uses.
 
 For custom abilities, enter **Base AP cost** and optionally choose **Discounted by: STR, DEX, INT or FTH**. Cards and Overview favorites show the current price and its base. The discount uses your current modifier, with a minimum of half the base cost rounded up; negative modifiers increase the price, and blank/zero stays free. **None** keeps a flat cost and is the default for existing abilities.
 

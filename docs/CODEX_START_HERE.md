@@ -13,24 +13,26 @@
 - Seven non-weapon milestone actions are **implemented** under Abilities → Milestone actions. `UseMilestone` adapts to the existing activation transaction; `milestoneUses` keeps separate scoped counts, `SetMilestoneUses` corrects the current allowance, and long-rest Undo includes the map. Eyes of Truth is a WIS check; Commanding Presence is target CHA DC 10 + 2 × mod. Narrative outcomes remain at the table.
 - Devastate/Singularity are **implemented**. Confirmed: Devastate applies only to STR-based damage; dual Singularity affects **one chosen hand**. `BeginWeaponAttack` atomically commits AP/reaction and Singularity, returning source snapshots; `ApplyDevastate` consumes its shared use without rerolling damage. A forced critical is distinct from natural 20.
 - Equipment Use/corrections and turn/rest resets now use shared allowance helpers/commands. `outsideUsesStat` is optional on item abilities; legacy missing metadata keeps turn resets. Fixed/stat-based outside limits spend `equipmentOutsideSpent` separately from `spent`. Forge remapping preserves counts across edits/removals and current-bank changes; long-rest Undo includes both.
+- Character notes are **implemented** in the Notes tab: session notes, backstory, personality, languages and allies/connections use optional plain-text `state.fields` entries. They persist through local/v1/manual-cloud saves and stay shared across forms/rests. Narrative input skips gameplay refresh/commands; character replacement clears absent note fields.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — character notes
+## Your next independent task — consumables
 
-**Scope:** add backstory, personality, languages, allies and session notes to the player character sheet. Keep the interface comfortable on phones and preserve notes in local saves, v1 export/import and manual cloud copies. Use optional fields with empty defaults for legacy characters; editing notes must never trigger gameplay commands or overwrite DM game state.
+**Scope:** add a consumables list separate from worn gear, with editable quantities and a Use action that consumes one item. Support optional healing dice through the existing roll/Health UI where the mechanics are already defined. Keep free-form descriptions for other effects; do not parse AP costs from text or invent potion costs, currencies or new healing rules. Preserve legacy/v1/manual-cloud saves and comfortable phone use. Validate any configured roll before consuming quantity; keep manual correction available.
 
 **Preserve:**
+- Notes fields and exact multiline text, narrative-only editing, legacy empty defaults and character replacement/reset behavior.
 - Equipment charge tracking and explicit outside-use choices. Missing metadata keeps legacy turn resets; do not infer an item ability stat. Keep both spent maps, Forge row remapping, current-bank manual corrections, hidden item balances and long-rest Undo.
 - Confirmed weapon milestones, actual natural dice, source damage snapshots, atomic AP/reaction + Singularity payment, one-hit Devastate and existing opportunity conversion.
 - All other milestone/custom ability flows, separate combat/outside allowances, idempotent StartCombat, combat-only scoped round refills and no refill on EndCombat.
 - Source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment, cloud revision receipts, stale-tab save protection and independent DM saves.
-- Relevant 390px browser interactions and existing regressions. Full Health/turn/rest/Undo orchestration, consumables, roll history and free dice remain subsequent focused slices; do not introduce unapproved game rules, automatic triggers or multiplayer.
+- Relevant 390px browser interactions and existing regressions. Full Health/turn/rest/Undo orchestration, roll history and free dice remain subsequent focused slices; do not introduce unapproved game rules, automatic triggers or multiplayer.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the notes slice and relevant browser interactions, then run the appropriate regression checks and CI. Update docs where status changes.
+3. Implement the consumables slice with pure use/quantity checks and relevant phone/browser interactions, then run the appropriate regression checks and CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

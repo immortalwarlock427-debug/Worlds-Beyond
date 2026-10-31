@@ -95,6 +95,9 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   await sheet.goto('/index.html');
   await expect(sheet.locator('#charName')).toHaveValue('Phone hero');
   await cloudPage(page);
+  await page.evaluate(()=>Object.assign(window.cloudTest.row.document.fields,{
+    backstory:'Beyond the gate.\nA promise remains.',sessionNotes:'Cloud session notes 🗺️'
+  }));
   page.once('dialog',d=>d.accept());
   await page.locator('[data-cloud-action="restore"]').click();
   await expect(page.locator('#cloudFeedback')).toContainText('restored on this device');
@@ -114,12 +117,19 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   await expect(sheet.locator('#charName')).toHaveValue('Laptop level-up');
   await sheet.locator('#charName').fill('Reviewed level-up');
   await sheet.locator('#charName').blur();
+  await sheet.locator('[data-sheet-tab="notes"]').click();
+  await expect(sheet.locator('#backstory')).toHaveValue('Beyond the gate.\nA promise remains.');
+  await expect(sheet.locator('#sessionNotes')).toHaveValue('Cloud session notes 🗺️');
+  await sheet.locator('#sessionNotes').fill('Reviewed cloud session notes\nNext: the lighthouse.');
   await expect.poll(async()=>(await saved(sheet)).fields.charName).toBe('Reviewed level-up');
+  await expect.poll(async()=>(await saved(sheet)).fields.sessionNotes).toBe('Reviewed cloud session notes\nNext: the lighthouse.');
   page.once('dialog',d=>d.accept());
   await page.locator('#cloudSaveLocal').click();
   await expect(page.locator('#cloudFeedback')).toContainText('saved privately');
   expect((await saved(page)).cloudSync.revision).toBe(5);
   expect(await page.evaluate(()=>window.cloudTest.row.document.fields.charName)).toBe('Reviewed level-up');
+  expect(await page.evaluate(()=>window.cloudTest.row.document.fields.sessionNotes)).toBe('Reviewed cloud session notes\nNext: the lighthouse.');
+  expect(await page.evaluate(()=>window.cloudTest.row.document.fields.backstory)).toBe('Beyond the gate.\nA promise remains.');
 });
 
 test('malformed saved JSON cannot be overwritten by edits on a blank fallback sheet',async({page})=>{
