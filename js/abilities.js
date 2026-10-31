@@ -99,6 +99,62 @@
       remaining:outside?Math.max(0,maximum-(Number(ability.outsideUsesSpent)||0)):ability.usesLeft,
       period:outside||per==='rest'?'long rest':per};
   }
+  const equipmentOutsideSetting = ability => ability && (ability.outsideUsesStat===''||STATS.includes(ability.outsideUsesStat))?ability.outsideUsesStat:'legacy';
+  const counterMap = value => value && typeof value==='object' && !Array.isArray(value)?value:{};
+  const equipmentSpent = (map,itemId,index) => Math.max(0,Math.round(Number(counterMap(counterMap(map)[itemId])[index]))||0);
+  function equipmentAbility(state,itemId,index) {
+    if(typeof itemId!=='string'||!Number.isInteger(index)||index<0)return null;
+    const item=(state.items||[]).find(item=>item&&item.id===itemId),definition=item&&(item.abilities||[])[index];
+    if(!definition||typeof definition!=='object')return null;
+    const uses=typeof definition.uses==='number'&&definition.uses>=1?Math.min(20,Math.round(definition.uses)):'';
+    const setting=equipmentOutsideSetting(definition),round=definition.per==='round';
+    const legacyRound=round&&setting==='legacy';
+    const ability={id:'@equipment/'+itemId+'/'+index,name:String(definition.name||'Equipment ability'),type:'active',apCost:'',apDiscountStat:'',
+      uses,usesLeft:uses===''?null:Math.max(0,uses-equipmentSpent(state.spent,itemId,index)),usesPer:round&&!legacyRound?'round':'rest',
+      outsideUsesStat:setting==='legacy'?'':setting,outsideUsesSpent:equipmentSpent(state.equipmentOutsideSpent,itemId,index),
+      resourceId:'',resourceCost:'',cooldown:'',duration:'',cooldownLeft:0,durationLeft:0,capacityMax:'',capacityCurrent:0,loadoutIds:[],effects:[]};
+    const usage=usageState(state,ability);
+    if(legacyRound)usage.period='round';
+    return {itemId,index,definition,ability,usage,legacyRound,setting,spent:equipmentSpent(state.spent,itemId,index)};
+  }
+  function equipmentLifecycle(state,type) {
+    if(type==='EndCombat')return {spent:counterMap(state.spent),equipmentOutsideSpent:counterMap(state.equipmentOutsideSpent)};
+    const spent={...counterMap(state.spent)},outside={...counterMap(state.equipmentOutsideSpent)};
+    for(const item of (state.items||[])){
+      if(!item)continue;
+      const counters={...counterMap(spent[item.id])};
+      for(let i=0;i<(item.abilities||[]).length;i++){
+        const a=item.abilities[i];if(!a)continue;
+        const configured=equipmentOutsideSetting(a)!=='legacy';
+        const reset=type==='RestAbilities'||a.per==='round'&&
+          (type==='StartCombat'&&configured||type==='AdvanceAbilityTurn'&&(state.inCombat===true||!configured));
+        if(reset)delete counters[i];
+      }
+      if(Object.keys(counters).length)spent[item.id]=counters;else delete spent[item.id];
+      if(type==='RestAbilities')delete outside[item.id];
+    }
+    return {spent,equipmentOutsideSpent:outside};
+  }
+  // Forge rows retain their source index while editing. Carry counters with the
+  // row when earlier rows are removed; a rename never refills the whole item.
+  function remapEquipmentUses(state,itemId,nextAbilities,originalIndices) {
+    const item=(state.items||[]).find(item=>item&&item.id===itemId);
+    const spent={},outside={},oldOutside=counterMap(counterMap(state.equipmentOutsideSpent)[itemId]);
+    for(let next=0;next<nextAbilities.length;next++){
+      const old=originalIndices[next];if(!Number.isInteger(old)||old<0||!item||(item.abilities||[])[old]==null)continue;
+      const prior=item.abilities[old],used=equipmentSpent(state.spent,itemId,old);
+      if(Object.prototype.hasOwnProperty.call(counterMap(counterMap(state.spent)[itemId]),old))spent[next]=used;
+      const outsideUsed=equipmentSpent(state.equipmentOutsideSpent,itemId,old);
+      if(Object.prototype.hasOwnProperty.call(oldOutside,old))outside[next]=outsideUsed;
+      const priorOutside=state.inCombat!==true&&prior.per==='round'&&equipmentOutsideSetting(prior)!=='legacy';
+      const nextOutside=state.inCombat!==true&&nextAbilities[next].per==='round'&&equipmentOutsideSetting(nextAbilities[next])!=='legacy';
+      if(priorOutside!==nextOutside){if(nextOutside)outside[next]=used;else spent[next]=outsideUsed;}
+    }
+    const patch={spent:{...counterMap(state.spent)},equipmentOutsideSpent:{...counterMap(state.equipmentOutsideSpent)}};
+    if(Object.keys(spent).length)patch.spent[itemId]=spent;else delete patch.spent[itemId];
+    if(Object.keys(outside).length)patch.equipmentOutsideSpent[itemId]=outside;else delete patch.equipmentOutsideSpent[itemId];
+    return patch;
+  }
   const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
   const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const MAX_EFFECTS = 12;
@@ -429,6 +485,7 @@
   function normalizeState(state) {
     state.inCombat=state.inCombat===true;
     state.milestoneUses=milestoneData(state);
+    state.equipmentOutsideSpent=counterMap(state.equipmentOutsideSpent);
     const ids = new Set();
     state.abilityLoadouts = (Array.isArray(state.abilityLoadouts) ? state.abilityLoadouts : [])
       .filter(x => x && typeof x === 'object' && !Array.isArray(x) && clean(x.name,60).trim())
@@ -1280,7 +1337,9 @@
     normalizeState, init, initMilestones, activate, checkActivation, filterAbilities, loadoutVisible,
     milestoneDescriptions, milestoneAbility, milestoneAction, milestoneActions, milestoneLifecycle,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, abilityApCost, abilityRollPlan, weaponSource, weaponAttackPlan, usageState, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
+    formStatBonus, abilityApCost, abilityRollPlan, weaponSource, weaponAttackPlan, usageState,
+    equipmentOutsideSetting, equipmentAbility, equipmentLifecycle, remapEquipmentUses,
+    entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };

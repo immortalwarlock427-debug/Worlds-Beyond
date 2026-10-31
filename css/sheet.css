@@ -633,6 +633,12 @@ h1 {
   background: transparent; font: inherit; font-size: 15px; color: var(--ink);
 }
 .abil-uses select { font-size: 14px; }
+.abil-outside { grid-column:1; display:grid; gap:4px; min-width:0; font-size:13.5px; color:var(--muted); }
+.abil-outside select { min-width:0; width:100%; min-height:44px; padding:8px; border:1px solid var(--rule); border-radius:3px; background:var(--field); color:var(--ink); font:inherit; }
+.abil-outside-note { grid-column:1; margin:0; font-size:12px; color:var(--muted); }
+.equipment-ability-use { min-height:44px; max-width:100%; white-space:normal; }
+.equipment-uses-correction { display:grid; gap:4px; max-width:110px; }
+.equipment-uses-correction input { width:100%; min-width:0; min-height:44px; padding:7px; border:1px solid var(--rule); border-radius:3px; background:var(--field); color:var(--ink); font:inherit; }
 .abil-uses select, .eff-row select { cursor: pointer; background-color: var(--sheet); }
 .abil-uses select option, .eff-row select option { background-color: var(--sheet); color: var(--ink); }
 .abil-uses select:focus, .eff-row select:focus, .eff-row input:focus { outline: none; }
