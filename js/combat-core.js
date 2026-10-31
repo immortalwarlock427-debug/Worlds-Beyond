@@ -63,9 +63,7 @@
     const skip=new Set(['rarm','larm','rleg','lleg']);
     const ids=new Set();let total=arms+legs;
     for(const slot of SLOTS){if(skip.has(slot)||!equip[slot]||ids.has(equip[slot]))continue;ids.add(equip[slot]);total+=ar(by(slot));}
-    const pieces=wornItems(state).filter(it=>['head','torso','arms','legs','pants'].includes(it.type));
-    const bonuses=pieces.map(it=>({Steel:0,Osmium:2,Tungsten:3,Titanium:4}[it.metal]||0));
-    return total+(bonuses.length?Math.min(...bonuses):0);
+    return total;
   }
   function armorProfile(state) {
     const items=wornItems(state),weights=['light','medium','heavy'];
@@ -89,7 +87,7 @@
   function speed(state,temporary=true){const base=derivedValue(state,'speed',Math.max(5,5+5*currentModifier(state,'AGL',temporary))+gearBonus(state,'move'));return Math.max(0,base+(temporary&&window.WBAbilities?window.WBAbilities.movementBonus(state):0));}
   function apMaximum(state){const value=num(record(state.fields).apMax);return Number.isFinite(value)?trackerMax(value,15):15+2*Math.floor(level(state)/5);}
   function scalingTier(state){return 1+Math.floor(Math.min(20,level(state))/5);}
-  function blockDice(state){const shield=wornItems(state).find(it=>it.type==='shield');const m=String(shield&&shield.block||'1d4').match(/d(\d+)/i);return {count:scalingTier(state),sides:m?Math.max(1,Number(m[1])):4,multiplier:shield?Math.max(1,Number(shield.blockMultiplier)||({Osmium:1.3,Tungsten:1.4,Titanium:1.5}[shield.metal]||1)):1};}
+  function blockDice(state){const shield=wornItems(state).find(it=>it.type==='shield');const m=String(shield&&shield.block||'1d4').match(/d(\d+)/i);return {count:scalingTier(state),sides:m?Math.max(1,Number(m[1])):4,multiplier:shield&&shield.blockMultiplier!=null&&Number.isFinite(Number(shield.blockMultiplier))?Math.max(0,Number(shield.blockMultiplier)):1};}
   // Active ability and form bonuses are supplied by WBAbilities. Keeping the
   // components explicit avoids silently treating temporary buffs as base stats.
   function effectiveScore(state, stat, n, abilityBonus=0, formBonus=0) {

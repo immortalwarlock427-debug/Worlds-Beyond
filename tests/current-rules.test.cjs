@@ -42,14 +42,14 @@ test('arm armor counts highest once; legs need a pair, with both arm effects ret
  assert.equal(c.gearArmor(state),4);assert.equal(c.gearBonus(state,'STR'),3);state.items[2].pair=true;assert.equal(c.gearArmor(state),7);
  state.items[2].pair=false;state.items.push({id:'l2',type:'legs',ar:1});state.equip.lleg='l2';assert.equal(c.gearArmor(state),8);
 });
-test('heaviest armor controls Evasion, Heavy AGL is capped at three and metal armor bonus applies once',()=>{
+test('heaviest armor controls Evasion, Heavy AGL is capped at three and item material metadata never changes its stats',()=>{
  const {state,c}=setup();state.items=[{id:'armor',type:'torso',ar:8,armorWeight:'heavy',metal:'Titanium'}];state.equip.torso='armor';
- assert.equal(c.armorProfile(state).aglPenalty,3);assert.equal(c.currentScore(state,'AGL'),13);assert.equal(c.gearArmor(state),12);
+ assert.equal(c.armorProfile(state).aglPenalty,3);assert.equal(c.currentScore(state,'AGL'),13);assert.equal(c.gearArmor(state),8);
  state.items[0].armorWeight='light';state.items[0].lightEvasion=2;assert.equal(c.evasion(state),16);state.items.push({id:'hat',type:'head',armorWeight:'medium',ar:1});state.equip.head='hat';
- assert.equal(c.armorProfile(state).evasionBonus,0);assert.equal(c.gearArmor(state),9,'Steel hat sets lowest armor-metal bonus to zero');
+ assert.equal(c.armorProfile(state).evasionBonus,0);assert.equal(c.gearArmor(state),9,'Only entered armor stats count');
 });
 test('Block and weapon dice scale at every documented tier and use shield die size',()=>{
- const {state,c}=setup();state.items=[{id:'shield',type:'shield',block:'1d10',metal:'Titanium'}];state.equip.off='shield';
+ const {state,c}=setup();state.items=[{id:'shield',type:'shield',block:'1d10',blockMultiplier:1.5}];state.equip.off='shield';
  for(const level of [1,5,10,15,20,25]){state.fields.level=level;const count=1+Math.floor(Math.min(20,level)/5);assert.equal(c.blockDice(state).count,count);assert.equal(c.blockDice(state).sides,10);assert.equal(c.blockDice(state).multiplier,1.5);assert.equal(c.scaleDice('2d6+3',count),2*count+'d6+3');}
 });
 test('Heavy and Paragon double damage modifier while AP uses the single chosen modifier',()=>{

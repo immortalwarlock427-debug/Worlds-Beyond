@@ -227,7 +227,7 @@
     return {weaponId:weapon.id,name:String(weapon.name||'Weapon'),stat,type:weapon.type,dice:scaled||rawDice,rawDice,tier,
       fastRoll:state.fastRoll===true,criticalFrom:rules.criticalFrom,twoHanded:rules.twoHanded,puncture:rules.puncture,melee:rules.melee,normalRange:rules.normalRange,longRange:rules.longRange,
       disadvantage:rules.disadvantage,warning:rules.warning,light:rules.light,loading:rules.loading,
-      attackModifier:modifier(stat)+sum('atk'),apModifier:modifier(stat),damageModifier:modifier(stat)*rules.damageMultiplier,flatBonus:sum('flat')+(rules.props.includes('Mount')&&weapon.mounted?Math.min(Math.max(0,modifier(stat)),Math.floor(Math.max(0,Number(state.mountApproach)||0)/10)):0),diceMultiplier:({Osmium:1.3,Tungsten:1.4,Titanium:1.5}[weapon.metal]||1),
+      attackModifier:modifier(stat)+sum('atk'),apModifier:modifier(stat),damageModifier:modifier(stat)*rules.damageMultiplier,flatBonus:sum('flat')+(rules.props.includes('Mount')&&weapon.mounted?Math.min(Math.max(0,modifier(stat)),Math.floor(Math.max(0,Number(state.mountApproach)||0)/10)):0),diceMultiplier:weapon.diceMultiplier!=null&&Number.isFinite(Number(weapon.diceMultiplier))?Math.max(0,Number(weapon.diceMultiplier)):1,
       extras:effects.filter(e=>e.k==='dmg').map(e=>({dice:String(e.dice||''),type:String(e.dt||'')})),
       hits:[...effects.filter(e=>e.k==='onhit').map(e=>String(e.text||'')),...(Array.isArray(weapon.signatures)?weapon.signatures:[]).map(x=>x+': '+(window.WBRulesCatalog?.signatures?.[x]||'resolve its property at the table.')) ]};
   }

@@ -65,3 +65,9 @@ test('explicit Draw and Drink buttons commit discounted AP with gear or quantity
  await page.locator('[data-consumable-id="potion"] [data-consumable-action="drink"]').click();await expect.poll(async()=>(await saved(page)).apAvail).toBe(11);expect((await saved(page)).consumables[0].quantity).toBe(1);
  await page.locator('#toastActions [data-act="consumable-heal"]').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('9');expect((await saved(page)).apAvail).toBe(11);
 });
+test('Forge uses editable numeric multipliers without a material taxonomy',async({page})=>{
+ await seed(page);await tab(page,'equipment');await page.locator('#forgeType [data-type="onehand"]').click();await page.locator('#forgeName').fill('Custom blade');await page.locator('#forgeDmg').fill('1d6');
+ await page.locator('.rule-editor > summary').click();await expect(page.locator('#forgeMetal')).toHaveCount(0);await page.locator('#forgeDamageMultiplier').fill('1.5');await page.locator('#forgeSubmit').click();
+ await expect.poll(async()=>(await saved(page)).items.length).toBe(1);const item=(await saved(page)).items[0];expect(item.diceMultiplier).toBe(1.5);expect(item.metal).toBeUndefined();
+ await page.locator('[data-draw-weapon="'+item.id+'"][data-hand="main"]').click();await page.locator('#toastClose').click();await page.locator('#attacks .atk-dmg[data-slot="main"]').click();await expect(page.locator('#toastTotal')).toHaveText('14');
+});

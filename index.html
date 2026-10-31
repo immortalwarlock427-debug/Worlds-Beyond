@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-current-rules-v44">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-current-rules-v45">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -729,7 +729,7 @@
           <label>Add from current equipment tables<select id="catalogPreset"></select></label><button type="button" class="btn" id="catalogAdd">Add preset to pack</button>
           <details class="rule-editor"><summary>Weapon properties, armor and pack settings</summary>
             <div class="rule-fields">
-              <label>Price<input id="forgePrice" placeholder="15 gc"></label><label>Metal<select id="forgeMetal"><option>Steel</option><option>Osmium</option><option>Tungsten</option><option>Titanium</option></select></label><label>Thrown normal range<input id="forgeThrownRange" type="number" min="5"></label><label>Thrown long range<input id="forgeThrownLongRange" type="number" min="5"></label><label>Weapon family<select id="forgeFamily"><option>Balanced</option><option>Heavy</option><option>Finesse</option><option>Paragon</option></select></label>
+              <label>Price<input id="forgePrice" placeholder="15 gc"></label><label>Weapon dice multiplier<input id="forgeDamageMultiplier" type="number" min="0" step="any" placeholder="1"></label><label>Thrown normal range<input id="forgeThrownRange" type="number" min="5"></label><label>Thrown long range<input id="forgeThrownLongRange" type="number" min="5"></label><label>Weapon family<select id="forgeFamily"><option>Balanced</option><option>Heavy</option><option>Finesse</option><option>Paragon</option></select></label>
               <fieldset id="forgeProperties"><legend>Weapon properties</legend><label><input type="checkbox" data-weapon-property="Light">Light</label><label><input type="checkbox" data-weapon-property="Two-handed">Two-handed</label><label><input type="checkbox" data-weapon-property="Versatile">Versatile</label><label><input type="checkbox" data-weapon-property="Strapped">Strapped</label><label><input type="checkbox" data-weapon-property="Reach">Reach</label><label><input type="checkbox" data-weapon-property="Thrown">Thrown</label><label><input type="checkbox" data-weapon-property="Loading">Loading</label><label><input type="checkbox" data-weapon-property="Mount">Mount</label><label><input type="checkbox" data-weapon-property="Ranged">Ranged</label></fieldset>
               <label>Two-handed grip (Versatile)<input id="forgeGrip" type="checkbox"></label>
               <label>Two-handed damage dice<input id="forgeVersatile" placeholder="1d10"></label>
@@ -738,7 +738,7 @@
               <label>Mounted<input id="forgeMounted" type="checkbox"></label>
               <label>Armor weight<select id="forgeWeight"><option value="">Unspecified</option><option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option></select></label>
               <label>Light armor Evasion bonus<input id="forgeLightEv" type="number" min="0"></label>
-              <label>Shield Block multiplier<input id="forgeBlockMultiplier" type="number" min="1" step="0.5" placeholder="1"></label>
+              <label>Shield Block multiplier<input id="forgeBlockMultiplier" type="number" min="0" step="any" placeholder="1"></label>
               <label>Pack slots (blank = automatic)<input id="forgeSlots" type="number" min="0"></label>
               <label>Backpack capacity bonus<input id="forgeBackpack" type="number" min="0" placeholder="6"></label>
               <label>Ammunition quantity (stacks of 5)<input id="forgeAmmo" type="number" min="0"></label>
@@ -919,21 +919,21 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-current-rules-v44"></script>
-<script src="js/game-state.js?v=20261031-current-rules-v44"></script>
-<script src="js/maps.js?v=20261031-current-rules-v44"></script>
-<script src="js/routing.js?v=20261031-current-rules-v44"></script>
-<script src="js/combat-core.js?v=20261031-current-rules-v44"></script>
-<script src="js/equipment-profiles.js?v=20261031-current-rules-v44"></script>
-<script src="js/rules-catalog.js?v=20261031-current-rules-v44"></script>
-<script src="js/abilities.js?v=20261031-current-rules-v44"></script>
-<script src="js/rolls.js?v=20261031-current-rules-v44"></script>
-<script src="js/character-core.js?v=20261031-current-rules-v44"></script>
-<script src="js/resources.js?v=20261031-current-rules-v44"></script>
-<script src="js/encounter-actions.js?v=20261031-current-rules-v44"></script>
-<script src="js/status.js?v=20261031-current-rules-v44"></script>
-<script src="js/consumables.js?v=20261031-current-rules-v44"></script>
-<script src="js/sheet-layout.js?v=20261031-current-rules-v44"></script>
-<script src="js/app.js?v=20261031-current-rules-v44"></script>
+<script src="js/persistence.js?v=20261031-current-rules-v45"></script>
+<script src="js/game-state.js?v=20261031-current-rules-v45"></script>
+<script src="js/maps.js?v=20261031-current-rules-v45"></script>
+<script src="js/routing.js?v=20261031-current-rules-v45"></script>
+<script src="js/combat-core.js?v=20261031-current-rules-v45"></script>
+<script src="js/equipment-profiles.js?v=20261031-current-rules-v45"></script>
+<script src="js/rules-catalog.js?v=20261031-current-rules-v45"></script>
+<script src="js/abilities.js?v=20261031-current-rules-v45"></script>
+<script src="js/rolls.js?v=20261031-current-rules-v45"></script>
+<script src="js/character-core.js?v=20261031-current-rules-v45"></script>
+<script src="js/resources.js?v=20261031-current-rules-v45"></script>
+<script src="js/encounter-actions.js?v=20261031-current-rules-v45"></script>
+<script src="js/status.js?v=20261031-current-rules-v45"></script>
+<script src="js/consumables.js?v=20261031-current-rules-v45"></script>
+<script src="js/sheet-layout.js?v=20261031-current-rules-v45"></script>
+<script src="js/app.js?v=20261031-current-rules-v45"></script>
 </body>
 </html>

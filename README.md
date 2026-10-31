@@ -42,7 +42,7 @@ Health is current VIT × level; Mana/Holy Power is current INT/FTH × (level + 2
 
 Weapon properties drive stat choices, Heavy/Paragon modifiers, Light dual attacks, Finesse criticals on 18–19, armor penetration and range bands. A dual off-hand hit omits its stat modifier before halving. Weapon and Block dice scale at levels 5/10/15/20; Fast Roll is optional and criticals roll every die. Roll-mode recommendations remain overridable.
 
-Forge includes the current weapon/armor/shield tables and prices, armor classes, rare metals, signature reminders, pants and a strapped attachment that can coexist with arm guards. Pack capacity is advisory. Use explicit Draw/swap, Reload and Drink controls for discounted AP payments; generic consumable Use keeps custom costs at the table. Quickdraw is free.
+Forge includes the current weapon/armor/shield tables and prices, armor classes, editable dice/Block multipliers, signature reminders, pants and a strapped attachment that can coexist with arm guards. Pack capacity is advisory. Use explicit Draw/swap, Reload and Drink controls for discounted AP payments; generic consumable Use keeps custom costs at the table. Quickdraw is free.
 
 Status Effects includes all 16 presets, editable effect DCs and source levels, Shake It Off, status-damage rolls and Stand up. Burning requires a roll; Bleeding ends with healing. The zero-Health state is labeled Dying. Other condition and target effects resolve at the table. Under Health & recovery, Short rest hit die rolls one explicit recovery and can apply it once.
 

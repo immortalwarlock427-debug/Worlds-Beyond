@@ -1364,7 +1364,7 @@
     const m=source.damageModifier,fb=source.flatBonus;
     let base=rollSet(source.fastRoll&&!crit?source.rawDice:source.dice,crit);
     if(source.fastRoll&&!crit&&source.tier>1){const flat=window.WBCombat.parseDamageDice(source.rawDice).flat;base={t:(base.t-flat)*source.tier+flat,math:base.math+' (dice × '+source.tier+', Fast Roll)'};}
-    if((source.diceMultiplier||1)!==1){const flat=window.WBCombat.parseDamageDice(source.dice).flat;base={t:Math.floor((base.t-flat)*source.diceMultiplier)+flat,math:base.math+' (dice × '+source.diceMultiplier+')'};}
+    if(source.diceMultiplier!=null&&source.diceMultiplier!==1){const flat=window.WBCombat.parseDamageDice(source.dice).flat;base={t:Math.floor((base.t-flat)*source.diceMultiplier)+flat,math:base.math+' (dice × '+source.diceMultiplier+')'};}
     const extras = source.extras.map(e => ({ effect:{dt:e.type}, roll:rollSet(e.dice,crit) }));
     const packet = window.WBCombat.damagePacket(base.t, m, fb, extras.map(x => x.roll.t));
     let math = base.math + modText(m) + (fb ? modText(fb) : '');
@@ -2287,8 +2287,8 @@
   });
   function resetForge() {
     editingId = null;
-    for(const id of ['forgeThrownRange','forgeThrownLongRange','forgePrice','forgeVersatile','forgeLongRange','forgeLoading','forgeLightEv','forgeBlockMultiplier','forgeSlots','forgeBackpack','forgeAmmo'])$('#'+id).value='';
-    $('#forgeMetal').value='Steel';$('#forgeFamily').value='Balanced';$('#forgeWeight').value='';$('#forgeGrip').checked=false;$('#forgeMounted').checked=false;
+    for(const id of ['forgeDamageMultiplier','forgeThrownRange','forgeThrownLongRange','forgePrice','forgeVersatile','forgeLongRange','forgeLoading','forgeLightEv','forgeBlockMultiplier','forgeSlots','forgeBackpack','forgeAmmo'])$('#'+id).value='';
+    $('#forgeFamily').value='Balanced';$('#forgeWeight').value='';$('#forgeGrip').checked=false;$('#forgeMounted').checked=false;
     document.querySelectorAll('[data-weapon-property],[data-signature]').forEach(input=>input.checked=false);
     $('#forgeName').value = '';
     $('#forgeAr').value = '';
@@ -2315,11 +2315,11 @@
     resetForge();
     editingId = id;
     $('#forgeName').value = it.name;
-    $('#forgeMetal').value=it.metal||'Steel';$('#forgePrice').value=it.price||'';
+    $('#forgePrice').value=it.price||'';
     const props=window.WBCombat.weaponProperties(it);$('#forgeFamily').value=['Paragon','Heavy','Finesse','Balanced'].find(p=>props.includes(p))||'Balanced';
     document.querySelectorAll('[data-weapon-property]').forEach(input=>input.checked=props.includes(input.dataset.weaponProperty));
     document.querySelectorAll('[data-signature]').forEach(input=>input.checked=(it.signatures||[]).includes(input.dataset.signature));
-    for(const [id,key] of [['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeVersatile','versatileDice'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']])$('#'+id).value=it[key]??'';
+    for(const [id,key] of [['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeVersatile','versatileDice'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']])$('#'+id).value=it[key]??'';
     $('#forgeWeight').value=it.armorWeight||'';$('#forgeGrip').checked=!!it.twoHandedGrip;$('#forgeMounted').checked=!!it.mounted;
     $('#forgeAr').value = String(it.ar);
     setForgeType(it.type);
@@ -2425,14 +2425,14 @@
     }
     const data = { name, type: forgeType, ar: arRaw === '' ? 0 : Math.round(ar), abilities, bonuses, effects };
     if (isW) { data.dmg = dmg; data.stat = forgeStat; }
-    data.metal=$('#forgeMetal').value;data.price=$('#forgePrice').value.trim();
+    data.price=$('#forgePrice').value.trim();
     data.properties=[$('#forgeFamily').value,...Array.from(document.querySelectorAll('[data-weapon-property]:checked'),i=>i.dataset.weaponProperty)];
     data.signatures=Array.from(document.querySelectorAll('[data-signature]:checked'),i=>i.dataset.signature);
     data.versatileDice=$('#forgeVersatile').value.trim();
     if(data.versatileDice&&!window.WBCombat.parseDamageDice(data.versatileDice)){errEl.textContent='Check the Versatile damage dice.';errEl.hidden=false;return;}
     data.twoHandedGrip=$('#forgeGrip').checked;data.mounted=$('#forgeMounted').checked;data.armorWeight=$('#forgeWeight').value;
-    for(const [id,key] of [['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']]){
-      const input=$('#'+id);if(input.value!=='')data[key]=Math.max(0,key==='blockMultiplier'?(Number(input.value)||1):Math.round(Number(input.value)||0));
+    for(const [id,key] of [['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']]){
+      const input=$('#'+id);if(input.value!=='')data[key]=Math.max(0,['blockMultiplier','diceMultiplier'].includes(key)?(Number(input.value)||0):Math.round(Number(input.value)||0));
       else data[key]=undefined;
     }
 
