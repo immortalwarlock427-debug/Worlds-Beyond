@@ -32,6 +32,7 @@
           (typeof item.description==='string'&&item.description?'<p class="consumable-description">'+esc(item.description)+'</p>':'')+
           '<div class="consumable-actions"><label class="consumable-quantity"><span>Quantity</span><input type="number" min="0" step="1" inputmode="numeric" value="'+(q===null?'':q)+'" data-quantity-committed="'+(q===null?'':q)+'" aria-label="'+esc(title)+' quantity"></label>'+
           '<button type="button" class="btn strong" data-consumable-action="use" aria-label="Use '+esc(title)+'"'+(q===0?' disabled':'')+'>Use</button>'+
+          '<button type="button" class="btn" data-consumable-action="drink"'+(q===0?' disabled':'')+'>Drink (DEX-discounted 5 AP)</button>'+
           '<button type="button" class="btn" data-consumable-action="edit" aria-label="Edit '+esc(title)+'">Edit</button>'+
           '<button type="button" class="btn-link" data-consumable-action="remove" aria-label="Remove '+esc(title)+'">Remove</button></div>'+
           (pendingRemove===item.id?'<div class="consumable-remove"><span>Remove '+esc(title)+' from this character?</span><button type="button" class="btn danger" data-consumable-action="confirm-remove">Remove item</button><button type="button" class="btn" data-consumable-action="keep">Keep</button></div>':'')+'</article>';
@@ -94,7 +95,7 @@
       else if(action==='confirm-remove'){
         const result=execute({type:'RemoveConsumable',consumableId:id});
         if(result.ok){pendingRemove=null;if(editingId===id)closeEditor();add.focus();}
-      }else if(action==='use'){
+      }else if(action==='use'||action==='drink'){
         // Some touch browsers do not blur number inputs when a button is tapped.
         // Commit the visible correction before using the item in that case too.
         const input=card.querySelector('input');
@@ -104,7 +105,7 @@
         }
         // Ignore a delayed blur from this input when rendering the spent count.
         input.dataset.quantityCommitted=input.value;
-        const result=execute({type:'UseConsumable',consumableId:id});
+        const result=execute({type:action==='drink'?'DrinkConsumable':'UseConsumable',consumableId:id});
         if(result.ok){focusItem(id);controls.onUse(result.consumablePlan);}
       }
     });

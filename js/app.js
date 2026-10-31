@@ -4,7 +4,7 @@
   const MAX_LEVEL = 100;
   const ASI_LEVELS = [4, 8, 12, 16, 19];
   const STATS = [
-    { k: 'STR', n: 'Strength',     g: 'phys', m: ['Devastate', 'Overwhelming Force'] },
+    { k: 'STR', n: 'Strength',     g: 'phys', m: ["Titan’s Might", 'Overwhelming Force'] },
     { k: 'VIT', n: 'Vitality',     g: 'phys', m: ['Indomitable', 'Adamantine Body'] },
     { k: 'DEX', n: 'Dexterity',    g: 'phys', m: ['Parry', 'Singularity'] },
     { k: 'AGL', n: 'Agility',      g: 'phys', m: ['Surge', 'Flicker'] },
@@ -27,7 +27,9 @@
     { k: 'rleg',   n: 'Right Leg',  fits: 'legs' },
     { k: 'lleg',   n: 'Left Leg',   fits: 'legs' },
     { k: 'main',   n: 'Main Hand',  fits: 'onehand twohand' },
-    { k: 'off',    n: 'Off Hand',   fits: 'onehand shield' }
+    { k: 'off',    n: 'Off Hand',   fits: 'onehand shield' },
+    { k: 'strapped', n:'Strapped attachment',fits:'onehand' },
+    { k:'pants',n:'Pants',fits:'pants' }
   ];
   const ORDER = SLOTS.map((s) => s.k);
   const SLOT_BY = {};
@@ -40,6 +42,7 @@
     ring: { a: 'rring', b: 'lring', n: 'Both Rings', on: 'both ring slots' }
   };
   const TYPES = {
+    pants: {n:'Pants',def:'Pants'},
     head:   { n: 'Head',   def: 'Helmet' },
     torso:  { n: 'Torso',  def: 'Chestpiece' },
     arms:   { n: 'Arms',   def: 'Arm guards' },
@@ -109,6 +112,7 @@
     twohand: SVG_OPEN + '<path d="M17.5 3.5h3v3L9.5 17.5l-3-3z"/><path d="M4 12l8 8M3 21l3-3"/></svg>',
     shield: SVG_OPEN + '<path d="M12 3l7 2.5V11c0 4.6-3 8-7 10-4-2-7-5.4-7-10V5.5z"/><path d="M12 3v18M5 11h14"/></svg>'
   };
+  ICONS.pants=ICONS.legs;
   const PEN = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 13l.8-3.2L10.5 3 13 5.5 6.2 12.2z"/><path d="M9.3 4.2l2.5 2.5"/></svg>';
   const UP = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.5V3.5M4.5 7L8 3.5 11.5 7"/></svg>';
   const DOWN = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5v9M4.5 9L8 12.5 11.5 9"/></svg>';
@@ -116,8 +120,8 @@
   const DIE_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="5" cy="5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="11" cy="11" r="1.3" fill="currentColor"/></svg>';
   const $ = (s) => document.querySelector(s);
   const blank = () => ({
-    fields: {}, over: {}, hist: {}, rolls: {},
-    pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {}, equipmentOutsideSpent:{},
+    fields: {}, over: {}, hist: {},
+    pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], spent: {}, equipmentOutsideSpent:{},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
     asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: [], consumables:[], rollHistory:[]
   });
@@ -180,12 +184,11 @@
       const ib = itemById(state.equip[p.b]);
       if (isPair(ib)) {
         const prev = state.equip[p.a];
-        if (prev && prev !== ib.id) delete state.settled[prev];
         state.equip[p.a] = ib.id;
         delete state.equip[p.b];
       }
       const ia = itemById(state.equip[p.a]);
-      if (isPair(ia) && state.equip[p.b]) { delete state.settled[state.equip[p.b]]; delete state.equip[p.b]; }
+      if(isPair(ia)&&state.equip[p.b])delete state.equip[p.b];
     });
   }
   const isNum = (v) => typeof v === 'number' && isFinite(v) && v !== 0;
@@ -285,7 +288,7 @@
     const it = itemById(state.equip[s]);
     if (!it || !fits(it.type, s)) delete state.equip[s];
   });
-  { const mw = itemById(state.equip.main); if (mw && mw.type === 'twohand') delete state.equip.off; }
+  { const mw = itemById(state.equip.main); if (mw && window.WBCombat.weaponRules(state,mw).twoHanded) delete state.equip.off; }
   fixPairs();
   window.WBEquipment.normalizeState(state); // Legacy characters inherit their current worn equipment.
   // Movement this turn: feet moved, feet left over from AP already spent, and Surge AP used.
@@ -310,7 +313,7 @@
     }
     delete state.map; delete state.token; delete state.foes; delete state.fog;
   }
-  Object.keys(state.settled).forEach((id) => { if (!slotOf(id)) delete state.settled[id]; });
+
   Object.keys(state.spent).forEach((id) => { if (!itemById(id) || !state.spent[id] || typeof state.spent[id] !== 'object') delete state.spent[id]; });
   // Portraits: one per form. Older drafts kept a single portrait.
   if (typeof state.portrait === 'string' && state.portrait) state.portraits = [{ id: 'f1', src: state.portrait, name: '' }];
@@ -324,6 +327,7 @@
     if (form.portraitId && !portraitIds.has(form.portraitId)) form.portraitId = '';
   });
   if (!state.portraits.some((f) => f.id === state.formId)) state.formId = state.portraits.length ? state.portraits[0].id : null;
+  window.WBCombat.migrateVitals(state);
   Object.assign(state,window.WBCharacter.healthTrackingPatch(state));
   }
 
@@ -392,9 +396,14 @@
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   });
   if (characterLoadFailed) blockCharacterWrites();
+  let vitalBaseline=window.WBCharacter.vitalMaximums(state);
   function save() {
     if (characterWritesBlocked) { blockCharacterWrites(); return; }
     Object.assign(state,window.WBCharacter.healthTrackingPatch(state));
+    const currentVitals=window.WBCharacter.vitalMaximums(state);
+    const adjustment=JSON.stringify(currentVitals)===JSON.stringify(vitalBaseline)?{ok:true,patch:{}}:window.WBCharacter.apply(state,{type:'ReconcileVitalMaximums',previous:vitalBaseline});
+    if(adjustment.ok&&Object.keys(adjustment.patch).length){Object.assign(state,adjustment.patch);fillInputs();refreshAll();}
+    vitalBaseline=window.WBCharacter.vitalMaximums(state);
     window.WBEquipment.capture(state); // Save the currently worn slots in this form's profile.
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -475,16 +484,7 @@
         Object.keys(h).forEach((key) => { if (Number(key) > n) delete h[key]; });
         if (keep != null && rawAt(k, n) == null) h[1] = keep;
       });
-      Object.keys(state.rolls).forEach((key) => { if (Number(key) > n) delete state.rolls[key]; });
-      Object.keys(state.lvGear).forEach((key) => { if (Number(key) > n) delete state.lvGear[key]; });
       Object.keys(state.asi).forEach((key) => { if (Number(key) > n) delete state.asi[key]; });
-    } else if (n > old) {
-      // Gear you've worn through a long rest counts toward that level's Health and Mana.
-      const snap = {};
-      ['VIT', 'INT', 'FTH'].forEach((k) => { const g = gearSettled(k); if (g) snap[k] = g; });
-      for (let lv = old + 1; lv <= n; lv++) {
-        if (Object.keys(snap).length) state.lvGear[lv] = Object.assign({}, snap); else delete state.lvGear[lv];
-      }
     }
     state.fields.level = String(n);
   }
@@ -554,7 +554,7 @@
   }
   const sumEff = (list, k, on) => list.reduce((t, e) => t + (e.k === k && (!on || e.on === 'all' || e.on === on) ? e.v : 0), 0);
   const defBonus = (type) => sumEff(allEffects(), 'def', type);
-  const atkMod = (w) => mod(w.stat) + sumEff(effectsFor(w), 'atk');
+  const atkMod = (w) => window.WBAbilities.weaponSource(state,w.id)?.attackModifier||0;
   function resistances() {
     const r = [];
     allEffects().forEach((e) => { if (e.k === 'res' && !r.some((x) => x.toLowerCase() === e.dt.toLowerCase())) r.push(e.dt); });
@@ -568,43 +568,17 @@
   const poolGearNote = (k) => { const g = gear(k); return g ? ' · ' + sgn(g) + ' from gear' : ''; };
   const pointsBy = (L) => 4 * ASI_LEVELS.filter((x) => x <= L).length;
 
-  // Advancement: Health and Mana built level by level from the scores each level had.
-  function computeLog() {
-    const L = level();
-    const ms = msStat();
-    const rows = [];
-    const missing = [];
-    let hp = 0;
-    let mp = 0;
-    for (let n = 1; n <= L; n++) {
-      const lg = state.lvGear[n] || {};
-      const vb = scoreAt('VIT', n);
-      const mb = scoreAt(ms, n);
-      const vit = vb == null ? null : vb + (Number(lg.VIT) || 0);
-      const msv = mb == null ? null : mb + (Number(lg[ms]) || 0);
-      const health = window.WBCombat.healthAtLevel(state, n, vit);
-      const die = health.die, dieMax = health.dieMax, gain = health.gain;
-      if (vit != null) {
-        if (gain == null) missing.push(n); else hp += gain;
-      }
-      let mgain = null;
-      if (msv != null) {
-        mgain = window.WBCombat.manaAtLevel(n, msv);
-        mp += mgain;
-      }
-      rows.push({ n, vit, msv, die, dieMax, gain, mgain, vg: vb == null ? 0 : (lg.VIT || 0), mg: mb == null ? 0 : (lg[ms] || 0) });
-    }
-    return { rows, hp: hasScore('VIT') ? hp : null, mp: hasScore(ms) ? mp : null, missing };
-  }
-  let log = { rows: [], hp: null, mp: null, missing: [] };
+  // Advancement now describes current-stat maxima; hit dice are short-rest healing.
+  function computeLog(){return {rows:[],hp:window.WBCombat.characterMaxHealth(state).max,mp:window.WBCombat.characterMaxMana(state),missing:[]};}
+  let log={rows:[],hp:null,mp:null,missing:[]};
 
   const AUTO = {
     hpMax: () => { const max=window.WBCharacter.health(state).automaticMax; return max==null?'':max; },
     mpMax: () => { const max = window.WBCombat.characterMaxMana(state); return max == null ? '' : max; },
     hitDie: () => { const v = score('VIT'); return v == null ? '' : hitDieFor(v); },
-    evasion: () => 10 + mod('AGL') + gear('ev') + window.WBAbilities.effectBonus(state, 'evasion'),
-    armor: () => Math.max(0, armorTotal() + vitArmor() + window.WBAbilities.effectBonus(state, 'armor')),
-    init: () => fmt(mod('WIS') + gear('init')),
+    evasion: () => window.WBCombat.evasion(state),
+    armor: () => window.WBCombat.armorRating(state),
+    init: () => fmt(window.WBCombat.initiative(state)),
     speed: () => Math.max(0, Math.max(5, 5 * (1 + mod('AGL'))) + gear('move')),
     reactMax: () => window.WBCombat.reactionMaximum(state,window.WBAbilities.effectBonus(state,'stat','AGL'),window.WBAbilities.formStatBonus(state,'AGL')),
     wonderMax: () => Math.max(0, mod('FTH'))
@@ -645,7 +619,7 @@
         state[key].splice(0,state[key].length,...revised);
       } else state[key] = value;
     }
-    if(result.ok)for(const key of result.removedKeys||[])delete state[key];
+    if(result.ok){for(const key of result.removedKeys||[])delete state[key];vitalBaseline=window.WBCharacter.vitalMaximums(state);}
     return result;
   }
   const applyPoolCommand = (command) => commitCharacter(window.WBCharacter.apply(state, command));
@@ -679,7 +653,7 @@
     $('#combatFeedback').textContent=r.message;
     if(r.ok){refreshAll();save();}
   });
-  const statusManager = window.WBStatus.init(() => state, save, { refresh: () => refreshAll() });
+  const statusManager = window.WBStatus.init(() => state, save, {execute:formEntryControls.execute,refresh:()=>refreshAll(),shake:plan=>rollCheck('Shake It Off',plan.modifier,'check',{dc:plan.dc,shakePlan:plan,note:plan.cost+' AP spent. Success ends the selected status.'}),rollStatus:(name,dice,kind)=>{const roll=rollSet(dice,false);showRolled({kind:'status',title:name+' damage',total:roll.t,math:roll.math,statusDamageType:kind,take:roll.t,acts:[['status-hit','Apply damage to me']]});} });
   function updateManaKind() {
     const holy = kind() === 'holy';
     const label = holy ? 'Holy Power' : 'Mana';
@@ -755,10 +729,12 @@
   });
   const reactTracker = makeTracker({
     key: 'reactAvail', maxEl: $('#reactMax'), pips: $('#reactPips'), count: $('#reactCount'), noun: 'Reaction', shape: 'ring',
+    set:value=>applyPoolCommand({type:'SetReactionCurrent',value}),
     format: (a, m) => a + '/' + m + (m === 1 ? ' reaction' : ' reactions')
   });
   const wonderTracker = makeTracker({
     key: 'wonderAvail', maxEl: $('#wonderMax'), pips: $('#wonderPips'), count: $('#wonderCount'), noun: 'Wonder use', shape: 'star',
+    set:value=>applyPoolCommand({type:'SetWonderCurrent',value}),
     format: (a, m) => (m ? a + ' of ' + m + ' ready' : 'No uses until FTH reaches 13')
   });
   const trackers = [apTracker, reactTracker, wonderTracker];
@@ -851,7 +827,7 @@
     const ft = num($('#moveFt').value);
     const out = $('#movePlan');
     if (isNaN(ft) || ft <= 0) { out.textContent = sp ? 'Enter how far you’re moving. A square on the map is 5 ft.' : ''; return; }
-    const p = movePlan(Math.round(ft));
+    const p = movePlan(Math.round(ft)*window.WBCombat.armorProfile(state).movementMultiplier);
     if (!sp && p.fromLeft < p.ft) { out.textContent = 'You can only move the ' + m.left + ' ft you have left over.'; return; }
     out.textContent = p.ft + ' ft costs ' + planText(p) + (p.paid > apHave() ? '. You have ' + apHave() + ' AP.' : p.leftAfter ? ', with ' + p.leftAfter + ' ft left over.' : '.');
   }
@@ -876,7 +852,7 @@
     const el = $('#moveFt');
     const ft = Math.round(num(el.value));
     if (isNaN(ft) || ft <= 0) { el.focus(); return; }
-    const p = spendMove(ft);
+    const p = spendMove(ft*window.WBCombat.armorProfile(state).movementMultiplier);
     if (!p) return;
     el.value = '';
     refreshAll();
@@ -973,7 +949,7 @@
   // and lets you block for anyone you could reach with 1 AP of movement.
   const BASE_BLOCK = '1d4';
   function shieldInHand() { const sh = itemById(state.equip.off); return sh && sh.type === 'shield' ? sh : null; }
-  function blockDie() { const sh = shieldInHand(); return sh && isSet(sh.block) ? sh.block : BASE_BLOCK; }
+  function blockDie(){const b=window.WBCombat.blockDice(state);return b.count+'d'+b.sides;}
   const armorNow = () => { const v = num($('#armor').value); return isNaN(v) ? 0 : Math.max(0, v); };
   const canGuard = () => !!shieldInHand() || (reached('DEX', 21) && hasWeaponInHand());
   function incoming() {
@@ -984,7 +960,7 @@
     const area = $('#incArea').checked;
     // An attack that rolled a natural 20 always hits and can't be dodged, but it can still be blocked or parried.
     const nat = !area && $('#incNat').checked;
-    return { vs: isNaN(a) ? null : a, dmg: isNaN(d) ? null : Math.max(0, Math.round(d)), area, nat, of: $('#incOF').checked, dt, ally, noAr: $('#incNoAr').checked, res: !ally && resists(dt) };
+    return { vs: isNaN(a) ? null : a, dmg: isNaN(d) ? null : Math.max(0, Math.round(d)), area, nat, of: $('#incOF').checked, dt, ally, noAr: $('#incNoAr').checked, res: !ally && resists(dt),twoHanded:$('#incTwoHanded').checked,puncture:$('#incPuncture').checked?2:0 };
   }
   // Damage for an ally is entered after their own Armor Rating, so yours never comes off it.
   const arFor = (inc) => (inc.ally || inc.noAr ? 0 : armorNow());
@@ -997,7 +973,7 @@
   function setGear(sel, v) { const el = $(sel); el.hidden = !v; el.textContent = v ? sgn(v) + ' gear' : ''; }
   function clearIncoming() {
     ['#incAtk', '#incDmg', '#incType'].forEach((sel) => { $(sel).value = ''; });
-    ['#incArea', '#incNat', '#incOF', '#incNoAr', '#incAlly'].forEach((sel) => { $(sel).checked = false; });
+    ['#incArea', '#incNat', '#incOF', '#incNoAr', '#incAlly','#incTwoHanded','#incPuncture'].forEach((sel) => { $(sel).checked = false; });
     renderDefense();
   }
   function parryUsage() {
@@ -1015,10 +991,10 @@
     let msg;
     if (inc.ally) {
       msg = after == null
-        ? 'Enter the damage left after their Armor Rating, then Block' + (shieldInHand() ? '' : ' (needs a shield)') + ' or Parry for them.'
+        ? 'Enter the damage left after their Armor Rating reduces it, then Block' + (shieldInHand() ? '' : ' (needs a shield)') + ' or Parry for them.'
         : 'They’d take ' + after + '. Block or Parry to protect them.';
     } else if (after == null) {
-      msg = (inc.noAr ? 'Your Armor Rating won’t come off this one.' : 'Your Armor Rating (' + armorNow() + ') comes off every hit.') + (rl.length ? ' You resist ' + listJoin(rl) + '.' : '');
+      msg = (inc.noAr ? 'This damage ignores your Armor Rating.' : 'Your Armor Rating ('+armorNow()+') reduces the damage of every hit you take.') + (rl.length ? ' You resist ' + listJoin(rl) + '.' : '');
     } else {
       const how = [];
       if (inc.res) how.push('halved for your ' + inc.dt + ' resistance');
@@ -1080,7 +1056,7 @@
     $('#incDmg').focus({ preventScroll: true });
   });
   function spendReaction() {
-    state.reactAvail = Math.max(0, reactTracker.avail() - 1);
+    applyPoolCommand({type:'SpendReaction'});
     reactTracker.render();
     renderDefense();
     save();
@@ -1095,7 +1071,7 @@
       showRoll({ kind: 'notice', title: name, math: 'No reactions left. They come back at the start of your turn.' });
       return;
     }
-    state.reactAvail = reactTracker.avail() - 1;
+    applyPoolCommand({type:'SpendReaction'});
     if (type === 'parry') {
       if(state.inCombat)state.parryUsed=true;
       else state.parryOutsideSpent=(Number(state.parryOutsideSpent)||0)+1;
@@ -1108,7 +1084,9 @@
     const who = inc.ally ? ' for an ally' : '';
     if (type === 'block') {
       const die = blockDie();
-      const rs = rollSet(die, false);
+      const b=window.WBCombat.blockDice(state);let rs=rollSet(state.fastRoll?'1d'+b.sides:die,false);
+      if(state.fastRoll&&b.count>1)rs={t:rs.t*b.count,math:rs.math+' × '+b.count+' (Fast Roll)'};
+      rs={t:Math.floor(rs.t*b.multiplier),math:rs.math+(b.multiplier!==1?' × '+b.multiplier:'')};
       const m = mod('STR');
       const g = defBonus('block');
       df.amt = Math.max(0, rs.t + m + g);
@@ -1117,6 +1095,7 @@
       rollCheck(name + who, type === 'dodge' ? mod('AGL') + defBonus('dodge') : mod('DEX') + defBonus('parry'), 'check', { defense: df });
     }
   }
+  $('#armorDisadvantage').addEventListener('change',event=>{state.ignoreArmorDisadvantage=!event.target.checked;save();});
   $('#defs').addEventListener('click', (e) => {
     const b = e.target.closest('button[data-def]');
     if (!b || b.disabled) return;
@@ -1279,6 +1258,7 @@
     } else if (r.dc != null) {
       won = !!r.success || r.total >= r.dc;
       notes.push((won ? 'Success' : 'Failed') + ' against DC ' + r.dc + (won && r.winNote ? ': ' + r.winNote : ''));
+      if(won&&r.shakePlan&&!r.shakeResolved&&r.shakePlan.characterId===state.id){r.shakeResolved=true;formEntryControls.execute({type:'EndManualStatus',statusId:r.shakePlan.statusId});refreshAll();save();}
       // Indomitable: making the roll stops your own bleeding.
       const down=window.WBCharacter.health(state).down;
       if (won && r.indom && down && !down.stable && !isDead()) setStable(true,'indomitable');
@@ -1316,12 +1296,12 @@
       if(r.weaponAttack&&r.weaponAttack.singularityHand)acts.push(['crit','Roll critical damage (Singularity)']);
       else {
         acts.push([r.abilityRoll?'ability-dmg':'dmg', 'Roll damage']);
-        if (r.d20 === 20) acts.push([r.abilityRoll?'ability-crit':'crit', 'Roll critical damage']);
+        if (r.d20 >= (r.weaponAttack?.main.criticalFrom||20)) acts.push([r.abilityRoll?'ability-crit':'crit', 'Roll critical damage']);
       }
     }
     if (r.kind === 'dual') {
       const chosen=r.weaponAttack&&r.weaponAttack.singularityHand;
-      const mainCrit=window.WBCombat.weaponCritical(r.dual.a,chosen==='main'),offCrit=window.WBCombat.weaponCritical(r.dual.b,chosen==='off');
+      const mainCrit=window.WBCombat.weaponCritical(r.dual.a,chosen==='main',r.weaponAttack?.main.criticalFrom),offCrit=window.WBCombat.weaponCritical(r.dual.b,chosen==='off',r.weaponAttack?.off.criticalFrom);
       const both = mainCrit && offCrit ? ' (both crit)' : mainCrit ? ' (main crit)' : offCrit ? ' (off-hand crit)' : '';
       if (!foe) acts.push(['dualboth', 'Damage: both hit' + both], ['dualmain', 'Main hand only' + (mainCrit?' (crit)':'')], ['dualoff', 'Off-hand only' + (offCrit?' (crit)':'')]);
       else if (r.mainHit && r.offHit) acts.push(['dualboth', 'Roll damage, both hit' + both]);
@@ -1331,17 +1311,7 @@
     if ((r.kind === 'attack' || r.kind === 'dual') && r.apSpent && reactTracker.avail() > 0) acts.push(['toreact', 'It was an opportunity attack (use a reaction, get ' + r.apSpent + ' AP back)']);
     if (take != null && take > 0 && !(df && df.ally)) acts.push(['take', 'Take ' + take + ' damage']);
     if (foe && r.kind === 'damage' && r.hurt > 0) acts.push(['hurt', 'Take ' + r.hurt + ' off ' + foe.name + '’s Health']);
-    if(r.kind==='damage'&&r.attackDamage&&!r.devastateApplied){
-      const milestone=window.WBAbilities.milestoneAction(state,'devastate');
-      if(milestone.unlocked&&milestone.usage.remaining>0){
-        for(const hand of ['main','off']){
-          const data=r.attackDamage[hand];
-          if(data&&data.source.stat==='STR')acts.push(['devastate-'+hand,'Devastate'+(r.attackDamage.dual?' '+(hand==='main'?'main hand':'off hand'):'')+modText(data.source.damageModifier)]);
-        }
-      }
-    }
-    if(r.consumableHealing&&!r.consumableHealing.applied&&r.consumableHealing.amount>0)
-      acts.push(['consumable-heal','Apply '+r.consumableHealing.amount+' healing to me']);
+    if(r.consumableHealing&&r.consumableHealing.amount>0&&!r.consumableHealing.applied&&r.consumableHealing.characterId===state.id)acts.push(['consumable-heal','Apply healing to me']);
     $('#toastActions').innerHTML = acts.map((a) => '<button type="button" class="btn' + (a[0] === 'wonder' || a[0] === 'defy' ? ' strong' : '') + '" data-act="' + a[0] + '">' + esc(a[1]) + '</button>').join('');
     toastEl.hidden = false;
     toastEl.classList.remove('pop-in');
@@ -1367,7 +1337,9 @@
     return { d, txt: (mode === 'adv' ? 'Advantage, d20 (' : 'Disadvantage, d20 (') + a + ', ' + b + ')', mode };
   }
   function rollCheck(title, m, kind, extra) {
-    const r = rollD20(advMode());
+    const armorDisadvantage=!state.ignoreArmorDisadvantage&&window.WBCombat.armorProfile(state).heavy&&(score('STR')??0)<21&&(kind==='attack'||extra?.defense?.type==='dodge'||extra?.stat==='AGL');
+    if(armorDisadvantage&&!extra?.weaponAttack)extra={...extra,rollMode:'dis'};
+    const r = rollD20(extra?.weaponAttack?weaponRollMode(extra.weaponAttack.main,extra.foe):extra?.rollMode||advMode());
     showRolled(Object.assign({ title, kind, mod: m, d20: r.d, mode: r.mode, total: r.d + m, math: r.txt + modText(m) }, extra || {}));
   }
   function rollSet(str, crit) {
@@ -1388,9 +1360,11 @@
   // Damage for one weapon: its dice and modifier, plus extra dice from it and from worn gear.
   function damageOf(w, crit, source) {
     source=source||window.WBAbilities.weaponSource(state,w&&w.id);
-    if(!source)return null;
+    if(!source||!window.WBCombat.parseDamageDice(source.dice)||!window.WBCombat.parseDamageDice(source.rawDice))return null;
     const m=source.damageModifier,fb=source.flatBonus;
-    const base = rollSet(source.dice, crit);
+    let base=rollSet(source.fastRoll&&!crit?source.rawDice:source.dice,crit);
+    if(source.fastRoll&&!crit&&source.tier>1){const flat=window.WBCombat.parseDamageDice(source.rawDice).flat;base={t:(base.t-flat)*source.tier+flat,math:base.math+' (dice × '+source.tier+', Fast Roll)'};}
+    if((source.diceMultiplier||1)!==1){const flat=window.WBCombat.parseDamageDice(source.dice).flat;base={t:Math.floor((base.t-flat)*source.diceMultiplier)+flat,math:base.math+' (dice × '+source.diceMultiplier+')'};}
     const extras = source.extras.map(e => ({ effect:{dt:e.type}, roll:rollSet(e.dice,crit) }));
     const packet = window.WBCombat.damagePacket(base.t, m, fb, extras.map(x => x.roll.t));
     let math = base.math + modText(m) + (fb ? modText(fb) : '');
@@ -1403,7 +1377,7 @@
     });
     const hits = source.hits;
     return { total: packet.total, math, weaponDmg: packet.weaponDmg, split, hits,
-      data:{source,baseRoll:base.t,baseMath,extraMath,extras:extras.map(x=>x.roll.t),critical:crit,devastateBonus:0} };
+      data:{source,baseRoll:base.t,baseMath,extraMath,extras:extras.map(x=>x.roll.t),critical:crit,} };
   }
   function rollDamage(w, crit, foeId, weaponAttack) {
     const d = damageOf(w, crit,weaponAttack&&weaponAttack.main);
@@ -1412,8 +1386,8 @@
     if (d.split.length) notes.push(d.weaponDmg + ' weapon', ...d.split);
     if (d.hits.length) notes.push('On hit: ' + d.hits.join(', '));
     const foe = foeId ? foeById(foeId) : null;
-    // Against a target from the map, its Armor Rating comes off the hit.
-    const hurt = foe ? window.WBCombat.armorDamage(d.total, foe.ar) : null;
+    // Against a target from the map, its Armor Rating reduces the damage the hit.
+    const hurt = foe ? window.WBCombat.armorDamage(d.total,foe.ar,d.data.source.twoHanded,d.data.source.puncture) : null;
     showRolled({ title: d.data.source.name + (crit ? ' critical damage' : ' damage') + (foe ? ' to ' + foe.name : ''), kind: 'damage', total: d.total, math: d.math, weapon: w,
       attackDamage:{main:d.data,off:null,dual:false},note: notes.join(' · ') || undefined, foe: foe ? foe.id : null, hurt });
   }
@@ -1437,7 +1411,7 @@
     extras.forEach(extra=>{const text=extra.roll.math+(extra.type?' '+extra.type:'');math+=', '+text;extraMath.push(text);});
     const notes=['Ability costs paid once.',abilitySaveNote(plan),...damage.hits.map(text=>'On hit: '+text)].filter(Boolean);
     const data=plan.attack?{main:{source:{stat:damage.stat,damageModifier:damage.modifier,flatBonus:damage.flatBonus},
-      baseRoll:base.t,baseMath,extraMath,extras:extras.map(extra=>extra.roll.t),devastateBonus:0},off:null,dual:false}:null;
+      baseRoll:base.t,baseMath,extraMath,extras:extras.map(extra=>extra.roll.t),},off:null,dual:false}:null;
     showRolled({kind:'damage',title:plan.name+(critical?' critical damage':' damage'),total:packet.total,math,note:notes.join(' · '),attackDamage:data});
   }
 
@@ -1445,13 +1419,19 @@
   function dualReady() {
     const mw = itemById(state.equip.main);
     const ow = itemById(state.equip.off);
-    return !!(mw && ow && TYPES[mw.type].weapon && mw.type !== 'twohand' && TYPES[ow.type].weapon);
+    return window.WBAbilities.weaponAttackPlan(state,'dual').ok;
+  }
+  function weaponRollMode(source,foeId){
+    const selected=state.weaponRollModes?.[source.weaponId];if(selected&&selected!=='auto')return selected;
+    const foe=foeId?foeById(foeId):null,at=myTok();
+    const long=foe&&at&&Math.max(Math.abs(foe.x-at.x),Math.abs(foe.y-at.y))*5>source.normalRange;
+    return source.disadvantage||long?'dis':advMode();
   }
   function rollDual(extra) {
     const plan=extra&&extra.weaponAttack||window.WBAbilities.weaponAttackPlan(state,'dual');
     if(!plan.ok)return;
-    const a = rollD20(advMode());
-    const b = rollD20(advMode());
+    const a = rollD20(weaponRollMode(plan.main,extra?.foe));
+    const b = rollD20(weaponRollMode(plan.off,extra?.foe));
     const ma = plan.main.attackModifier;
     const oa = plan.off.attackModifier;
     const notes = [];
@@ -1471,7 +1451,7 @@
     const parts = [];
     const hits = [];
     let total = 0;
-    // Against a target from the map, its Armor Rating comes off each hit separately (the off-hand after halving).
+    // Against a target from the map, its Armor Rating reduces the damage each hit separately (the off-hand after halving).
     let mainTotal = 0;
     let offTotal = 0;
     const damage={main:null,off:null,dual:true};
@@ -1490,33 +1470,11 @@
       parts.push('Off-hand' + (offCrit ? ' crit' : '') + ': ' + d.math + ' = ' + d.total + ', halved to ' + half);
       hits.push(...d.hits);
     }
-    const hurt = foe ? window.WBCombat.dualArmorDamage(mainTotal, offTotal, foe.ar, mainHit, offHit) : 0;
+    const hurt = foe ? (mainHit?window.WBCombat.armorDamage(mainTotal,foe.ar,plan.main.twoHanded,plan.main.puncture):0)+(offHit?window.WBCombat.armorDamage(window.WBCombat.offhandDamage(offTotal),foe.ar,plan.off.twoHanded,plan.off.puncture):0) : 0;
     const uniq = hits.filter((h, i) => hits.indexOf(h) === i);
     showRolled({ title: 'Dual wield damage' + (foe ? ' to ' + foe.name : ''), kind: 'damage', total, math: parts.join(' · '), note: uniq.length ? 'On hit: ' + uniq.join(', ') : undefined,
       attackDamage:damage,foe: foe ? foe.id : null, hurt: foe ? hurt : null, perHit: !!(foe && mainHit && offHit) });
   }
-  function applyDevastate(roll,hand) {
-    const data=roll.attackDamage&&roll.attackDamage[hand];
-    if(!data||roll.devastateApplied)return;
-    const result=formEntryControls.execute({type:'ApplyDevastate',damageSource:data.source});
-    if(!result.ok){showRoll({...roll,note:result.message});return;}
-    const damage={...roll.attackDamage,[hand]:{...data,devastateBonus:result.devastateBonus}};
-    const total=d=>d?window.WBCombat.damagePacket(d.baseRoll,d.source.damageModifier+d.devastateBonus,d.source.flatBonus,d.extras).total:0;
-    const main=total(damage.main),off=total(damage.off),parts=[];
-    for(const side of ['main','off']){
-      const d=damage[side];if(!d)continue;
-      const value=total(d),applied=side===hand;
-      let text=d.baseMath+(applied?modText(d.devastateBonus)+' Devastate':'')+d.extraMath.map(x=>', '+x).join('');
-      if(damage.dual)text=(side==='main'?'Main hand':'Off-hand')+': '+text+' = '+value+(side==='off'?', halved to '+window.WBCombat.offhandDamage(value):'');
-      parts.push(text);
-    }
-    const foe=roll.foe?foeById(roll.foe):null;
-    const hurt=foe?(damage.dual?window.WBCombat.dualArmorDamage(main,off,foe.ar,!!damage.main,!!damage.off):window.WBCombat.armorDamage(main,foe.ar)):null;
-    refreshAll();save();
-    reviseRoll({...roll,attackDamage:damage,devastateApplied:true,total:main+(damage.dual?window.WBCombat.offhandDamage(off):0),
-      math:parts.join(' · '),hurt,note:[roll.note,'Devastate: original STR damage modifier applied twice.'].filter(Boolean).join(' · ')});
-  }
-
   // Opportunity attacks are the only attacks that use a reaction instead of AP.
   function opportunity(slot, foeId) {
     const result=formEntryControls.execute({type:'BeginWeaponAttack',slot,payment:'reaction',singularityHand:singularityChoice(slot)});
@@ -1536,7 +1494,7 @@
     if (dual ? !dualReady() : !itemById(state.equip[slot])) return;
     const w = dual ? itemById(state.equip.main) : itemById(state.equip[slot]);
     const foe = foeId ? foeById(foeId) : null;
-    const cost = apCost(mod(w.stat));
+    const cost = window.WBAbilities.weaponAttackPlan(state,slot).apCost;
     const have = apHave();
     const name = (dual ? 'Dual wield attack' : w.name + ' attack') + (foe ? ' on ' + foe.name : '');
     if (have < cost) {
@@ -1556,7 +1514,7 @@
   function onRollButton(b) {
     if (b.classList.contains('roll-stat')) {
       const st = STATS.find((x) => x.k === b.dataset.stat);
-      rollCheck(st.n + ' check', mod(st.k), 'check');
+      rollCheck(st.n + ' check', mod(st.k), 'check',{stat:st.k});
     } else if (b.id === 'rollInit') {
       const v = num($('#init').value);
       rollCheck('Initiative', isNaN(v) ? mod('WIS') : v, 'check', { noDefy: true });
@@ -1584,7 +1542,7 @@
     const r = lastRoll;
     const act = b.dataset.act;
     if (act === 'wonder' || act === 'defy') {
-      state.wonderAvail = Math.max(0, wonderTracker.avail() - 1);
+      applyPoolCommand({type:'SpendWonder'});
       wonderTracker.render();
       save();
     }
@@ -1593,13 +1551,14 @@
       showRolled(Object.assign({}, r, { d20: rr.d, total: rr.d + r.mod, math: rr.txt + modText(r.mod), note: 'Rerolled with Wonder (was ' + r.total + ')' }));
     } else if (act === 'defy') {
       reviseRoll(Object.assign({}, r, { success: true, note: 'Counts as a success (Defy Fate)' }));
+    } else if(act==='status-hit'){applyDamage(r.statusDamageType==='Burning'&&resists('Fire')?Math.floor(r.total/2):r.total);return;
+    } else if(act==='shortrest-heal'){if(!r.shortRestHealing||r.shortRestHealing.applied||r.shortRestHealing.characterId!==state.id)return;if(applyHeal(r.shortRestHealing.amount))r.shortRestHealing.applied=true;return;
     } else if (act === 'consumable-heal') {
       const healing=r.consumableHealing;
       if(!healing||healing.applied||healing.characterId!==state.id)return;
       if(hpNow()==null){showRoll({...r,note:'Set your Health first, or enter VIT so it can be worked out. The item has already been used.'});return;}
       if(applyHeal(healing.amount))healing.applied=true;
-    } else if (act === 'devastate-main' || act === 'devastate-off') {
-      applyDevastate(r,act==='devastate-main'?'main':'off');
+
     } else if (act === 'ability-dmg' || act === 'ability-crit') {
       rollAbilityDamage(r.abilityRoll,act==='ability-crit');
     } else if (act === 'dmg') {
@@ -1608,8 +1567,8 @@
       rollDamage(r.weapon, true, r.foe,r.weaponAttack);
     } else if (act === 'dualboth' || act === 'dualmain' || act === 'dualoff') {
       const chosen=r.weaponAttack&&r.weaponAttack.singularityHand;
-      rollDualDamage(act !== 'dualoff', act !== 'dualmain',window.WBCombat.weaponCritical(r.dual.a,chosen==='main'),
-        window.WBCombat.weaponCritical(r.dual.b,chosen==='off'),r.foe,r.weaponAttack);
+      rollDualDamage(act !== 'dualoff', act !== 'dualmain',window.WBCombat.weaponCritical(r.dual.a,chosen==='main',r.weaponAttack?.main.criticalFrom),
+        window.WBCombat.weaponCritical(r.dual.b,chosen==='off',r.weaponAttack?.off.criticalFrom),r.foe,r.weaponAttack);
     } else if (act === 'hurt') {
       const f = foeById(r.foe);
       if (!f) return;
@@ -1647,7 +1606,7 @@
       rollIndomitable();
     } else if (act === 'stable') {
       setStable(true,'indomitable');
-      showRoll({ kind: 'notice', title: 'Indomitable', math: 'You stop bleeding. You’re still unconscious until you’re healed.' });
+      showRoll({ kind: 'notice', title: 'Indomitable', math: 'You stabilize. You remain unconscious until you’re healed.' });
     } else if (act === 'gostats') {
       $('#asiBar').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
       toastEl.hidden = true;
@@ -1655,7 +1614,7 @@
   });
   $('#toastClose').addEventListener('click', () => { toastEl.hidden = true; });
 
-  // ---------- Health: damage, healing, bleeding out and death ----------
+  // ---------- Health: damage, healing, dying and death ----------
   const fmtHp = (n) => (n < 0 ? '−' + Math.abs(n) : String(n));
   function hpNow() { return window.WBCharacter.health(state).current; }
   // Death Threshold: level + VIT, 5 closer for each Trauma since your last long rest.
@@ -1682,12 +1641,12 @@
     const notes=[];
     if(outcome.mercyCapped)notes.push("Death's Mercy stopped it at "+fmtHp(after));
     if(dead)notes.push(outcome.threshold===0?'Below 0 with a Death Threshold of 0':'Death Threshold reached');
-    else if(outcome.dropped)notes.push('Unconscious and bleeding out');
+    else if(outcome.dropped)notes.push('Unconscious and dying');
     const acts=[],concDc=outcome.concentrationDc;
     if(outcome.concentration)acts.push(['conc','Concentration check (DC '+concDc+')']);
     if(outcome.indomitable)acts.push(['indom','Indomitable roll']);
-    showRoll({kind:'notice',title:bleeding?'Bleeding out':'Health',
-      math:(bleeding?'Lost '+amt+' to bleeding':'Took '+amt+' damage')+'. Health is now '+fmtHp(after)+'.',
+    showRoll({kind:'notice',title:bleeding?'Dying':'Health',
+      math:(bleeding?'Lost '+amt+' while Dying':'Took '+amt+' damage')+'. Health is now '+fmtHp(after)+'.',
       note:notes.join(' · ')||undefined,acts,concDc});
   }
   function recoveryNotes(plan) {
@@ -1719,7 +1678,7 @@
     save();
     showRoll({ kind: 'notice', title: 'Treated', math: 'Ten minutes of treatment after combat: back to 1 Health.', note: recoveryNotes(result.healthPlan).join(' · ') });
   });
-  function rollIndomitable() { rollCheck('Indomitable (VIT)', mod('VIT'), 'check', { dc: 12, indom: true, winNote: 'you stop bleeding, though you\u2019re still unconscious' }); }
+  function rollIndomitable() { rollCheck('Indomitable (VIT)', mod('VIT'), 'check', { dc: 12, indom: true, winNote: 'you stabilize and remain unconscious' }); }
   // Stabilizing someone else: 5 AP and d20 + INT mod against DC 12.
   $('#stabBtn').addEventListener('click', () => {
     const have = apHave();
@@ -1729,7 +1688,7 @@
     renderGiven();
     renderMove();
     save();
-    rollCheck('Stabilize (INT)', mod('INT'), 'check', { dc: 12, winNote: 'they stop bleeding', note: 'Spent 5 AP, ' + leftText() });
+    rollCheck('Stabilize (INT)', mod('INT'), 'check', { dc: 12, winNote:'they stabilize', note: 'Spent 5 AP, ' + leftText() });
   });
   $('#indomBtn').addEventListener('click', rollIndomitable);
   $('#stableOn').addEventListener('change', (e) => setStable(e.target.checked));
@@ -1753,7 +1712,7 @@
     const stable = !!(healthDown && healthDown.stable);
     box.classList.toggle('dead', dead);
     box.classList.toggle('stable', stable && !dead);
-    $('#dyingTitle').textContent = dead ? 'Dead' : stable ? 'Stabilized' : 'Bleeding out';
+    $('#dyingTitle').textContent = dead ? 'Dead' : stable ? 'Stabilized' : 'Dying';
     $('#dyingSub').textContent = dead ? '' : 'Unconscious';
     $('#deathBar').style.width = (dt == null || dt <= 0 ? 100 : Math.min(100, Math.max(0, (-h / dt) * 100))) + '%';
     let txt;
@@ -1762,8 +1721,8 @@
     } else {
       txt = 'Health ' + fmtHp(h) + '.' + (dt == null ? '' : dt === 0 ? ' Your Death Threshold is 0, so going below 0 kills you.' : ' You die at ' + fmtHp(-dt) + ', ' + (h + dt) + ' away.');
       txt += stable
-        ? ' You’ve stopped bleeding but you’re still unconscious.'
-        : ' You lose 4 at the start of each of your turns until someone stabilizes you (5 AP, d20 + INT mod against DC 12). Armor and resistance don\u2019t reduce it.';
+        ? ' You’re stabilized and remain unconscious.'
+        : ' While dying, you lose 4 at the start of each of your turns until someone stabilizes you (5 AP, d20 + INT mod against DC 12). Armor and resistance don\u2019t reduce it.';
       if (!(healthDown && healthDown.mercy) && dt != null && dt > 0) txt += " Death's Mercy: the first hit that takes you below 0 can't take you past " + fmtHp(-Math.floor(Math.max(0, dt) / 2)) + '.';
     }
     $('#dyingTxt').textContent = txt;
@@ -1935,32 +1894,31 @@
     refreshAll();
     save();
   });
+  packEl.addEventListener('click',event=>{const b=event.target.closest('[data-draw-weapon]');if(!b)return;event.stopPropagation();const result=formEntryControls.execute({type:'DrawWeapon',weaponId:b.dataset.drawWeapon,slot:b.dataset.hand});refreshAll();save();showRoll({kind:'notice',title:'Draw / swap',math:result.message});});
   function newId() { return 'i' + Date.now().toString(36) + randInt(1e6).toString(36); }
   function toPack(slot) {
     const id = state.equip[slot];
     if (!id) return;
     delete state.equip[slot];
-    delete state.settled[id];
   }
   function equip(id, slot) {
     const it = itemById(id);
     if (!it) return;
-    if (it.type === 'twohand') slot = 'main';
+    if(window.WBCombat.weaponProperties(it).includes('Strapped'))slot='strapped';
+    else if (it.type === 'twohand') slot = 'main';
     if (isPair(it)) slot = PAIRS[it.type].a;
     if (!fits(it.type, slot)) return;
     const from = slotOf(id);
     const prev = state.equip[slot];
-    if (!from) delete state.settled[id];
     if (from) delete state.equip[from];
-    if (prev && prev !== id && !from) delete state.settled[prev];
     state.equip[slot] = id;
     // Moving between two arm, ring, leg or hand slots swaps the pieces. A set can't swap, so it goes to the pack.
     if (prev && prev !== id && from) {
       const p = itemById(prev);
-      if (p && fits(p.type, from) && !isPair(p)) state.equip[from] = prev; else delete state.settled[prev];
+      if (p && fits(p.type, from) && !isPair(p)) state.equip[from] = prev;
     }
     // A two-handed weapon needs both hands; a weapon in the off hand puts a two-handed one away.
-    if (it.type === 'twohand') toPack('off');
+    if (window.WBCombat.weaponRules(state,it).twoHanded) toPack('off');
     if (slot === 'off') { const m = itemById(state.equip.main); if (m && m.type === 'twohand') toPack('main'); }
     // A set fills both slots; a single piece in a set's second slot puts the set away.
     if (isPair(it)) toPack(PAIRS[it.type].b);
@@ -2085,7 +2043,6 @@
             '<span class="worn-slot">' + (isPair(it) ? PAIRS[it.type].n : SLOT_BY[k].n) + '</span>' +
             '<div class="worn-body">' +
               '<div class="worn-top"><span class="worn-name">' + esc(it.name) + '</span><span class="worn-ar">' + (TYPES[it.type].weapon ? esc(it.dmg) + ' ' + it.stat : 'AR ' + it.ar) + '</span></div>' +
-              (!state.settled[it.id] && (it.bonuses || []).some((b) => b.t === 'VIT' || b.t === 'INT' || b.t === 'FTH') ? '<p class="worn-rest">Counts toward level-ups after your next long rest</p>' : '') +
               (gearLine(it).length ? '<p class="worn-bonus">' + esc(gearLine(it).join(' \u00b7 ')) + '</p>' : '') +
               (ab.length ? '<ul class="abils">' + ab.map((a, ai) => '<li>' + abilText(a) + usesHTML(it, ai, a) + '</li>').join('') + '</ul>' : '<p class="worn-none">No abilities</p>') +
             '</div>' +
@@ -2102,7 +2059,7 @@
 
     const loose = state.items.filter((it) => !slotOf(it.id));
     packEl.innerHTML = loose.length
-      ? loose.map((it) => cardHTML(it, false)).join('')
+      ? loose.map((it)=>cardHTML(it,false)+(TYPES[it.type].weapon?'<div class="atk-btns"><button type="button" class="btn" data-draw-weapon="'+esc(it.id)+'" data-hand="main">Draw/swap (DEX-discounted 2 AP; Quickdraw free)</button><button type="button" class="btn" data-draw-weapon="'+esc(it.id)+'" data-hand="off">Draw off hand</button></div>':'')).join('')
       : '<p class="pack-empty">' + (state.items.length ? "You're wearing everything you own." : 'Your pack is empty. Forge a piece to fill it.') + '</p>';
     $('#packCount').textContent = loose.length === 1 ? '1 piece' : loose.length + ' pieces';
     // Attacks with what's in your hands. With a weapon in each hand you can attack with either, at full damage,
@@ -2110,9 +2067,9 @@
     const mainW = itemById(state.equip.main);
     const offW = itemById(state.equip.off);
     const dual = dualReady();
-    const held = [];
+    const held = [];const strapped=itemById(state.equip.strapped);if(strapped)held.push(['strapped',strapped]);
     if (mainW && TYPES[mainW.type].weapon) held.push(['main', mainW]);
-    if (offW && TYPES[offW.type].weapon && !(mainW && mainW.type === 'twohand')) held.push(['off', offW]);
+    if (offW && TYPES[offW.type].weapon && !(mainW && window.WBCombat.weaponRules(state,mainW).twoHanded)) held.push(['off', offW]);
     const extraOf = (fx) => fx.filter((e) => e.k === 'dmg').map((e) => ' + ' + e.dice + (e.dt ? ' ' + e.dt : '')).join('');
     const oppBtn = (slot) => '<button type="button" class="btn atk-opp" data-slot="' + slot + '">Opportunity attack</button>';
     const singularity=window.WBAbilities.milestoneAction(state,'singularity');
@@ -2125,41 +2082,56 @@
         (slot==='dual'?(hand==='main'?'Main hand':'Off hand'):'This attack')+'</option>').join('')+'</select></label>';
     };
     let atkHtml = held.map(([slot, w]) => {
-      const m = mod(w.stat);
+      const source=window.WBAbilities.weaponSource(state,w.id);const m=source.apModifier;
       const fx = effectsFor(w);
       const hits = fx.filter((e) => e.k === 'onhit').map((e) => e.text);
       return '<div class="atk">' +
-        '<div class="atk-top"><span class="atk-name">' + (dual ? (slot === 'main' ? 'Main hand: ' : 'Off hand: ') : '') + esc(w.name) + '</span><span class="atk-ap">' + apCost(m) + ' AP</span></div>' +
-        '<div class="atk-line">Attack ' + fmt(atkMod(w)) + ' · Damage ' + esc(w.dmg) + modText(m + sumEff(fx, 'flat')) + esc(extraOf(fx)) + ' · ' + w.stat + ' · Range ' + rangeOf(w) + ' ft</div>' +
+        '<div class="atk-top"><span class="atk-name">' + (slot==='strapped'?'Strapped: ':dual?(slot==='main'?'Main hand: ':'Off hand: '):'') + esc(w.name) + '</span><span class="atk-ap">' + apCost(m) + ' AP</span></div>' +
+        '<div class="atk-line">Attack ' + fmt(atkMod(w)) + ' · Damage ' + esc(source.dice) + modText(source.damageModifier + sumEff(fx, 'flat')) + esc(extraOf(fx)) + ' · ' + source.stat + ' · Range ' + rangeOf(w) + ' ft</div>' +
         (hits.length ? '<div class="atk-eff">On hit: ' + esc(hits.join(', ')) + '</div>' : '') +
         singularitySelect(slot)+'<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="' + slot + '">Attack</button><button type="button" class="btn atk-dmg" data-slot="' + slot + '">Damage</button>' + oppBtn(slot) + '</div>' +
       '</div>';
     }).join('');
     if (dual) {
-      const line = (w) => { const fx = effectsFor(w); return esc(w.name) + ' ' + fmt(atkMod(w)) + ' to hit, ' + esc(w.dmg) + modText(mod(w.stat) + sumEff(fx, 'flat')) + esc(extraOf(fx)); };
+      const line=w=>{const x=window.WBAbilities.weaponSource(state,w.id);return esc(w.name)+' '+fmt(x.attackModifier)+' to hit, '+esc(x.dice)+modText(x.damageModifier+x.flatBonus)+esc(extraOf(effectsFor(w)));};
       const hits = effectsFor(mainW).concat(effectsFor(offW)).filter((e) => e.k === 'onhit').map((e) => e.text).filter((h, i, a) => a.indexOf(h) === i);
       atkHtml += '<div class="atk dual">' +
-        '<div class="atk-top"><span class="atk-name">Dual wield</span><span class="atk-ap">' + apCost(mod(mainW.stat)) + ' AP</span></div>' +
+        '<div class="atk-top"><span class="atk-name">Dual wield</span><span class="atk-ap">' + window.WBAbilities.weaponAttackPlan(state,'dual').apCost + ' AP</span></div>' +
         '<div class="atk-sub">Main hand: ' + line(mainW) + '</div>' +
-        '<div class="atk-sub">Off-hand: ' + line(offW) + ', then halved</div>' +
+        '<div class="atk-sub">Off-hand: ' + esc(window.WBAbilities.weaponSource(state,offW.id).dice) + ' plus extra effects, no stat modifier, then halved</div>' +
         (hits.length ? '<div class="atk-eff">On hit: ' + esc(hits.join(', ')) + '</div>' : '') +
         singularitySelect('dual')+'<div class="atk-btns"><button type="button" class="btn atk-roll" data-slot="dual">Attack with both</button><button type="button" class="btn atk-dmg" data-slot="dual">Damage</button>' + oppBtn('dual') + '</div>' +
       '</div>';
     }
+    atkHtml+=held.map(([slot,w])=>{const rules=window.WBCombat.weaponRules(state,w),source=window.WBAbilities.weaponSource(state,w.id);
+      const chosen=state.weaponRollModes?.[w.id]||'auto';
+      return '<div class="weapon-rules" data-weapon-rule="'+esc(w.id)+'"><strong>'+esc(w.name)+'</strong><p>'+esc(rules.props.join(', '))+' · '+esc(source.dice)+' '+modText(source.damageModifier)+' · crit '+(rules.criticalFrom===20?'20':rules.criticalFrom+'–20')+' · '+rules.normalRange+'/'+rules.longRange+' ft</p><p>'+esc(rules.warning)+'</p>'+
+       (rules.props.includes('Thrown')?'<label>Weapon use<select data-weapon-use="'+esc(w.id)+'"><option value="melee"'+(w.attackMode!=='ranged'?' selected':'')+'>Melee</option><option value="ranged"'+(w.attackMode==='ranged'?' selected':'')+'>Thrown</option></select></label>':'')+'<label>Attack mode<select data-weapon-mode="'+esc(w.id)+'">'+[['auto',rules.disadvantage?'Suggested: Disadvantage':'Use bottom dice mode'],['norm','Normal'],['adv','Advantage'],['dis','Disadvantage']].map(([value,label])=>'<option value="'+value+'"'+(chosen===value?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
+       (rules.loading?'<p>Shots: '+(state.weaponShots?.[w.id]??rules.loading)+'/'+rules.loading+'</p><button type="button" class="btn" data-reload-weapon="'+esc(w.id)+'">Reload ('+window.WBCombat.abilityApCost(5,mod('DEX'))+' AP)</button>':'')+'</div>';}).join('');
     $('#attacks').innerHTML = atkHtml || '<p class="atk-empty">No weapon in hand.</p>';
-    $('#dollAr').textContent = String(Math.max(0, armorTotal() + vitArmor()));
+    $('#fastRoll').checked=state.fastRoll===true;$('#mountApproach').value=state.mountApproach||'';
+    const inventory=window.WBCombat.inventory(state);$('#inventorySlots').textContent='Pack: '+inventory.used+' / '+inventory.capacity+' slots'+(inventory.incomplete?' — some saved stock could not be counted.':'')+(inventory.used>inventory.capacity?' — over capacity; correct or resolve at the table.':'');
+
+    $('#dollAr').textContent = String(Math.max(0, window.WBCombat.armorRating(state)));
     $('#dollWorn').textContent = (adamantine() ? 'Half VIT ' + sgn(vitArmor()) : 'VIT mod ' + fmt(mod('VIT'))) + (worn.length ? ', ' + sgn(armorTotal()) + ' from ' + worn.length + (worn.length === 1 ? ' piece' : ' pieces') + ' worn' : ', nothing worn yet');
   }
   $('#attacks').addEventListener('change',event=>{
+    const use=event.target.closest('[data-weapon-use]');if(use){const item=itemById(use.dataset.weaponUse);if(item)item.attackMode=use.value;refreshAll();save();return;}
+    const mode=event.target.closest('[data-weapon-mode]');if(mode){state.weaponRollModes={...state.weaponRollModes,[mode.dataset.weaponMode]:mode.value};save();return;}
     const select=event.target.closest('[data-singularity-slot]');if(!select)return;
     singularitySelections[select.dataset.singularitySlot]={hand:select.value,ids:[state.equip.main||'',state.equip.off||''].join('|')};
     renderMap();
   });
 
+  $('#fastRoll').addEventListener('change',event=>{state.fastRoll=event.target.checked;save();});
+  $('#mountApproach').addEventListener('change',event=>{state.mountApproach=Math.max(0,Number(event.target.value)||0);refreshAll();save();});
+  $('#attacks').addEventListener('click',event=>{const b=event.target.closest('[data-reload-weapon]');if(!b)return;const result=formEntryControls.execute({type:'ReloadWeapon',weaponId:b.dataset.reloadWeapon});refreshAll();save();showRoll({kind:'notice',title:'Reload',math:result.message});});
   // Forge: make a new piece or edit an existing one
   const forgeEl = $('#forge');
   const abilRows = $('#abilRows');
   const MAX_ABILS = 4;
+  $('#catalogPreset').innerHTML='<option value="">Choose an equipment preset</option>'+window.WBRulesCatalog.equipment.map((item,index)=>'<option value="'+index+'">'+esc(item.name+' · '+item.price)+'</option>').join('');
+  $('#catalogAdd').addEventListener('click',()=>{const selected=$('#catalogPreset').value;if(selected==='')return;const preset=window.WBRulesCatalog.equipment[Number(selected)];if(!preset)return;state.items.push({...JSON.parse(JSON.stringify(preset)),id:newId()});refreshAll();save();});
   let forgeType = 'head';
   let editingId = null;
   let abilSeq = 0;
@@ -2315,6 +2287,9 @@
   });
   function resetForge() {
     editingId = null;
+    for(const id of ['forgeThrownRange','forgeThrownLongRange','forgePrice','forgeVersatile','forgeLongRange','forgeLoading','forgeLightEv','forgeBlockMultiplier','forgeSlots','forgeBackpack','forgeAmmo'])$('#'+id).value='';
+    $('#forgeMetal').value='Steel';$('#forgeFamily').value='Balanced';$('#forgeWeight').value='';$('#forgeGrip').checked=false;$('#forgeMounted').checked=false;
+    document.querySelectorAll('[data-weapon-property],[data-signature]').forEach(input=>input.checked=false);
     $('#forgeName').value = '';
     $('#forgeAr').value = '';
     $('#forgeDmg').value = '';
@@ -2340,6 +2315,12 @@
     resetForge();
     editingId = id;
     $('#forgeName').value = it.name;
+    $('#forgeMetal').value=it.metal||'Steel';$('#forgePrice').value=it.price||'';
+    const props=window.WBCombat.weaponProperties(it);$('#forgeFamily').value=['Paragon','Heavy','Finesse','Balanced'].find(p=>props.includes(p))||'Balanced';
+    document.querySelectorAll('[data-weapon-property]').forEach(input=>input.checked=props.includes(input.dataset.weaponProperty));
+    document.querySelectorAll('[data-signature]').forEach(input=>input.checked=(it.signatures||[]).includes(input.dataset.signature));
+    for(const [id,key] of [['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeVersatile','versatileDice'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']])$('#'+id).value=it[key]??'';
+    $('#forgeWeight').value=it.armorWeight||'';$('#forgeGrip').checked=!!it.twoHandedGrip;$('#forgeMounted').checked=!!it.mounted;
     $('#forgeAr').value = String(it.ar);
     setForgeType(it.type);
     if (TYPES[it.type].weapon) { $('#forgeDmg').value = it.dmg || ''; $('#forgeRange').value = it.range ? String(it.range) : ''; setForgeStat(it.stat); }
@@ -2444,6 +2425,17 @@
     }
     const data = { name, type: forgeType, ar: arRaw === '' ? 0 : Math.round(ar), abilities, bonuses, effects };
     if (isW) { data.dmg = dmg; data.stat = forgeStat; }
+    data.metal=$('#forgeMetal').value;data.price=$('#forgePrice').value.trim();
+    data.properties=[$('#forgeFamily').value,...Array.from(document.querySelectorAll('[data-weapon-property]:checked'),i=>i.dataset.weaponProperty)];
+    data.signatures=Array.from(document.querySelectorAll('[data-signature]:checked'),i=>i.dataset.signature);
+    data.versatileDice=$('#forgeVersatile').value.trim();
+    if(data.versatileDice&&!window.WBCombat.parseDamageDice(data.versatileDice)){errEl.textContent='Check the Versatile damage dice.';errEl.hidden=false;return;}
+    data.twoHandedGrip=$('#forgeGrip').checked;data.mounted=$('#forgeMounted').checked;data.armorWeight=$('#forgeWeight').value;
+    for(const [id,key] of [['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']]){
+      const input=$('#'+id);if(input.value!=='')data[key]=Math.max(0,key==='blockMultiplier'?(Number(input.value)||1):Math.round(Number(input.value)||0));
+      else data[key]=undefined;
+    }
+
     if (isW && range > 5) data.range = range;
     if (blk) data.block = blk;
     const asSet = !!PAIRS[forgeType] && $('#forgeSet').checked;
@@ -2458,7 +2450,7 @@
       if (!asSet) delete it.pair;
       const s = slotOf(it.id);
       if (s && !fits(it.type, s)) toPack(s);
-      { const mw = itemById(state.equip.main); if (mw && mw.type === 'twohand') toPack('off'); }
+      { const mw = itemById(state.equip.main); if (mw && window.WBCombat.weaponRules(state,mw).twoHanded) toPack('off'); }
       fixPairs();
       flash = 'Saved ' + name + '.';
     } else {
@@ -2727,106 +2719,15 @@
   const logBody = $('#logBody');
   const logTable = $('#logTable');
   let logSig = '';
-  function renderLog() {
-    const L = level();
-    const ms = msStat();
-    const holy = ms === 'FTH';
-    $('#msHead').textContent = ms;
-    $('#mpHead').textContent = holy ? 'Holy' : 'Mana';
-    logTable.classList.toggle('holy', holy);
-    if (String(L) !== logSig) {
-      logSig = String(L);
-      let html = '';
-      for (let n = 1; n <= L; n++) {
-        const asi = ASI_LEVELS.includes(n);
-        const rollCell = n === 1
-          ? '<span class="maxnote" id="lv1-max"></span>'
-          : '<span class="roll"><input class="roll-in" id="lv' + n + '-roll" data-roll-lv="' + n + '" type="number" inputmode="numeric" aria-label="Health roll for level ' + n + '" autocomplete="off">' +
-            '<button type="button" class="die-btn" data-roll="' + n + '" aria-label="Roll for level ' + n + '">' + DIE_SVG + '</button></span>';
-        html += '<tr' + (asi ? ' class="asi"' : '') + '>' +
-          '<th scope="row">' + n + '</th>' +
-          '<td class="snap" id="lv' + n + '-vit"></td>' +
-          '<td>' + rollCell + '</td>' +
-          '<td class="out hp" id="lv' + n + '-hp"></td>' +
-          '<td class="snap" id="lv' + n + '-ms"></td>' +
-          '<td class="out mp" id="lv' + n + '-mp"></td>' +
-          '<td class="out pts">' + (asi ? '+4' : '') + '</td>' +
-          '</tr>';
-      }
-      logBody.innerHTML = html;
-    }
-    const active = document.activeElement;
-    log.rows.forEach((row) => {
-      const n = row.n;
-      document.getElementById('lv' + n + '-vit').innerHTML = row.vit == null ? '—' : row.vit + (row.vg ? ' <span class="gear">(' + sgn(row.vg) + ' gear)</span>' : '');
-      document.getElementById('lv' + n + '-ms').innerHTML = row.msv == null ? '—' : row.msv + (row.mg ? ' <span class="gear">(' + sgn(row.mg) + ' gear)</span>' : '');
-      if (n === 1) {
-        $('#lv1-max').textContent = row.dieMax ? row.dieMax + ' max' : '—';
-      } else {
-        const el = document.getElementById('lv' + n + '-roll');
-        const btn = el.nextElementSibling;
-        el.placeholder = row.die || '—';
-        if (el !== active) el.value = isSet(state.rolls[n]) ? state.rolls[n] : '';
-        btn.disabled = !row.die;
-        btn.setAttribute('aria-label', row.die ? 'Roll ' + row.die + ' for level ' + n : 'Enter VIT to roll for level ' + n);
-      }
-      document.getElementById('lv' + n + '-hp').textContent = row.gain == null ? '—' : '+' + row.gain;
-      document.getElementById('lv' + n + '-mp').textContent = row.mgain == null ? '—' : '+' + row.mgain;
-    });
-    $('#logHp').textContent = log.hp == null ? '—' : String(log.hp);
-    $('#logMp').textContent = log.mp == null ? '—' : String(log.mp);
-    const pts = pointsBy(L);
-    $('#logPts').textContent = String(pts);
-    $('#levelNow').textContent = 'Level ' + L;
-    const next = ASI_LEVELS.find((x) => x > L);
-    const unspent = unspentPts();
-    $('#ptsNow').textContent = (pts ? pts + ' stat points earned' + (unspent ? ', ' + unspent + ' not spent yet' : '') : 'No stat points yet') + (next ? '. Next 4 at level ' + next + '.' : '.');
-    const asiLog = $('#asiLog');
-    const earned = earnedAsi();
-    asiLog.hidden = !earned.length;
-    asiLog.innerHTML = !earned.length ? '' :
-      '<span class="foot-label">Stat increases</span>' +
-      earned.map((x) => '<div class="asi-item"><b>Level ' + x + '</b><span>' + (asiText(x) || 'Nothing yet') + (asiSpent(x) < 4 ? ' (' + (4 - asiSpent(x)) + ' unspent)' : '') + '</span>' +
-        '<button type="button" class="btn-link" data-asi-edit="' + x + '">Change</button>' +
-        (asiSpent(x) ? '<button type="button" class="btn-link" data-asi-reset="' + x + '">Reset</button>' : '') + '</div>').join('') +
-      (Object.keys(state.asi).length
-        ? (asiAsk
-          ? '<div class="asi-all"><span>Undo every stat increase?</span><button type="button" class="btn danger" data-asi-all="yes">Reset all</button><button type="button" class="btn" data-asi-all="no">Keep</button></div>'
-          : '<div class="asi-all"><button type="button" class="btn-link" data-asi-all="ask">Reset all stat increases</button></div>')
-        : '');
-    const missEl = $('#logMissing');
-    let msg = '';
-    if (!hasScore('VIT')) {
-      msg = 'Enter your VIT score to work out Health.';
-    } else {
-      const miss = log.missing.filter((x) => x > 1);
-      if (miss.length) msg = 'Roll for level' + (miss.length > 1 ? 's ' : ' ') + listJoin(miss) + ' to finish your max Health.';
-    }
-    missEl.hidden = !msg;
-    missEl.textContent = msg;
+  function renderLog(){
+    $('#logHp').textContent=log.hp==null?'—':String(log.hp);
+    $('#logMp').textContent=log.mp==null?'—':String(log.mp);
+    $('#msHead').textContent=msStat();$('#mpHead').textContent=kind()==='holy'?'Holy Power':'Mana';
+    logBody.innerHTML='<tr><th>'+level()+'</th><td>'+ (score('VIT')??'—') +'</td><td>'+esc(rowDie(score('VIT'))||'—')+'</td><td>'+ (log.hp??'—')+'</td><td>'+ (score(msStat())??'—')+'</td><td>'+ (log.mp??'—')+'</td><td>'+pointsBy(level())+'</td></tr>';
+    $('#logMissing').hidden=false;$('#logMissing').textContent='Health = current VIT × level. Mana/Holy Power = current INT/FTH × (level + 2). Hit dice heal on short rests.';
   }
-  logBody.addEventListener('click', (e) => {
-    const b = e.target.closest('.die-btn');
-    if (!b || b.disabled) return;
-    const n = Number(b.dataset.roll);
-    const row = log.rows[n - 1];
-    if (!row || !row.die) return;
-    const v = rollDice(row.die);
-    if (v == null) {
-      setStatus("That hit die can't be rolled. Use a format like 1d8 or 1d12+1d4.", true);
-      return;
-    }
-    state.rolls[n] = String(v);
-    diceManager.capture({kind:'advancement',title:'Level '+n+' Health roll',total:v,math:row.die+' = '+v,note:'Hit die only; advancement bonuses are added separately.'});
-    refreshAll();
-    save();
-    const el = document.getElementById('lv' + n + '-roll');
-    if (el) {
-      el.classList.remove('rolled');
-      void el.offsetWidth;
-      el.classList.add('rolled');
-    }
-  });
+  $('#shortRest').addEventListener('click',()=>{const dice=rowDie(score('VIT'));if(!window.WBCombat.parseDamageDice(dice))return;const roll=rollSet(dice,false);showRolled({kind:'healing',title:'Short rest hit die',total:roll.t,math:roll.math,note:'Roll one hit die for an allowed short-rest recovery, then apply its healing to yourself.',shortRestHealing:{amount:Math.max(0,roll.t),characterId:state.id,applied:false},acts:[['shortrest-heal','Apply healing to me']]});});
+  $('#vitalMigrationDismiss').addEventListener('click',()=>{if(state.vitalMigration)state.vitalMigration.acknowledged=true;refreshAll();save();});
   const levelInput = $('#level');
   $('#levelUp').addEventListener('click', () => {
     setLevel(level() + 1);
@@ -3202,7 +3103,7 @@
   const foeAt = (ms, x, y, skip) => game.foes.find((f) => f.map === ms.id && f.x === x && f.y === y && f.id !== skip && !foeDown(f)) || null;
   const anyFoeAt = (ms, x, y, skip) => game.foes.find((f) => f.map === ms.id && f.x === x && f.y === y && f.id !== skip) || null;
   const cheb = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-  function rangeOf(w) { return w && w.range > 5 ? w.range : 5; }
+  function rangeOf(w){return w?window.WBCombat.weaponRules(state,w).longRange:5;}
   // "Draugr 2" shows as D2 on its token, "Bone Archer" as BA.
   function foeLabel(f) {
     const w = f.name.trim().split(/\s+/);
@@ -3226,8 +3127,9 @@
     const dual = dualReady();
     const out = [];
     if (mainW && TYPES[mainW.type].weapon) out.push({ slot: 'main', w: mainW, label: mainW.name, range: rangeOf(mainW) });
-    if (offW && TYPES[offW.type].weapon && !(mainW && mainW.type === 'twohand')) out.push({ slot: 'off', w: offW, label: offW.name, range: rangeOf(offW) });
+    if (offW && TYPES[offW.type].weapon && !(mainW && window.WBCombat.weaponRules(state,mainW).twoHanded)) out.push({ slot: 'off', w: offW, label: offW.name, range: rangeOf(offW) });
     if (dual) out.push({ slot: 'dual', w: mainW, label: 'Both weapons', range: Math.min(rangeOf(mainW), rangeOf(offW)) });
+    const strapped=itemById(state.equip.strapped);if(strapped)out.push({slot:'strapped',w:strapped,label:strapped.name,range:rangeOf(strapped)});
     return out;
   }
   const inReachFrom = (ms, from, f, range) => cheb(from, f) * SQ_FT <= range && sees(ms, from, f);
@@ -3281,7 +3183,7 @@
       visible.map(f=>f.id+':'+f.x+','+f.y+':'+f.hp).join(';'),
       fog ? fogVer : 'all'].join('|');
     if(pathMemo.key===key)return pathMemo;
-    const plan=window.WBRouting.findPaths({
+    const plan=window.WBRouting.findPaths({costMultiplier:window.WBCombat.armorProfile(state).movementMultiplier,
       cols:ms.cols,rows:ms.rows,start:{x:ms.x,y:ms.y},
       terrain:ms.def.terrain||[],
       side:'party',
@@ -3663,7 +3565,7 @@
     if (!next) return false;
     const why = walkBlock(ms, cur, next, walk.i + 1 === walk.route.length - 1);
     if (why) { walk.stop = why; return false; }
-    const cost = isRough(kindAt(ms, next.x, next.y)) ? 2 * SQ_FT : SQ_FT;
+    const cost=(isRough(kindAt(ms,next.x,next.y))?2*SQ_FT:SQ_FT)*window.WBCombat.armorProfile(state).movementMultiplier;
     if (walk.ft + cost > walk.budget) { walk.stop = 'The ' + TERRAIN_NAME[kindAt(ms, next.x, next.y)] + ' at ' + cellName(next) + ' takes more movement than you have left.'; return false; }
     walk.ft += cost;
     walk.i++;
@@ -3779,8 +3681,8 @@
     else {
       btns = opts.map((o) => {
         const ok = !walk && dist <= o.range && seeIt;
-        return '<button type="button" class="btn' + (ok ? ' strong' : '') + '" data-foe-atk="' + o.slot + '"' + (ok ? '' : ' disabled') + '>' + esc(o.label) + ' · ' + apCost(mod(o.w.stat)) +
-          ' AP'+(singularityChoice(o.slot)?' · Singularity ('+singularityChoice(o.slot)+' hand)':'')+'</button>';
+        return '<button type="button" class="btn' + (ok ? ' strong' : '') + '" data-foe-atk="' + o.slot + '"' + (ok ? '' : ' disabled') + '>' + esc(o.label) + ' · ' + window.WBAbilities.weaponAttackPlan(state,o.slot).apCost +
+          ' AP'+(dist>window.WBCombat.weaponRules(state,o.w).normalRange?' · long range: disadvantage':'')+(singularityChoice(o.slot)?' · Singularity ('+singularityChoice(o.slot)+' hand)':'')+'</button>';
       }).join('');
       const best = Math.max(...opts.map((o) => o.range));
       if (dist > best || !seeIt) {
@@ -4231,6 +4133,10 @@
     });
   }
   function refreshAll() {
+    $('#armorDisadvantage').checked=!state.ignoreArmorDisadvantage;
+    const migration=state.vitalMigration;
+    $('#vitalMigration').hidden=!migration||migration.acknowledged;
+    if(migration)$('#vitalMigrationText').textContent='Updated pool rules. Health max: '+(migration.oldHealth??'unknown')+' → '+(migration.newHealth??'unknown')+'. Mana/Holy Power max: '+(migration.oldMana??'unknown')+' → '+(migration.newMana??'unknown')+'. Your stored current values were kept. Correct them if needed. Manual maxima stay in place; clear them to use the current-stat formulas.';
     consumableManager.render();
     log = computeLog();
     $('#sheetCharacterName').textContent = String(state.fields.charName || '').trim() || 'Worlds Beyond';
@@ -4238,10 +4144,11 @@
     $('#combatToggle').textContent=state.inCombat?'End combat':'New combat';
     $('#combatToggle').setAttribute('aria-label',state.inCombat?'End combat':'Start new combat');
     const active = document.activeElement;
-    for (const id of ['mpCur', 'apMax']) {
+    for (const id of ['hpCur','mpCur','apMax']) {
       const input = $('#' + id);
       if (input !== active) input.value = state.fields[id] == null ? '' : state.fields[id];
     }
+    if(!isSet(state.fields.apMax))$('#apMax').placeholder=String(window.WBCombat.apMaximum(state));
     if (levelInput !== active) levelInput.value = String(level());
     STATS.forEach((s) => {
       const el = document.getElementById('score-' + s.k);
@@ -4307,7 +4214,7 @@
     $('#hpRule').textContent = (vit == null ? 'Enter VIT to work out Health' : 'Next level: roll ' + rowDie(vit) + ' + ' + Math.floor(vit / 2)) + poolGearNote('hp');
     const msv = score(msStat());
     $('#mpRule').textContent = (msv == null ? 'Enter ' + msStat() + ' to work it out' : 'Next level: +' + manaPerLevel(msv)) + poolGearNote(kind() === 'holy' ? 'holy' : 'mp');
-    $('#evSrc').textContent = '10 + AGL mod' + gearNote('ev') + (window.WBAbilities.effectBonus(state, 'evasion') ? ' · ability ' + fmt(window.WBAbilities.effectBonus(state, 'evasion')) : '');
+    $('#evSrc').textContent = '12 + AGL mod' + gearNote('ev') + (window.WBAbilities.effectBonus(state, 'evasion') ? ' · ability ' + fmt(window.WBAbilities.effectBonus(state, 'evasion')) : '');
     $('#armorSrc').textContent = (adamantine() ? 'Half VIT (Adamantine Body)' : 'VIT mod') + ' + worn armor' + (window.WBAbilities.effectBonus(state, 'armor') ? ' · ability ' + fmt(window.WBAbilities.effectBonus(state, 'armor')) : '');
     $('#initSrc').textContent = 'WIS mod' + gearNote('init');
     const effectSpeed = window.WBAbilities.movementBonus(state);
@@ -4391,9 +4298,6 @@
       if (t.id === 'hpMax') applyPoolCommand({ type: 'SetHealthMaximum', value: t.value });
       else if (t.id === 'mpMax') applyPoolCommand({ type: 'SetManaMaximum', value: t.value });
       else if (t.value.trim() === '') delete state.over[t.id]; else state.over[t.id] = t.value;
-    } else if (t.dataset && t.dataset.rollLv) {
-      const n = t.dataset.rollLv;
-      if (t.value.trim() === '') delete state.rolls[n]; else state.rolls[n] = t.value;
     } else {
       return;
     }
@@ -4432,6 +4336,7 @@
   const footBtns = $('#footBtns');
   const importConfirm = $('#importConfirm');
   function resetSession() {
+    vitalBaseline=window.WBCharacter.vitalMaximums(state);
     diceManager.reset();
     consumableManager.reset();
     lastRoll=null;
@@ -4577,6 +4482,7 @@
     else setStatus('Imported, but this browser can\u2019t save it. Export it again before you close the page.', true);
   });
 
+  vitalBaseline=window.WBCharacter.vitalMaximums(state);
   fillInputs();
   refreshAll();
   viewFromHash();

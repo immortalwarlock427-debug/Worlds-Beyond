@@ -12,6 +12,12 @@ const corridor=['#####','#...#','#####','#####','#####'];
 const start={x:1,y:1};
 const guest=(side,hp=20)=>({id:'guest',x:2,y:1,side,hp});
 const target={x:3,y:1};
+test('armor and prone cost multipliers share the same route calculation for sheet and DM',()=>{
+ const input={cols:3,rows:1,start:{x:0,y:0},terrain:['.r.'],goal:{x:2,y:0}};
+ assert.equal(window.WBRouting.findPaths(input).to(2,0).ft,15);
+ assert.equal(window.WBRouting.findPaths({...input,costMultiplier:2}).to(2,0).ft,30);
+ assert.equal(window.WBRouting.findPaths({...input,costMultiplier:4}).to(2,0).ft,60);
+});
 test('party ally can be crossed in a one-square corridor at normal cost, never occupied as endpoint',()=>{
   const routes=plan(corridor,start,[guest('party')],'party',target);
   const via=routes.to(3,1);

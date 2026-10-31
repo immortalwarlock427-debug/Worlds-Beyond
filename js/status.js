@@ -6,6 +6,8 @@
   const MAX = 999999;
   const TYPES = ['buff', 'debuff', 'condition', 'other'];
   const TYPE_LABELS = { buff: 'Buff', debuff: 'Debuff', condition: 'Condition', other: 'Other' };
+  const PRESETS=['Bleeding','Blinded','Burning','Charmed','Deafened','Frightened','Grappled','Incapacitated','Invisible','Paralyzed','Petrified','Poisoned','Prone','Restrained','Stunned','Unconscious'];
+  const presetText=window.WBRulesCatalog?.statuses||{};
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
   const id = () => 'sts' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const clean = (v, limit) => String(v == null ? '' : v).trim().slice(0, limit);
@@ -21,6 +23,8 @@
   function normalizeStatus(s) {
     if (!s || typeof s !== 'object' || Array.isArray(s)) return null;
     return {
+      ...s,
+      preset:PRESETS.includes(s.preset)?s.preset:'',dc:s.dc==null||s.dc===''?(['Bleeding','Burning'].includes(s.preset)?12:null):turns(s.dc),sourceLevel:Math.max(1,Math.min(100,Number(s.sourceLevel)||1)),
       id: typeof s.id === 'string' && /^sts[a-z0-9]{6,40}$/.test(s.id) ? s.id : id(),
       name: clean(s.name, 100) || 'Unnamed condition',
       type: TYPES.includes(s.type) ? s.type : 'condition',
@@ -71,7 +75,7 @@
     });
     const manual = (state.statuses || []).map(s => ({
       id: s.id, type: 'manual', name: s.name, source: s.source || 'Manual',
-      remaining: s.remaining, labels: [], tone: s.type, notes: s.notes
+      remaining: s.remaining, labels: [], tone: s.type, notes: s.notes,preset:s.preset,dc:s.dc,sourceLevel:s.sourceLevel
     }));
     return { effects, manual, total: effects.length + manual.length };
   }
@@ -136,6 +140,9 @@
           '<button type="button" class="btn" data-status-action="end-manual">Remove</button></div></div>' +
         '<p class="status-secondary">Source: ' + escape(e.source) + '</p>' +
         (e.notes ? '<p class="status-note">' + escape(e.notes) + '</p>' : '') +
+        (['Bleeding','Burning','Poisoned'].includes(e.preset||e.name)?'<label>Effect DC<input type="number" min="0" data-status-edit="dc" value="'+(e.dc??'')+'"></label><button type="button" class="btn" data-status-action="shake">Shake It Off (VIT-discounted 5 AP)</button>':'')+
+        (['Bleeding','Burning'].includes(e.preset||e.name)?'<label>Source level<input type="number" min="1" max="100" data-status-edit="sourceLevel" value="'+(e.sourceLevel||1)+'"></label><button type="button" class="btn" data-status-action="roll-status">Roll status damage</button>':'')+
+        ((e.preset||e.name)==='Prone'?'<button type="button" class="btn" data-status-action="stand">Stand up (5 AP)</button>':'')+
         '<div class="status-edit"><label class="ability-field"><span class="foot-label">Turns remaining (blank = indefinite)</span>' +
           '<input data-status-edit="remaining" type="number" min="0" max="' + MAX + '" value="' +
             (e.remaining == null ? '' : e.remaining) + '" placeholder="Indefinite"></label></div>' +
@@ -151,12 +158,13 @@
         '<p class="status-empty">No manually tracked conditions.</p>';
     }
 
+    const preset=document.getElementById('statusPreset');if(preset){preset.innerHTML='<option value="">Custom condition</option>'+PRESETS.map(name=>'<option>'+name+'</option>').join('');preset.addEventListener('change',()=>{if(preset.value){name.value=preset.value;notes.value=presetText[preset.value]||'Record the source, duration and agreed effects. Resolve this condition at the table.';}});}
     form.addEventListener('submit', e => {
       e.preventDefault();
       const value = clean(name.value, 100);
       if (!value) { feedback.textContent = 'Enter a condition or effect name.'; name.focus(); return; }
       getState().statuses.push(normalizeStatus({
-        id: id(), name: value, type: type.value, source: source.value,
+        id: id(), name: value,preset:preset&&preset.value, type: type.value, source: source.value,
         notes: notes.value, remaining: duration.value
       }));
       // A manually noted status is descriptive; it does not change any stat math.
@@ -172,22 +180,26 @@
       const card = b.closest('.status-card');
       if (!card) return;
       if (action === 'end-ability') {
-        if (!endAbility(getState(), card.dataset.statusAbility)) return;
+        if(controls.execute){const r=controls.execute({type:'EndAbilityEffect',abilityId:card.dataset.statusAbility});if(!r.ok)return;}else if(!endAbility(getState(),card.dataset.statusAbility))return;
         feedback.textContent = 'Ended ability effect. AP and resource costs are not refunded.';
         if (controls.refresh) controls.refresh();
       } else if (action === 'end-manual') {
-        if (!endManual(getState(), card.dataset.statusManual)) return;
+        if(controls.execute)controls.execute({type:'EndManualStatus',statusId:card.dataset.statusManual});else if(!endManual(getState(),card.dataset.statusManual))return;
         feedback.textContent = 'Removed condition.';
+      } else if(action==='stand'&&controls.execute){const r=controls.execute({type:'StandUp',statusId:card.dataset.statusManual});feedback.textContent=r.message;if(r.ok){if(controls.refresh)controls.refresh();save();}return;
+      } else if(action==='shake'&&controls.execute){const status=getState().statuses.find(s=>s.id===card.dataset.statusManual),result=controls.execute({type:'BeginShakeItOff',statusId:status.id});feedback.textContent=result.message;if(result.ok){if(controls.refresh)controls.refresh();save();controls.shake(result.shakePlan);}return;
+      } else if(action==='roll-status'&&controls.rollStatus){const status=getState().statuses.find(s=>s.id===card.dataset.statusManual);const dice=window.WBCombat.scalingTier({fields:{level:status.sourceLevel||1}})+'d'+((status.preset||status.name)==='Burning'?6:4);controls.rollStatus(status.name,dice,status.preset||status.name);return;
       } else return;
       render();
       save();
     });
     manualList.addEventListener('change', e => {
-      const input = e.target.closest('[data-status-edit="remaining"]');
+      const input = e.target.closest('[data-status-edit]');
       if (!input) return;
       const card = input.closest('[data-status-manual]');
       const status = card && getState().statuses.find(s => s.id === card.dataset.statusManual);
       if (!status) return;
+      if(input.dataset.statusEdit!=='remaining'){status[input.dataset.statusEdit]=turns(input.value);save();return;}
       const n = turns(input.value);
       if (n === 0) endManual(getState(), status.id);
       else status.remaining = n;
@@ -198,5 +210,5 @@
     return { render, turnStart() { if (advanceTurn(getState())) { render(); save(); } } };
   }
 
-  window.WBStatus = { normalizeState, normalizeStatus, activeEntries, advanceTurn, endAbility, endManual, formatEffect, init };
+  window.WBStatus = { PRESETS,presetText,normalizeState, normalizeStatus, activeEntries, advanceTurn, endAbility, endManual, formatEffect, init };
 })();

@@ -1560,3 +1560,12 @@ main.view-dice ~ .advbar { display: none; }
   .favorite-heading h3 { font-size: 18px; }
   .favorite-ability { padding: 10px; }
 }
+
+/* Rule editors stay within a phone viewport. */
+.rule-editor,.weapon-rules{margin:.7rem 0;padding:.7rem;border:1px solid var(--line,#665f50);border-radius:.5rem;min-width:0}
+.rule-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:.7rem;margin-top:.7rem}
+.rule-fields label,.weapon-rules label{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.rule-fields fieldset{min-width:0;display:flex;flex-wrap:wrap;gap:.5rem;grid-column:1/-1}
+.rule-fields fieldset label{display:flex;flex-direction:row;align-items:center}
+.rule-fields input:not([type=checkbox]),.rule-fields select,.weapon-rules select{max-width:100%;width:100%;min-width:0}
+.weapon-rules p{overflow-wrap:anywhere}.save-recovery{padding:.7rem;margin:.7rem 0;border:1px solid currentColor}

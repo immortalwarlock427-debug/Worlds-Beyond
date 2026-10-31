@@ -11,7 +11,7 @@
   const integer = Number.isInteger;
   const cmp = (a,b) => { for (let i=0;i<a.length;i++) if (a[i]!==b[i]) return a[i]-b[i]; return 0; };
   const isDown = a => Number(a.hp) <= 0 || a.down === true;
-  function findPaths({cols,rows,start,terrain=[],occupants=[],side='party',seen=null,goal=null}) {
+  function findPaths({cols,rows,start,terrain=[],occupants=[],side='party',seen=null,goal=null,costMultiplier=1}) {
     if (!integer(cols)||!integer(rows)||cols<1||rows<1||cols>60||rows>60||
         !start||!integer(start.x)||!integer(start.y)||
         start.x<0||start.y<0||start.x>=cols||start.y>=rows)
@@ -64,7 +64,7 @@
         if(dx&&dy&&wall(x+dx,y)&&wall(x,y+dy))continue;
         const next=cell(nx,ny)*stride+i;
         const deviation=goalCell>=0?Math.abs((nx-start.x)*dyGoal-(ny-start.y)*dxGoal):0;
-        const nextScore=[score[0]+(rough(nx,ny)?10:5),
+        const nextScore=[score[0]+(rough(nx,ny)?10:5)*Math.max(1,Number(costMultiplier)||1),
           score[1]+(dx&&dy?1:0),score[2]+(dir!==DIRS.length&&dir!==i?1:0),
           score[3]+deviation];
         if(!best[next]||cmp(nextScore,best[next])<0){

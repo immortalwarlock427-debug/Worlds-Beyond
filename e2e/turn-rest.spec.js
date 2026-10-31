@@ -32,7 +32,7 @@ test('phone turn commits one command with post-expiry resource/movement, timers 
  const s=await saved(page);expect(s.resources[0].current).toBe(100);expect(s.abilities[0].durationLeft).toBe(0);expect(s.abilities[0].cooldownLeft).toBe(1);
  expect(s.abilities[0].usesLeft).toBe(2);expect(s.abilities[0].outsideUsesSpent).toBe(2);expect(s.apGiven).toEqual({n:4,fresh:false});
  expect(s.statuses.map(s=>s.name)).toEqual(['Ongoing']);expect(s.spent.helm).toBeUndefined();expect(s.consumables[0].quantity).toBe(2);
- await expect(page.locator('#toastTitle')).toHaveText('Bleeding out');await expect(page.locator('#toastMath')).toContainText('Lost 4');
+ await expect(page.locator('#toastTitle')).toHaveText('Dying');await expect(page.locator('#toastMath')).toContainText('Lost 4');
  expect(await page.evaluate(()=>window.transitionCalls)).toEqual(['StartTurn']);expect(await page.evaluate(key=>localStorage.getItem(key),gameKey)).toBe(game);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
  await page.locator('#toastClose').click();await page.locator('#turnReset').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-11');expect((await saved(page)).apGiven).toBeNull();
@@ -51,10 +51,10 @@ test('long rest uses state maxima even when displayed values are stale and refil
  const s=await saved(page);expect(s.fields.mpCur).toBe('20');expect(s.trauma).toBe(0);expect(s.down).toBeNull();expect(s.wonderAvail).toBeNull();
  expect(s.apGiven).toBeNull();expect(s.apAvail).toBeNull();expect(s.reactAvail).toBeNull();expect(s.parryOutsideSpent).toBe(0);
  expect(s.resources.map(r=>r.current)).toEqual([100,2]);expect(s.abilities[0].cooldownLeft).toBe(0);expect(s.abilities[0].durationLeft).toBe(0);
- expect(s.settled.helm).toBe(true);expect(s.statuses).toHaveLength(2);expect(s.inCombat).toBe(true);expect(s.consumables[0].quantity).toBe(2);
+ expect(s.settled).toBeUndefined();expect(s.statuses).toHaveLength(2);expect(s.inCombat).toBe(true);expect(s.consumables[0].quantity).toBe(2);
  expect(await page.evaluate(()=>window.transitionCalls)).toEqual(['LongRest']);await expect(page.locator('#manaPool')).toBeHidden();
  await page.locator('#toastActions [data-act="undo"]').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-3');
- expect((await saved(page)).down).toEqual({mercy:true,stable:false});expect((await saved(page)).resources[0].current).toBe(150);expect((await saved(page)).settled.helm).toBeUndefined();
+ expect((await saved(page)).down).toEqual({mercy:true,stable:false});expect((await saved(page)).resources[0].current).toBe(150);expect((await saved(page)).settled).toBeUndefined();
  expect(await page.evaluate(()=>window.transitionCalls)).toEqual(['LongRest','UndoLongRest']);
 });
 test('rest Undo keeps later phone notes, quantity corrections and manual statuses while restoring rest trackers',async({page})=>{

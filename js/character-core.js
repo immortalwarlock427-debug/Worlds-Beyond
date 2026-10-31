@@ -102,6 +102,8 @@
      if(before.current==null||before.current>0||before.dead)return {ok:false,error:'TREATMENT_UNAVAILABLE',message:'Treatment is for a living character at 0 Health or below.'};
      patch.fields={...record(state.fields),hpCur:'1'};patch.trauma=before.trauma+1;patch.down=null;plan.recovered=true;
    }
+   if((type==='HealHealth'&&plan.amount>0)||type==='TreatHealth'){const statuses=(state.statuses||[]).filter(s=>String(s.preset||s.name).toLowerCase()!=='bleeding');if(statuses.length!==(state.statuses||[]).length)patch.statuses=statuses;}
+   if(patch.fields&&health({...state,...patch}).current!=null&&health({...state,...patch}).current<=0){patch.fields.concOn='0';if(plan.concentration)plan.concentration=false;}
    const next={...state,...patch},after=health(next);
    plan={...plan,before:before.current,after:after.current,trauma:after.trauma,threshold:after.threshold};
    const correction=type.startsWith('Set')&&command.source!=='indomitable';
@@ -125,7 +127,7 @@
      });
    }
    const fields=record(state.fields),over=record(state.over),combat=window.WBCombat;
-   const max=combat.trackerMax(fields.apMax,15);
+   const max=combat.apMaximum(state);
    const own=combat.trackerAvailable(state.apAvail==null?null:
      finite(state.apAvail)?numeric(state.apAvail):0,max);
    const rawGiven=record(state.apGiven).n;
@@ -206,25 +208,25 @@
  // A rest receipt is memory-only and deliberately excludes portraits, notes,
  // inventory, consumables, history, manual statuses and DM/game data.
  const restKeys=['abilities','milestoneUses','resources','wonderAvail','apAvail','reactAvail','apGiven','move',
-   'parryUsed','parryOutsideSpent','settled','spent','equipmentOutsideSpent','trauma','down'];
+   'parryUsed','parryOutsideSpent','spent','equipmentOutsideSpent','trauma','down'];
  const transitionKeys=[...restKeys,'fields','statuses'];
  const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
  function restReceipt(state){
    const snapshot=(object,keys)=>Object.fromEntries(keys.map(key=>[key,
      {present:Object.prototype.hasOwnProperty.call(object,key),value:copy(object[key])}]));
-   return {version:1,values:snapshot(state,restKeys),fields:snapshot(record(state.fields),['hpCur','mpCur'])};
+   return {version:1,values:snapshot(state,restKeys),fields:snapshot(record(state.fields),['hpCur','mpCur','concOn'])};
  }
  function undoLongRest(state,command){
    const receipt=record(command.receipt),values=record(receipt.values),fields=record(receipt.fields);
    if(receipt.version!==1||!restKeys.every(key=>typeof record(values[key]).present==='boolean')||
-     !['hpCur','mpCur'].every(key=>typeof record(fields[key]).present==='boolean'))
+     !['hpCur','mpCur','concOn'].every(key=>typeof record(fields[key]).present==='boolean'))
      return {ok:false,error:'INVALID_REST_RECEIPT',message:'There is no valid long rest to undo.'};
    const patch={fields:{...record(state.fields)}},removedKeys=[];
    for(const key of restKeys){
      if(values[key].present)patch[key]=copy(values[key].value);
      else {patch[key]=undefined;removedKeys.push(key);}
    }
-   for(const key of ['hpCur','mpCur']){
+   for(const key of ['hpCur','mpCur','concOn']){
      if(fields[key].present)patch.fields[key]=copy(fields[key].value);
      else delete patch.fields[key];
    }
@@ -258,8 +260,6 @@
        if(pools.health.max!=null)next.fields.hpCur=String(pools.health.max);
        if(pools.mana.max!=null)next.fields.mpCur=String(pools.mana.max);
        next.wonderAvail=null;next.parryOutsideSpent=0;next.trauma=0;next.down=null;
-       next.settled={...record(next.settled)};
-       for(const slot of window.WBCombat.SLOTS){const id=record(next.equip)[slot];if(id)next.settled[id]=true;}
      }else{
        const previousMaxima=Object.fromEntries(Object.entries(before.resources).map(([id,r])=>[id,r.effectiveMax]));
        run({type:'ResourceTurnStart'},'regeneration');
@@ -457,14 +457,20 @@
  function beginWeaponAttack(state,command){
    const plan=window.WBAbilities.weaponAttackPlan(state,command.slot);
    if(!plan.ok)return {ok:false,error:'INVALID_WEAPON',message:plan.message};
+   const shots={...record(state.weaponShots)};
+   for(const source of [plan.main,plan.off].filter(Boolean))if(source.loading){
+     const remaining=shots[source.weaponId]==null?source.loading:Number(shots[source.weaponId]);
+     if(!Number.isFinite(remaining)||remaining<1)return {ok:false,error:'RELOAD_REQUIRED',message:source.name+' needs reloading (5 AP).'};
+     shots[source.weaponId]=remaining-1;
+   }
    const payment=command.payment===undefined?'ap':command.payment;
    if(!['ap','reaction'].includes(payment))return {ok:false,error:'INVALID_PAYMENT',message:'Choose AP or a reaction for this weapon attack.'};
    const before=derive(state);
-   let patch={},events=[];
+   let patch={weaponShots:shots},events=[];
    if(payment==='ap'){
      const paid=applyPools(state,{type:'SpendAP',amount:plan.apCost});
      if(!paid.ok)return {ok:false,error:paid.error,message:'Not enough AP for this weapon attack.'};
-     patch=paid.patch;events=paid.events.map(e=>({...e,command:'BeginWeaponAttack'}));
+     patch={...patch,...paid.patch};events=paid.events.map(e=>({...e,command:'BeginWeaponAttack'}));
    }else{
      if(before.reactions.current<1)return {ok:false,error:'INSUFFICIENT_REACTIONS',message:'No reactions left. They come back at the start of your turn.'};
      patch.reactAvail=before.reactions.current-1;
@@ -472,7 +478,7 @@
    }
    const singularityHand=command.singularityHand||'';
    if(singularityHand){
-     if(!['main','off'].includes(singularityHand)||!plan.dual&&singularityHand!==command.slot)
+     if(!['main','off','strapped'].includes(singularityHand)||!plan.dual&&singularityHand!==command.slot)
        return {ok:false,error:'INVALID_SINGULARITY_HAND',message:'Choose one hand making this weapon attack.'};
      const used=applyMilestone({...state,...patch},{type:'UseMilestone',milestoneId:'singularity'});
      if(!used.ok)return used;
@@ -559,9 +565,54 @@
    return {ok:true,state:{...state,...patch},patch,events:[event],log:[type+': '+id],
      ...(plan?{consumablePlan:plan}:{}),message:type==='UseConsumable'?'Used one '+plan.name+'.':'Consumables updated.'};
  }
- function apply(state,command){
+ function applyTracker(state,command){
+   const type=command.type;
+   if(['SetReactionCurrent','SpendReaction','SetWonderCurrent','SpendWonder'].includes(type)){
+     const wonder=type.includes('Wonder'),key=wonder?'wonderAvail':'reactAvail';
+     const max=wonder?window.WBCombat.trackerMax(record(state.over).wonderMax,Math.max(0,window.WBCombat.currentModifier(state,'FTH'))):derive(state).reactions.max;
+     const before=state[key]==null?max:number(state[key]),spend=type.startsWith('Spend');
+     if(spend&&before<1)return {ok:false,error:'TRACKER_EMPTY',message:'No '+(wonder?'Wonder uses':'reactions')+' left.'};
+     if(!spend&&command.value!=null&&command.value!==''&&!finite(command.value))return {ok:false,error:'INVALID_VALUE'};
+     const value=spend?before-1:command.value==null||command.value===''?null:Math.max(0,Math.min(max,numeric(command.value)));
+     const patch={[key]:value};return {ok:true,state:{...state,...patch},patch,events:[{type:(wonder?'wonder':'reactions')+'.changed',previous:before,current:value??max,source:spend?'command':'correction'}],log:[]};
+   }
+   const abilities=(state.abilities||[]).map(a=>({...a})),ability=abilities.find(a=>a.id===command.abilityId);
+   if(!ability)return {ok:false,error:'ABILITY_NOT_FOUND',message:'Choose an existing ability.'};
+   const usage=window.WBAbilities.usageState(state,ability);
+   if(type==='EndAbilityEffect')ability.durationLeft=0;
+   else if(type==='ReleaseAbilityCapacity')ability.capacityCurrent=Math.max(0,number(ability.capacityCurrent)-1);
+   else if(type==='ResetAbilityTracker'){
+     ability.cooldownLeft=0;ability.durationLeft=0;
+     if(usage.outside)ability.outsideUsesSpent=0;else ability.usesLeft=ability.uses===''?null:ability.uses;
+   }else{
+     if(!['usesLeft','cooldownLeft','durationLeft','capacityCurrent'].includes(command.field)||amount(command.value)===null)return {ok:false,error:'INVALID_TRACKER',message:'Enter a nonnegative tracker value.'};
+     const value=number(command.value);
+     if(command.field==='usesLeft'&&usage.limited){const remaining=Math.min(usage.maximum,value);if(usage.outside)ability.outsideUsesSpent=usage.maximum-remaining;else ability.usesLeft=remaining;}
+     else ability[command.field]=command.field==='capacityCurrent'&&ability.capacityMax!==''?Math.min(Number(ability.capacityMax)||0,value):value;
+   }
+   const patch={abilities};return {ok:true,state:{...state,...patch},patch,events:[{type:'ability.changed',abilityId:ability.id,source:'correction',command:type}],log:[],message:'Updated '+ability.name+'.'};
+ }
+ function applyRaw(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
+   if(['SetReactionCurrent','SpendReaction','SetWonderCurrent','SpendWonder','SetAbilityTracker','ResetAbilityTracker','ReleaseAbilityCapacity','EndAbilityEffect'].includes(command.type))return applyTracker(state,command);
+   if(command.type==='EndManualStatus'){
+     const patch={statuses:(state.statuses||[]).filter(status=>status.id!==command.statusId)};
+     return {ok:true,state:{...state,...patch},patch,events:[],log:[],message:'Condition ended.'};
+   }
+   if(command.type==='StandUp'){
+     const result=applyPools(state,{type:'SpendAP',amount:5});if(!result.ok)return {...result,message:'Standing up costs 5 AP.'};
+     const patch={...result.patch,statuses:(state.statuses||[]).filter(s=>s.id!==command.statusId)};
+     return {...result,state:{...state,...patch},patch,message:'Stood up for 5 AP.'};
+   }
+   if(command.type==='BeginShakeItOff'){
+     const status=(state.statuses||[]).find(status=>status.id===command.statusId);
+     if(!status||!['bleeding','burning','poisoned'].includes(String(status.preset||status.name).toLowerCase()))return {ok:false,error:'INELIGIBLE_STATUS',message:'Choose Bleeding, Burning or Poisoned.'};
+     const dc=amount(command.dc??status.dc);if(dc===null)return {ok:false,error:'MISSING_DC',message:'Enter the effect DC before rolling Shake It Off.'};
+     const modifier=window.WBCombat.currentModifier(state,'VIT'),cost=window.WBCombat.abilityApCost(5,modifier);
+     const result=applyPools(state,{type:'SpendAP',amount:cost});
+     return result.ok?{...result,shakePlan:{statusId:status.id,characterId:state.id,modifier,dc,cost},message:'Shake It Off: '+cost+' AP.'}:{...result,message:'Not enough AP for Shake It Off.'};
+   }
    if(poolTypes.has(command.type))return applyPools(state,command);
    if(healthTypes.has(command.type))return applyHealth(state,command);
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
@@ -569,14 +620,32 @@
    if(command.type==='UndoLongRest')return undoLongRest(state,command);
    if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
    if(command.type==='UseMilestone'||command.type==='SetMilestoneUses')return applyMilestone(state,command);
-   if(command.type==='ApplyDevastate'){
-     const source=record(command.damageSource);
-     if(source.stat!=='STR'||typeof source.damageModifier!=='number'||!Number.isFinite(source.damageModifier))
-       return {ok:false,error:'INVALID_DEVASTATE_SOURCE',message:'Devastate requires STR-based attack damage.'};
-     const result=applyMilestone(state,{type:'UseMilestone',milestoneId:'devastate'});
-     if(!result.ok)return result;
-     const events=result.events.map(e=>({...e,command:'ApplyDevastate'}));
-     return {...result,devastateBonus:source.damageModifier,events,log:events.map(e=>'ApplyDevastate: '+e.type)};
+   if(command.type==='DrinkConsumable'){
+     const used=applyConsumable(state,{...command,type:'UseConsumable'});if(!used.ok)return used;
+     const cost=window.WBCombat.abilityApCost(5,window.WBCombat.currentModifier(state,'DEX'));
+     const paid=applyPools(state,{type:'SpendAP',amount:cost});if(!paid.ok)return {...paid,message:'Drinking costs '+cost+' AP.'};
+     const patch={...used.patch,...paid.patch};return {...used,state:{...state,...patch},patch,events:[...paid.events,...used.events],message:'Drank one item for '+cost+' AP.'};
+   }
+   if(command.type==='DrawWeapon'){
+     const item=(state.items||[]).find(it=>it.id===command.weaponId);
+     if(!item||!['onehand','twohand'].includes(item.type))return {ok:false,error:'WEAPON_NOT_FOUND',message:'Choose a weapon.'};
+     const rules=window.WBCombat.weaponRules(state,item),cost=(Array.isArray(item.signatures)?item.signatures:[]).includes('Quickdraw')?0:window.WBCombat.abilityApCost(2,window.WBCombat.currentModifier(state,'DEX'));
+     const paid=applyPools(state,{type:'SpendAP',amount:cost});if(!paid.ok)return {...paid,message:'Drawing/swapping costs '+cost+' AP.'};
+     const slot=rules.props.includes('Strapped')?'strapped':rules.twoHanded?'main':command.slot==='off'?'off':'main';
+     const equip={...record(state.equip)};for(const key of Object.keys(equip))if(equip[key]===item.id)delete equip[key];
+     equip[slot]=item.id;if(rules.twoHanded)delete equip.off;
+     if(slot==='off'){const main=(state.items||[]).find(it=>it.id===equip.main);if(main&&window.WBCombat.weaponRules(state,main).twoHanded)delete equip.main;}
+     const patch={...paid.patch,equip,equipmentProfiles:copy(state.equipmentProfiles||{})},next={...state,...patch};
+     window.WBEquipment.capture(next);patch.equipmentProfiles=next.equipmentProfiles;
+     return {...paid,state:next,patch,message:'Drew/swapped '+item.name+' for '+cost+' AP.'};
+   }
+   if(command.type==='ReloadWeapon'){
+     const item=(state.items||[]).find(it=>it.id===command.weaponId),capacity=item&&window.WBCombat.weaponRules(state,item).loading;
+     if(!capacity)return {ok:false,error:'NOT_LOADING',message:'Choose a Loading weapon.'};
+     const cost=window.WBCombat.abilityApCost(5,window.WBCombat.currentModifier(state,'DEX'));
+     const paid=applyPools(state,{type:'SpendAP',amount:cost});if(!paid.ok)return {...paid,message:'Reload costs '+cost+' AP.'};
+     const patch={...paid.patch,weaponShots:{...record(state.weaponShots),[item.id]:capacity}};
+     return {...paid,state:{...state,...patch},patch,message:'Reloaded '+item.name+' for '+cost+' AP.'};
    }
    if(command.type==='BeginWeaponAttack')return beginWeaponAttack(state,command);
    if(command.type==='UseEquipmentAbility'||command.type==='SetEquipmentAbilityUses')return applyEquipmentAbility(state,command);
@@ -641,5 +710,37 @@
    return {ok:true,state:next,events,log:events.map(e=>
      type+': '+e.resourceId+' '+e.previous+' -> '+e.current)};
  }
- window.WBCharacter={derive,apply,health,healthTrackingPatch,consumables,consumableQuantity};
+ function vitalMaximums(state){return {health:health(state).max,mana:derive(state).mana.max};}
+ function reconcileVitals(state,previous,correction=false){
+   const current=vitalMaximums(state),patch={},fields={...record(state.fields)},events=[];
+   for(const [pool,key] of [['health','hpCur'],['mana','mpCur']]){
+     const old=previous&&previous[pool],max=current[pool];
+     if(!Number.isFinite(old)||!Number.isFinite(max)||old===max)continue;
+     const before=finite(fields[key])?numeric(fields[key]):null;
+     if(before!=null){fields[key]=String(before+max-old);patch.fields=fields;}
+     if(pool==='health'){
+       const h=health({...state,...patch});
+       if(h.current!=null&&h.current<=0){
+         if(before!=null&&before>0||!h.down)patch.down={mercy:false,stable:false};
+         else patch.down=h.down;
+         fields.concOn='0';patch.fields=fields;
+       }else{patch.down=null;if(before!=null&&before<=0&&h.current>0&&!correction)patch.trauma=health(state).trauma+1;}
+       if(max>old&&!correction){const statuses=(state.statuses||[]).filter(s=>String(s.preset||s.name).toLowerCase()!=='bleeding');if(statuses.length!==(state.statuses||[]).length)patch.statuses=statuses;}
+     }
+     events.push({type:pool+'.maximum.changed',previous:old,current:max,delta:max-old,source:correction?'correction':'maximum'});
+   }
+   return {ok:true,state:{...state,...patch},patch,events,log:[],message:'Pool maxima updated.'};
+ }
+ function apply(state,command){
+   if(command&&command.type==='ReconcileVitalMaximums')return reconcileVitals(state,command.previous);
+   const result=applyRaw(state,command);
+   if(!result.ok)return result;
+   if(['ActivateAbility','EnterForm','SelectPortrait','AdvanceAbilityTurn','RestAbilities','SetHealthMaximum','SetManaMaximum',
+      'SetAbilityTracker','ResetAbilityTracker','EndAbilityEffect','DrawWeapon'].includes(command.type)){
+     const adjusted=reconcileVitals(result.state,vitalMaximums(state),command.type.startsWith('Set'));
+     return {...result,state:adjusted.state,patch:{...result.patch,...adjusted.patch},...(result.healthPlan?{healthPlan:{...result.healthPlan,after:health(adjusted.state).current,threshold:health(adjusted.state).threshold}}:{}),events:[...result.events.map(event=>event.type==='mana.changed'?{...event,current:derive(adjusted.state).mana}:event),...adjusted.events]};
+   }
+   return result;
+ }
+ window.WBCharacter={derive,apply,health,healthTrackingPatch,consumables,consumableQuantity,vitalMaximums};
 })();

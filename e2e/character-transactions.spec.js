@@ -103,13 +103,13 @@ test('portrait clicks reject low Mana, then commit one source-profile payment an
  await page.locator('.form-thumb[data-form="beastpic"]').click();
  await expect.poll(async()=>(await saved(page)).formId).toBe('beastpic');
  s=await saved(page);
- expect(s.fields.mpCur).toBe('14');expect(s.apAvail).toBe(14);expect(s.apGiven.n).toBe(0);
+ expect(s.fields.mpCur).toBe('72');expect(s.apAvail).toBe(14);expect(s.apGiven.n).toBe(0);
  expect(s.equip.head).toBe('beasthelm');expect(s.resources[0].current).toBe(80);
  await page.locator('.form-thumb[data-form="beastpic"]').click();
  await page.locator('.form-thumb[data-form="basepic"]').click();
  await expect.poll(async()=>(await saved(page)).activeAbilityLoadoutId).toBe('');
  s=await saved(page);
- expect(s.fields.mpCur).toBe('14');expect(s.apAvail).toBe(14);expect(s.equip.head).toBe('basehelm');
+ expect(s.fields.mpCur).toBe('50');expect(s.apAvail).toBe(14);expect(s.equip.head).toBe('basehelm');
 });
 
 test('removing a portrait keeps it when the fallback form is unaffordable, then switches and unlinks together',async({page})=>{

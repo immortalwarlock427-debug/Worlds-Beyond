@@ -18,22 +18,46 @@
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
   const milestoneDescriptions = {
-    STR: ["Once each round, when an attack uses STR for damage, you can apply that Strength damage modifier twice instead of once. Devastate does not apply to DEX-based damage.", "Your weapon and unarmed attacks can't have their damage reduced below half by anything, blocks and parries included. A dodge still avoids them entirely, since the attack never connects, and this doesn't bypass immunities."],
-    VIT: ["Once per combat, when a status effect that physically restrains or damages you would take hold, such as stunned, paralyzed or restrained, you can negate it so it never affects you. Mind-based effects like charmed or frightened don't count. Also, when you're dropped below 0 Health, you can roll a d20 + your Vitality modifier against DC 12. On a success you stop bleeding, though you're still unconscious.", "Your Armor Rating becomes half your Vitality, rounded down, plus the armor you're wearing, instead of your Vitality modifier plus your armor."],
-    DEX: ["Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement, moving in front of the attack to do it. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.", "Once each round, before rolling a weapon attack (melee or ranged), you can concentrate all of your power into a single point. Choose one hand for a dual attack. If that hand hits, it's a critical hit; its miss still spends Singularity for the round. This does not turn the roll into a natural 20."],
-    AGL: ["Each turn, you get 2 AP of movement for free. You also gain an additional reaction.", "You move so fast that you can't be hit by opportunity attacks, and any attack that relies on sight to hit you rolls with disadvantage, whether it's melee, ranged or a spell. You also have advantage on saves against spells that need sight to target you. You also gain an additional reaction."],
-    INT: ["Once per round, for 5 AP, you can give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your Intelligence modifier.", "Once per round, for 5 AP, you can analyze a creature, ability, object or phenomenon you can perceive to learn one significant property, weakness or underlying principle, if one can be inferred from the information available."],
-    WIS: ["You have a supernatural sense for danger directed at you. Whenever you face a danger you don't know about, the GM secretly makes a Wisdom check for you against the danger's DC, like an ambusher's stealth roll or a trap's DC. On a success you aren't told what's wrong, only that something is, like a sudden aversion to drinking from a cup. Once per round, at no AP cost, you can also ask the GM whether a specific choice is dangerous, and you get a feeling back: good, bad or unsure.", "You naturally see through illusions and can see invisible creatures within 30 ft. Once per round, for 5 AP, you can attempt to perceive the true intent behind anything in sight, whether a creature (hostile, afraid, lying or hiding something) or the things around you, like what a trap or ritual is meant to do. Make a Wisdom check, contested by a creature's Charisma if it's hiding something, or against a DC the GM sets."],
-    CHA: ["Once per round, for 5 AP, you can force a creature within 60 ft that can perceive you to make a Charisma saving throw (DC 10 + double your Charisma modifier). On a failure, its attention is fixed on you until the start of your next turn, and it has disadvantage on attacks against anyone but you.", "You are immune to possession and to effects that forcibly alter your personality, memories or identity when they come from a source of your level or lower. Against higher-level sources, you have advantage to resist them."],
-    FTH: ["Your luck changes. Instead of rerolling, each use lets you treat a failed saving throw or ability check as a success. You still have a number of uses equal to your Faith modifier, regained on a long rest. Initiative is the exception: a use there still rerolls it.", "Once per long rest, at no AP cost, you can declare in one sentence a single restriction standing in the way of an action, such as a usage limit, an immunity or the limit of your own strength, and fate bends probability so the action can come to pass anyway. Miracle fails if the declaration is too broad or fundamentally impossible for you: it can push you past your limits, but it can't give you an ability you don't have, like flight. Miracle can't be used to get around its own limit."]
-  };
-  const DISCOUNT_STATS = ['STR', 'DEX', 'INT', 'FTH'];
+  "STR": [
+    "Once per round, when you land a melee attack, you can push the target 5ft in any direction or try to knock it prone, at no extra AP. You can also try to grapple or shove creatures larger than you, within reason.",
+    "Your weapon and unarmed attacks can't have their damage reduced below half by anything, including Armor Rating, blocks and parries. A dodge still avoids them entirely. This doesn't bypass immunities."
+  ],
+  "DEX": [
+    "Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement. To protect someone else, you move in front of wherever the attack is coming from. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.",
+    "Once each round, before rolling a weapon attack (melee or ranged), you can declare Singularity. If the attack hits, it's a critical hit. If it misses, Singularity is spent for the round."
+  ],
+  "VIT": [
+    "Once per combat, when a status effect that physically restrains or damages you would take hold, such as stunned, paralyzed or restrained, you can negate it so it never affects you. Mind-based effects like charmed or frightened don't count. Also, when you're dropped below 0 Health, you can roll a d20 + your Vitality modifier against DC 12. On a success you stop bleeding and remain unconscious.",
+    "Your Armor Rating becomes half your Vitality, rounded down, plus the armor you're wearing, instead of your Vitality modifier plus your armor."
+  ],
+  "AGL": [
+    "Each turn, you get 2 AP of movement for free. You also gain an additional reaction.",
+    "You can't be hit by opportunity attacks, and any attack that relies on sight to hit you rolls with disadvantage, whether it's melee, ranged or a spell. You also have advantage on saves against spells that need sight to target you. You also gain an additional reaction."
+  ],
+  "INT": [
+    "Once per round, for 5 AP, you can give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your Intelligence modifier.",
+    "Once per round, for 5 AP, you can analyze a creature, ability, object or phenomenon you can perceive to learn how it works: one significant property, weakness or underlying principle, if one can be inferred from the information available."
+  ],
+  "WIS": [
+    "Whenever you face a danger you don't know about, the GM secretly makes a Wisdom check for you against the danger's DC, like an ambusher's stealth roll or a trap's DC. On a success you feel that something is wrong, like a sudden aversion to drinking from a cup. The GM doesn't say what. Once per round, at no AP cost, you can also ask the GM whether a specific choice is dangerous, and you get a feeling back: good, bad or unsure.",
+    "You naturally see through illusions and can see invisible creatures within 30 ft. Once per round, for 5 AP, you can attempt to perceive the true intent behind anything in sight: whether a creature is hostile, afraid, lying or hiding something, or what the things around you are for, like who a trap is meant to catch or what a ritual is meant to bring about. You learn its purpose. Make a Wisdom check, contested by a creature's Charisma if it's hiding something, or against a DC the GM sets."
+  ],
+  "CHA": [
+    "Once per round, for 5 AP, you can force a creature within 60 ft that can perceive you to make a Charisma saving throw (DC 12 + your Charisma modifier). On a failure, its attention is fixed on you until the start of your next turn, and it has disadvantage on attacks against anyone but you.",
+    "You are immune to possession and to effects that forcibly alter your personality, memories or identity when they come from a source of your level or lower. Against higher-level sources, you have advantage to resist them."
+  ],
+  "FTH": [
+    "Each use of Wonder now turns a failed saving throw or ability check into a success. You still have uses equal to your Faith modifier, regained on a long rest. On initiative, Wonder still rerolls.",
+    "Once per long rest, at no AP cost, you can declare in one sentence a single restriction standing in the way of an action, such as a usage limit, an immunity or the limit of your own strength, and fate bends probability so the action can come to pass anyway. Miracle fails if the declaration is too broad or fundamentally impossible for you, such as granting an ability you don't have, like flight. Miracle can't be used to get around its own limit."
+  ]
+};
+  const DISCOUNT_STATS = ['STR','VIT','DEX','INT','WIS','CHA','FTH'];
   const discountStat = ability => DISCOUNT_STATS.includes(ability.apDiscountStat) ? ability.apDiscountStat : '';
   const rollStats = new Set(['attackStat','damageStat','saveDcStat','targetSaveStat']);
   const rollStat = value => STATS.includes(value)?value:'';
   const usesPer = ability => ['combat','round'].includes(ability.usesPer)?ability.usesPer:'rest';
   const milestoneDefinitions = [
-    {id:'devastate',name:'Devastate',stat:'STR',at:21,ap:0,per:'round',weapon:true},
+    {id:'titans-might',name:"Titan’s Might",stat:'STR',at:21,ap:0,per:'round'},
     {id:'singularity',name:'Singularity',stat:'DEX',at:28,ap:0,per:'round',weapon:true},
     {id:'indomitable-status',name:'Indomitable: negate status',stat:'VIT',at:21,ap:0,per:'combat'},
     {id:'stratagem',name:'Stratagem',stat:'INT',at:21,ap:5,per:'round'},
@@ -47,7 +71,7 @@
   function milestoneAbility(state,id) {
     const definition=milestoneDefinitions.find(d=>d.id===id);
     if(!definition)return null;
-    const saved=milestoneData(state)[id]||{},left=optionalNumber(saved.usesLeft);
+    const saved=milestoneData(state)[id]||(id==='titans-might'?milestoneData(state).devastate:null)||{},left=optionalNumber(saved.usesLeft);
     return {id:'@milestone/'+id,name:definition.name,type:'active',apCost:definition.ap,apDiscountStat:'',
       uses:1,usesLeft:left===''?1:Math.min(1,left),usesPer:definition.per,
       outsideUsesStat:definition.per==='round'?definition.stat:'',outsideUsesSpent:optionalNumber(saved.outsideUsesSpent)||0,
@@ -61,7 +85,7 @@
     const score=combat.effectiveScore(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
     const modifier=combat.modifier(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
     const ability=milestoneAbility(state,id),plan={title:definition.name,kind:'notice',total:null,text:''};
-    if(definition.weapon){plan.kind=id==='devastate'?'weapon-damage':'weapon-attack';plan.text=milestoneDescriptions[stat][definition.at===28?1:0];}
+    if(definition.weapon){plan.kind='weapon-attack';plan.text=milestoneDescriptions[stat][definition.at===28?1:0];}
     else if(id==='indomitable-status')plan.text='Negate one incoming status that physically restrains or damages you, such as stunned, paralyzed or restrained. Mind-based effects such as charmed or frightened do not count. Use when the status would take hold; resolve eligibility at the table.';
     else if(id==='stratagem'){
       plan.total=modifier;plan.text='Give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your INT modifier ('+(modifier>=0?'+':'')+modifier+').';
@@ -69,8 +93,8 @@
     else if(id==='eyes-of-truth'){
       plan.kind='check';plan.modifier=modifier;plan.text=milestoneDescriptions.WIS[1];
     }else if(id==='commanding-presence'){
-      plan.total=combat.commandingPresenceDc(modifier);
-      plan.text='A creature within 60 ft that can perceive you makes a CHA save, DC '+plan.total+' (10 + 2 × CHA modifier). On failure, its attention is fixed on you until your next turn and it has disadvantage on attacks against others. Resolve the target’s save at the table.';
+      plan.total=combat.abilitySaveDc(modifier);
+      plan.text='A creature within 60 ft that can perceive you makes a CHA save, DC '+plan.total+' (12 + CHA modifier). On failure, its attention is fixed on you until your next turn and it has disadvantage on attacks against others. Resolve the target’s save at the table.';
     }else plan.text=milestoneDescriptions[stat][definition.at===28?1:0];
     return {...definition,unlocked:score!=null&&score>=definition.at,ability,usage:usageState(state,ability),plan};
   }
@@ -78,12 +102,12 @@
   function milestoneLifecycle(state,type) {
     const original=milestoneData(state),updated={...original};
     for(const d of milestoneDefinitions){
-      if(!Object.prototype.hasOwnProperty.call(original,d.id))continue;
+      if(!Object.prototype.hasOwnProperty.call(original,d.id)&&!(d.id==='titans-might'&&Object.prototype.hasOwnProperty.call(original,'devastate')))continue;
       const ability=milestoneAbility(state,d.id);
       if(type==='StartCombat'&&d.per!=='rest')ability.usesLeft=1;
       else if(type==='AdvanceAbilityTurn')advanceTurn({...state,abilities:[ability]});
       else if(type==='RestAbilities')resetForRest({...state,abilities:[ability]});
-      updated[d.id]={...original[d.id],usesLeft:ability.usesLeft,outsideUsesSpent:ability.outsideUsesSpent};
+      updated[d.id]={...(original[d.id]||(d.id==='titans-might'?original.devastate:{})),usesLeft:ability.usesLeft,outsideUsesSpent:ability.outsideUsesSpent};
     }
     return updated;
   }
@@ -195,22 +219,27 @@
   function weaponSource(state,weaponId) {
     const weapon=(state.items||[]).find(item=>item&&item.id===weaponId);
     if(!weapon||!['onehand','twohand'].includes(weapon.type))return null;
-    const combat=window.WBCombat,stat=weapon.stat==='DEX'?'DEX':'STR';
-    const modifier=key=>combat.modifier(state,key,combat.level(state),effectBonus(state,'stat',key),formStatBonus(state,key));
-    const effects=combat.attackEffects(state,weapon.id);
+    const combat=window.WBCombat,rules=combat.weaponRules(state,weapon),stat=rules.stat;
+    const modifier=key=>combat.currentModifier(state,key),effects=combat.attackEffects(state,weapon.id);
     const sum=kind=>effects.reduce((total,e)=>total+(e.k===kind?Number(e.v)||0:0),0);
-    return {weaponId:weapon.id,name:String(weapon.name||'Weapon'),stat,type:weapon.type,dice:String(weapon.dmg||'1d6'),
-      attackModifier:modifier(stat)+sum('atk'),damageModifier:modifier(stat),flatBonus:sum('flat'),
+    const rawDice=String(rules.twoHanded&&weapon.versatileDice?weapon.versatileDice:weapon.dmg||'1d6'),tier=combat.scalingTier(state);
+    const scaled=combat.scaleDice(rawDice,tier);
+    return {weaponId:weapon.id,name:String(weapon.name||'Weapon'),stat,type:weapon.type,dice:scaled||rawDice,rawDice,tier,
+      fastRoll:state.fastRoll===true,criticalFrom:rules.criticalFrom,twoHanded:rules.twoHanded,puncture:rules.puncture,melee:rules.melee,normalRange:rules.normalRange,longRange:rules.longRange,
+      disadvantage:rules.disadvantage,warning:rules.warning,light:rules.light,loading:rules.loading,
+      attackModifier:modifier(stat)+sum('atk'),apModifier:modifier(stat),damageModifier:modifier(stat)*rules.damageMultiplier,flatBonus:sum('flat')+(rules.props.includes('Mount')&&weapon.mounted?Math.min(Math.max(0,modifier(stat)),Math.floor(Math.max(0,Number(state.mountApproach)||0)/10)):0),diceMultiplier:({Osmium:1.3,Tungsten:1.4,Titanium:1.5}[weapon.metal]||1),
       extras:effects.filter(e=>e.k==='dmg').map(e=>({dice:String(e.dice||''),type:String(e.dt||'')})),
-      hits:effects.filter(e=>e.k==='onhit').map(e=>String(e.text||''))};
+      hits:[...effects.filter(e=>e.k==='onhit').map(e=>String(e.text||'')),...(Array.isArray(weapon.signatures)?weapon.signatures:[]).map(x=>x+': '+(window.WBRulesCatalog?.signatures?.[x]||'resolve its property at the table.')) ]};
   }
   function weaponAttackPlan(state,slot) {
-    if(!['main','off','dual'].includes(slot))return {ok:false,message:'Choose a weapon in hand.'};
+    if(!['main','off','dual','strapped'].includes(slot))return {ok:false,message:'Choose a weapon in hand or strapped attachment.'};
     const equip=state.equip||{},main=weaponSource(state,equip.main),off=weaponSource(state,equip.off);
-    const source=slot==='off'?off:main;
-    if(!source||slot==='off'&&main&&main.type==='twohand'||slot==='dual'&&(!off||main.type!=='onehand'||off.type!=='onehand'||main.weaponId===off.weaponId))
-      return {ok:false,message:'Choose an equipped weapon, or two one-handed weapons for a dual attack.'};
-    return {ok:true,slot,dual:slot==='dual',main:source,off:slot==='dual'?off:null,apCost:window.WBCombat.attackApCost(source.damageModifier)};
+    const source=slot==='off'?off:slot==='strapped'?weaponSource(state,equip.strapped):main;
+    if(!source||slot==='off'&&main&&main.twoHanded||slot==='dual'&&(!off||!main.light||!off.light||main.twoHanded||off.twoHanded||main.weaponId===off.weaponId))
+      return {ok:false,message:'Dual attacks require a Light weapon in each hand. Other weapons can attack separately.'};
+    if(!window.WBCombat.parseDamageDice(source.dice)||slot==='dual'&&!window.WBCombat.parseDamageDice(off.dice))return {ok:false,message:'Check the weapon damage dice before attacking.'};
+    const offSource=slot==='dual'?{...off,damageModifier:0}:null;
+    return {ok:true,slot,dual:slot==='dual',main:source,off:offSource,apCost:window.WBCombat.attackApCost(source.apModifier)};
   }
   function abilityRollPlan(state,ability) {
     const attackStat=rollStat(ability.attackStat),damageStat=rollStat(ability.damageStat);
@@ -918,7 +947,7 @@
             '<textarea data-ability-prop="description" rows="3" maxlength="12000" placeholder="Describe what this ability does.">' +
             esc(ability.description) + '</textarea></label>' +
           '<div class="ability-editor-row ability-cost-row">' +
-            field('Base AP cost', 'apCost', ability.apCost, 'number') +
+            '<label class="ability-field"><span class="foot-label">Action tier</span><select data-action-tier><option value="">Custom</option><option value="0">Free · 0 AP</option><option value="2">Minor · 2 AP</option><option value="5">Quick · 5 AP</option><option value="10">Standard · 10 AP</option><option value="11">Spell · 11 AP</option><option value="15">Heavy / Extended · 15+ AP</option></select></label>'+field('Base AP cost', 'apCost', ability.apCost, 'number') +
             '<label class="ability-field"><span class="foot-label">Discounted by</span>' +
               '<select data-ability-prop="apDiscountStat"><option value="">None</option>' +
                 DISCOUNT_STATS.map(stat=>'<option value="'+stat+'"'+
@@ -934,7 +963,7 @@
             field('Resource cost', 'resourceCost', ability.resourceCost, 'number') +
           '</div>' +
           '<div class="ability-editor-row">' +
-            field('Cooldown (turns)', 'cooldown', ability.cooldown, 'number') +
+            field('Cooldown (turns)', 'cooldown', ability.cooldown, 'number')+field('Cooldown remaining','cooldownLeft',ability.cooldownLeft,'number')+field('Effect turns remaining','durationLeft',ability.durationLeft,'number') +
             field('Duration (turns)', 'duration', ability.duration, 'number') +
             field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Limits activations in the selected reset period; leave blank for unlimited."') +
           '</div>' +
@@ -1173,25 +1202,9 @@
       const ability = cardElement && byId(cardElement.dataset.abilityId);
       if (!ability) return null;
       const prop = input.dataset.abilityProp;
-      if (prop === 'capacityCurrent') {
-        if (ability.capacityMax !== '') {
-          const entered = optionalNumber(input.value);
-          if (entered !== '') ability.capacityCurrent = Math.min(ability.capacityMax, entered);
-          save();
-        }
-        return { ability, prop };
-      }
-      if (prop === 'usesLeft') {
-        if (ability.uses !== '') {
-          const usage=usageState(getState(),ability),entered=optionalNumber(input.value);
-          if(entered!==''){
-            const remaining=Math.min(usage.maximum,entered);
-            if(usage.outside)ability.outsideUsesSpent=usage.maximum-remaining;
-            else ability.usesLeft=remaining;
-          }
-          save();
-        }
-        return { ability, prop };
+      if(['capacityCurrent','usesLeft','cooldownLeft','durationLeft'].includes(prop)){
+        const entered=optionalNumber(input.value);if(entered!=='')execute({type:'SetAbilityTracker',abilityId:ability.id,field:prop,value:entered});
+        save();return {ability,prop};
       }
       if (!propNames.includes(prop)) return null;
       ability[prop] = prop==='usesPer'?usesPer({usesPer:input.value}):
@@ -1231,6 +1244,8 @@
       if (input) updateInput(input);
     });
     list.addEventListener('change', (event) => {
+      const tier=event.target.closest('[data-action-tier]');if(tier){const a=byId(tier.closest('[data-ability-id]').dataset.abilityId);if(a&&tier.value!==''){a.apCost=Number(tier.value);render();save();}return;}
+
       const member = event.target.closest('[data-loadout-member], [data-loadout-shared]');
       if (member) {
         const cardElement = member.closest('[data-ability-id]');
@@ -1299,28 +1314,10 @@
         ability.favorite = !ability.favorite;
       } else if (action === 'use') {
         useAbility(ability, feedback);
-      } else if (action === 'reset') {
-        ability.cooldownLeft = 0;
-        ability.durationLeft = 0;
-        const usage=usageState(getState(),ability);
-        if(usage.outside)ability.outsideUsesSpent=0;
-        else ability.usesLeft = ability.uses === '' ? null : ability.uses;
-        feedback.textContent = 'Reset ' + ability.name + ' tracker (previous AP and resource costs are not refunded).';
-        feedback.classList.remove('ability-error');
-      } else if (action === 'end') {
-        ability.durationLeft = 0;
-        feedback.textContent = 'Ended ' + ability.name + ' duration.';
-        feedback.classList.remove('ability-error');
-        if (controls.refresh) controls.refresh();
-      } else if (action === 'release') {
-        if (ability.capacityMax !== '' && ability.capacityCurrent > 0) {
-          ability.capacityCurrent--;
-          feedback.textContent = 'Released one ' + ability.name + ' creation (' +
-            ability.capacityCurrent + '/' + ability.capacityMax + ' active).';
-        } else {
-          feedback.textContent = 'There is nothing to release for ' + ability.name + '.';
-        }
-        feedback.classList.remove('ability-error');
+      } else if(['reset','end','release'].includes(action)){
+        const result=execute({type:action==='reset'?'ResetAbilityTracker':action==='end'?'EndAbilityEffect':'ReleaseAbilityCapacity',abilityId:ability.id});
+        feedback.textContent=result.message;feedback.classList.toggle('ability-error',!result.ok);
+        if(controls.refresh)controls.refresh();
       }
       render();
       save();

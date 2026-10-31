@@ -1,14 +1,14 @@
 /* Worlds-Beyond shared combat rules, phase 1.
  * Pure computations only: no DOM, localStorage, network, random rolls or UI.
  * Both the character sheet and future DM view should call these functions.
- * Homebrew STR/VIT/DEX/AGL/INT/WIS/CHA/FTH + AP rules are kept unchanged.
+ * Current homebrew rules; historical formulas exist only for one-time save migration.
  */
 (function () {
   'use strict';
   const STATS = ['STR','VIT','DEX','AGL','INT','WIS','CHA','FTH'];
   const ASI_LEVELS = [4,8,12,16,19];
   const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring',
-    'belt','rleg','lleg','main','off'];
+    'belt','rleg','lleg','main','off','strapped','pants'];
   const record = obj => obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
   const isSet = v => v != null && String(v).trim() !== '';
   const num = v => {
@@ -47,29 +47,54 @@
     const value = rawAt(state, stat, n);
     return value == null ? null : num(value) + asiSum(state, stat, n);
   }
-  function gearBonus(state, key, settledOnly=false) {
-    const equip = record(state.equip),settled=record(state.settled);
-    let total = 0;
-    SLOTS.forEach(slot => {
-      const id = equip[slot];
-      if (!id || (settledOnly && !settled[id])) return;
-      const item = (state.items || []).find(it => it && it.id === id);
-      if (item) (item.bonuses || []).forEach(b => { if (b.t === key) total += b.v; });
-    });
-    return total;
+  function wornItems(state) {
+    const ids=[...new Set(SLOTS.map(slot=>record(state.equip)[slot]).filter(id=>typeof id==='string'))];
+    return ids.map(id=>(state.items||[]).find(item=>item&&item.id===id)).filter(Boolean);
+  }
+  function gearBonus(state,key) {
+    return wornItems(state).reduce((sum,item)=>sum+(item.bonuses||[]).reduce((n,b)=>n+(b.t===key?(Number(b.v)||0):0),0),0);
   }
   function gearArmor(state) {
-    const equip=record(state.equip);
-    return SLOTS.reduce((sum,slot) => {
-      const item=(state.items || []).find(it => it && it.id === equip[slot]);
-      return sum + (item ? (Number(item.ar) || 0) : 0);
-    },0);
+    const equip=record(state.equip),by=slot=>(state.items||[]).find(it=>it&&it.id===equip[slot]);
+    const ar=item=>item?Math.max(0,Number(item.ar)||0):0;
+    const arms=Math.max(ar(by('rarm')),ar(by('larm')));
+    const legs=by('rleg')&&by('rleg').pair?ar(by('rleg')):
+      by('lleg')&&by('lleg').pair?ar(by('lleg')):by('rleg')&&by('lleg')?ar(by('rleg'))+ar(by('lleg')):0;
+    const skip=new Set(['rarm','larm','rleg','lleg']);
+    const ids=new Set();let total=arms+legs;
+    for(const slot of SLOTS){if(skip.has(slot)||!equip[slot]||ids.has(equip[slot]))continue;ids.add(equip[slot]);total+=ar(by(slot));}
+    const pieces=wornItems(state).filter(it=>['head','torso','arms','legs','pants'].includes(it.type));
+    const bonuses=pieces.map(it=>({Steel:0,Osmium:2,Tungsten:3,Titanium:4}[it.metal]||0));
+    return total+(bonuses.length?Math.min(...bonuses):0);
   }
+  function armorProfile(state) {
+    const items=wornItems(state),weights=['light','medium','heavy'];
+    let rank=-1;for(const item of items)rank=Math.max(rank,weights.indexOf(item.armorWeight));
+    const type=weights[rank]||'';const by=slot=>items.find(it=>it.id===record(state.equip)[slot]);const ne=it=>Math.max(0,Number(it?.lightEvasion)||0);
+    const armNE=Math.max(ne(by('rarm')),ne(by('larm'))),legNE=by('rleg')?.pair?ne(by('rleg')):by('lleg')?.pair?ne(by('lleg')):by('rleg')&&by('lleg')?Math.max(ne(by('rleg')),ne(by('lleg'))):0;
+    return {type,heavy:type==='heavy',aglPenalty:type==='heavy'?Math.min(3,Math.max(0,gearArmor(state)-items.filter(it=>it.type==='shield').reduce((n,it)=>n+(Number(it.ar)||0),0)-3)):0,
+      evasionBonus:type==='light'?armNE+legNE+items.filter(it=>!['arms','legs'].includes(it.type)).reduce((sum,it)=>sum+ne(it),0):0,
+      movementMultiplier:(type==='heavy'?2:1)*((state.statuses||[]).some(s=>String(s.preset||s.name).toLowerCase()==='prone')?2:1)};
+  }
+  function statBonus(state,stat,temporary=true){
+    const a=window.WBAbilities;
+    return {ability:temporary&&a?a.effectBonus(state,'stat',stat):0,form:a?a.formStatBonus(state,stat):0};
+  }
+  function currentScore(state,stat,temporary=true){const b=statBonus(state,stat,temporary);return effectiveScore(state,stat,level(state),b.ability,b.form);}
+  function currentModifier(state,stat,temporary=true){const b=statBonus(state,stat,temporary);return modifier(state,stat,level(state),b.ability,b.form);}
+  function derivedValue(state,key,automatic){const v=num(record(state.over)[key]);return Number.isFinite(v)?v:automatic;}
+  function evasion(state,temporary=true){return derivedValue(state,'evasion',12+currentModifier(state,'AGL',temporary)+gearBonus(state,'ev')+armorProfile(state).evasionBonus+(temporary&&window.WBAbilities?window.WBAbilities.effectBonus(state,'evasion'):0));}
+  function armorRating(state,temporary=true){const vit=currentScore(state,'VIT',temporary);return Math.max(0,derivedValue(state,'armor',gearArmor(state)+(vit!=null&&vit>=28?Math.floor(vit/2):currentModifier(state,'VIT',temporary))+(temporary&&window.WBAbilities?window.WBAbilities.effectBonus(state,'armor'):0)));}
+  function initiative(state,temporary=true){return derivedValue(state,'init',currentModifier(state,'WIS',temporary)+gearBonus(state,'init'));}
+  function speed(state,temporary=true){const base=derivedValue(state,'speed',Math.max(5,5+5*currentModifier(state,'AGL',temporary))+gearBonus(state,'move'));return Math.max(0,base+(temporary&&window.WBAbilities?window.WBAbilities.movementBonus(state):0));}
+  function apMaximum(state){const value=num(record(state.fields).apMax);return Number.isFinite(value)?trackerMax(value,15):15+2*Math.floor(level(state)/5);}
+  function scalingTier(state){return 1+Math.floor(Math.min(20,level(state))/5);}
+  function blockDice(state){const shield=wornItems(state).find(it=>it.type==='shield');const m=String(shield&&shield.block||'1d4').match(/d(\d+)/i);return {count:scalingTier(state),sides:m?Math.max(1,Number(m[1])):4,multiplier:shield?Math.max(1,Number(shield.blockMultiplier)||({Osmium:1.3,Tungsten:1.4,Titanium:1.5}[shield.metal]||1)):1};}
   // Active ability and form bonuses are supplied by WBAbilities. Keeping the
   // components explicit avoids silently treating temporary buffs as base stats.
   function effectiveScore(state, stat, n, abilityBonus=0, formBonus=0) {
     const base=scoreAt(state,stat,n);
-    return base == null ? null : base + gearBonus(state,stat) + abilityBonus + formBonus;
+    return base == null ? null : base + gearBonus(state,stat) + abilityBonus + formBonus - (stat==='AGL'?armorProfile(state).aglPenalty:0);
   }
   function autoMod(stat,score) {
     if (stat === 'STR' || stat === 'DEX') return Math.floor((score - 12) / 2);
@@ -89,7 +114,6 @@
     return Math.max(Math.ceil(base/2),base-discount);
   }
   function abilitySaveDc(modifier) { return 12+modifier; }
-  function commandingPresenceDc(modifier) { return 10+2*modifier; }
   // Dice are parsed here, but drawn by the UI. Reject partial expressions so
   // an ability never spends its costs and silently rolls only part of its dice.
   function parseDamageDice(value) {
@@ -201,20 +225,14 @@
       : isNaN(roll) ? null : roll + Math.floor(vit / 2);
     return { die, dieMax, gain };
   }
-  function characterMaxHealth(state) {
-    const n = level(state);
-    if (scoreAt(state,'VIT',1) == null) return { max: null, missing: [1] };
-    let sum = 0;
-    const missing = [];
-    for (let i = 1; i <= n; i++) {
-      const base = scoreAt(state,'VIT',i);
-      const gear = record(record(state.lvGear)[i]);
-      const vit = base == null ? null : base + (Number(gear.VIT) || 0);
-      const result = healthAtLevel(state,i,vit);
-      if (result.gain == null) missing.push(i);
-      else sum += result.gain;
-    }
-    return { max: sum + gearBonus(state,'hp'), missing };
+  function legacyMaxHealth(state) {
+    let sum=0;for(let i=1;i<=level(state);i++){const base=scoreAt(state,'VIT',i);if(base==null)return null;
+      const result=healthAtLevel(state,i,base+(Number(record(record(state.lvGear)[i]).VIT)||0));if(result.gain!=null)sum+=result.gain;}
+    return sum+gearBonus(state,'hp');
+  }
+  function characterMaxHealth(state,temporary=true) {
+    const vit=currentScore(state,'VIT',temporary);
+    return {max:vit==null?null:vit*level(state)+gearBonus(state,'hp'),missing:vit==null?[1]:[]};
   }
 
   function manaPerLevel(score) {
@@ -231,17 +249,22 @@
   }
   // Advancement uses historical INT/FTH and settled level-up snapshots. Current
   // gear adds only its explicit Max Mana/Holy Power bonus, never retroactive stats.
-  function characterMaxMana(state) {
-    const holy = record(state.fields).manaKind === 'holy';
-    const stat = holy ? 'FTH' : 'INT';
-    if (scoreAt(state,stat,1) == null) return null;
-    let total = 0;
-    for (let n = 1; n <= level(state); n++) {
-      const historical = scoreAt(state,stat,n);
-      const snapshot = record(record(state.lvGear)[n]);
-      if (historical != null) total += manaAtLevel(n,historical + (Number(snapshot[stat]) || 0));
-    }
-    return total + gearBonus(state,holy ? 'holy' : 'mp');
+  function legacyMaxMana(state) {
+    const stat=record(state.fields).manaKind==='holy'?'FTH':'INT';if(scoreAt(state,stat,1)==null)return null;
+    let total=0;for(let n=1;n<=level(state);n++)total+=manaAtLevel(n,scoreAt(state,stat,n)+(Number(record(record(state.lvGear)[n])[stat])||0));
+    return total+gearBonus(state,stat==='FTH'?'holy':'mp');
+  }
+  function characterMaxMana(state,temporary=true) {
+    const holy=record(state.fields).manaKind==='holy',score=currentScore(state,holy?'FTH':'INT',temporary);
+    return score==null?null:score*(level(state)+2)+gearBonus(state,holy?'holy':'mp');
+  }
+  function migrateVitals(state){
+    if(state.vitalRulesVersion===1){for(const key of ['rolls','lvGear','settled','levels'])delete state[key];return;}
+    const oldHealth=derivedValue(state,'hpMax',legacyMaxHealth(state)),oldMana=derivedValue(state,'mpMax',legacyMaxMana(state));
+    const newHealth=derivedValue(state,'hpMax',characterMaxHealth(state).max),newMana=derivedValue(state,'mpMax',characterMaxMana(state));
+    state.vitalRulesVersion=1;
+    if(Object.keys(record(state.hist)).length)state.vitalMigration={oldHealth,newHealth,oldMana,newMana,acknowledged:false};
+    for(const key of ['rolls','lvGear','settled','levels'])delete state[key];
   }
 
   // Attack / damage resolution. Dice are rolled by an adapter and passed in;
@@ -258,14 +281,15 @@
   function criticalTotal(rolled, diceMaximum, critical) {
     return rolled + (critical ? diceMaximum : 0);
   }
-  function weaponCritical(naturalDie,criticalOnHit) { return naturalDie===20||criticalOnHit===true; }
+  function weaponCritical(naturalDie,criticalOnHit,criticalFrom=20) { return naturalDie>=criticalFrom||criticalOnHit===true; }
   function damagePacket(baseRoll, statModifier, flatBonus, extraRolls) {
     const weaponDmg = Math.max(0,baseRoll+statModifier+flatBonus);
     const extras = (extraRolls || []).map(value => Math.max(0,value));
     return { weaponDmg, extras, total: weaponDmg + extras.reduce((sum,v) => sum+v,0) };
   }
   function offhandDamage(total) { return Math.floor(total/2); }
-  function armorDamage(total, armor) { return Math.max(0,total-armor); }
+  function effectiveArmor(armor,twoHanded=false,puncture=0){return Math.max(0,(twoHanded?Math.ceil(armor/2):armor)-puncture);}
+  function armorDamage(total, armor, twoHanded=false, puncture=0) { return Math.max(0,total-effectiveArmor(armor,twoHanded,puncture)); }
   function dualArmorDamage(mainTotal,offTotal,armor,mainHit=true,offHit=true) {
     return (mainHit ? armorDamage(mainTotal,armor) : 0) +
       (offHit ? armorDamage(offhandDamage(offTotal),armor) : 0);
@@ -280,7 +304,7 @@
   }
   function afterArmor(df) {
     return df.dmg == null ? null :
-      overwhelmFloor(Math.max(0,resistedDamage(df)-df.ar),df);
+      overwhelmFloor(Math.max(0,resistedDamage(df)-effectiveArmor(df.ar,df.twoHanded,df.puncture||0)),df);
   }
   // The dice roll and any forced success are inputs; no randomness or UI state
   // is held here. A save meets its DC; a dodge/parry beats an attack roll.
@@ -298,7 +322,7 @@
     if (df.dmg != null) {
       if (!won) take=after;
       else if (df.type === 'dodge') {
-        take=df.area ? overwhelmFloor(Math.max(0,Math.floor(resistedDamage(df)/2)-df.ar),df) : 0;
+        take=df.area ? overwhelmFloor(Math.max(0,Math.floor(resistedDamage(df)/2)-effectiveArmor(df.ar,df.twoHanded,df.puncture||0)),df) : 0;
       } else take=overwhelmFloor(0,df);
     }
     return { won, unresolved:false, take };
@@ -336,14 +360,40 @@
     const recovered=before<=0&&after>0;
     return {after,recovered,trauma:trauma+(recovered?1:0),amount:amt};
   }
+  const weaponPropertyNames=['Balanced','Heavy','Finesse','Paragon','Light','Two-handed','Versatile','Strapped','Reach','Thrown','Loading','Mount','Ranged'];
+  const signatureNames=['Sweep','Hook','Stagger','Disarm','Entangle','Puncture','Sunder','Bleed','Pierce Through','Bulwark','Quickdraw','Concealed','Silent','Loud'];
+  function weaponProperties(item){const p=Array.isArray(item.properties)?item.properties.filter(x=>weaponPropertyNames.includes(x)):['Balanced'];return [...new Set([...p,...(item.type==='twohand'?['Two-handed']:[])])];}
+  function weaponRules(state,item){
+    const props=weaponProperties(item),has=p=>props.includes(p),paragon=has('Paragon'),heavy=has('Heavy'),finesse=has('Finesse');
+    const thrown=has('Thrown')&&item.attackMode==='ranged',ranged=has('Ranged')||thrown,stat=paragon?item.stat==='DEX'?'DEX':'STR':ranged||finesse?'DEX':heavy?'STR':item.stat==='DEX'?'DEX':'STR';
+    const str=currentScore(state,'STR'),dex=currentScore(state,'DEX');
+    const requirement=paragon?(str==null||dex==null||str<21||dex<21):heavy?(str==null||str<21):finesse?(dex==null||dex<21):false;
+    const heavyArmor=armorProfile(state).heavy&&(str==null||str<21);
+    const twoHanded=has('Two-handed')||has('Versatile')&&item.twoHandedGrip===true;
+    const normalRange=Math.max(5,Number(thrown?item.thrownRange:item.range)||5)+(!ranged&&has('Reach')?5:0);
+    return {props,stat,light:has('Light'),twoHanded,ranged,melee:!ranged&&(Number(item.range)||5)===5,
+      normalRange,longRange:Math.max(normalRange,Number(thrown?item.thrownLongRange:item.longRange)||normalRange),
+      criticalFrom:finesse||paragon?18:20,damageMultiplier:heavy||paragon?2:1,
+      disadvantage:requirement||heavyArmor||has('Mount')&&!item.mounted,
+      warning:[requirement?'Attribute requirement unmet: disadvantage suggested.':'',heavyArmor?'Heavy armor without STR 21: disadvantage suggested.':'',has('Mount')&&!item.mounted?'Unmounted: disadvantage suggested.':''].filter(Boolean).join(' '),
+      puncture:(Array.isArray(item.signatures)?item.signatures:[]).includes('Puncture')?2:0,loading:has('Loading')?Math.max(1,Math.min(1000,Number(item.loadingCapacity)||1)):0};
+  }
+  function scaleDice(expression,tier){const parsed=parseDamageDice(expression);if(!parsed)return null;return parsed.expression.replace(/(\d*)d(\d+)/gi,(_,n,sides)=>((Number(n)||1)*tier)+'d'+sides);}
+  function inventory(state){
+    const worn=new Set(Object.values(record(state.equip))),items=(state.items||[]).filter(Boolean),stock=Array.isArray(state.consumables)?state.consumables:[];
+    const incomplete=state.consumables!=null&&!Array.isArray(state.consumables)||stock.some(it=>!it||!Number.isFinite(Number(it.quantity)));
+    const used=items.filter(it=>!worn.has(it.id)).reduce((sum,it)=>sum+(it.inventorySlots!=null?Math.max(0,Number(it.inventorySlots)||0):it.ammoQuantity!=null?Math.ceil(Math.max(0,Number(it.ammoQuantity)||0)/5):it.type==='twohand'||it.type==='shield'?2:1),0)+
+      stock.reduce((sum,it)=>sum+Math.ceil(Math.max(0,Number(it&&it.quantity)||0)/5),0);
+    return {used,incomplete,capacity:Math.max(0,10+currentModifier(state,'STR')+items.reduce((sum,it)=>sum+Math.max(0,Number(it.backpackBonus)||0),0))};
+  }
   window.WBCombat = {
-    STATS,ASI_LEVELS,SLOTS,
-    level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
-    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,commandingPresenceDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,reactionMaximum,givenAp,apAvailable,
+    STATS,ASI_LEVELS,SLOTS,weaponPropertyNames,signatureNames,weaponProperties,weaponRules,scaleDice,inventory,
+    level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,wornItems,armorProfile,currentScore,currentModifier,evasion,armorRating,initiative,speed,apMaximum,scalingTier,blockDice,effectiveScore,
+    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,reactionMaximum,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
-    hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
+    hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,migrateVitals,legacyMaxHealth,legacyMaxMana,
     attackHits,dualHits,criticalTotal,weaponCritical,damagePacket,offhandDamage,
-    armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
+    effectiveArmor,armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
     defenseResult,deathThreshold,diesAt,damageHealth,healHealth
   };
 })();

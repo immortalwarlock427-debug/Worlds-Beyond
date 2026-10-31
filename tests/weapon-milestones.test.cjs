@@ -9,8 +9,8 @@ function setup(){
  const state={fields:{level:'1',apMax:'15',mpCur:'3'},hist:{STR:{1:'22'},DEX:{1:'28'},AGL:{1:'21'}},over:{},
   apAvail:null,apGiven:{n:3,fresh:true},reactAvail:null,inCombat:true,
   abilities:[{id:'abilcustomone',name:'Custom',uses:2,usesLeft:1}],resources:[{id:'resenergyone',max:20,current:7}],
-  items:[{id:'sword',name:'Sword',type:'onehand',stat:'STR',dmg:'1d6',effects:[{k:'atk',v:2}]},
-   {id:'dagger',name:'Dagger',type:'onehand',stat:'DEX',dmg:'1d4',effects:[{k:'flat',v:3}]},
+  items:[{id:'sword',name:'Sword',type:'onehand',properties:['Balanced','Light'],stat:'STR',dmg:'1d6',effects:[{k:'atk',v:2}]},
+   {id:'dagger',name:'Dagger',type:'onehand',properties:['Balanced','Light'],stat:'DEX',dmg:'1d4',effects:[{k:'flat',v:3}]},
    {id:'helm',name:'Helm',type:'head',effects:[{k:'atk',v:1},{k:'dmg',dice:'1d4',dt:'Cold'}]}],
   equip:{main:'sword',off:'dagger',head:'helm'}};
  abilities.normalizeState(state);
@@ -24,7 +24,7 @@ function freeze(x){if(x&&typeof x==='object'){Object.values(x).forEach(freeze);O
 test('weapon attack sources capture current stats and applicable gear without DOM, clock or randomness',()=>{
  const {state,abilities}=setup();freeze(state);const before=JSON.stringify(state),plan=abilities.weaponAttackPlan(state,'dual');
  assert.equal(plan.ok,true);assert.equal(plan.apCost,5);assert.equal(plan.main.attackModifier,8);assert.equal(plan.main.damageModifier,5);
- assert.equal(plan.off.attackModifier,9);assert.equal(plan.off.damageModifier,8);assert.equal(plan.main.flatBonus,0);assert.equal(plan.off.flatBonus,3);
+ assert.equal(plan.off.attackModifier,9);assert.equal(plan.off.damageModifier,0);assert.equal(plan.main.flatBonus,0);assert.equal(plan.off.flatBonus,3);
  assert.deepEqual(plain(plan.main.extras),[{dice:'1d4',type:'Cold'}]);assert.equal(plan.main.stat,'STR');
  assert.equal(JSON.stringify(state),before);
 });
@@ -88,15 +88,12 @@ test('failed costs, unavailable Singularity and invalid hand selections publish 
  assert.equal(apply(state,'BeginWeaponAttack',{slot:'main',singularityHand:'off'}).ok,false);
 });
 
-test('Devastate consumes its shared use only for a valid STR damage snapshot, and returns the original modifier',()=>{
- const {state,apply}=setup();freeze(state);const source={stat:'STR',damageModifier:5};
- const r=apply(state,'ApplyDevastate',{damageSource:source});assert.equal(r.ok,true);assert.equal(r.devastateBonus,5);
- assert.equal(r.state.milestoneUses.devastate.usesLeft,0);assert.equal(r.state.apAvail,null);assert.equal(r.state.apGiven,state.apGiven);
- assert.equal(r.events[0].command,'ApplyDevastate');assert.equal(r.events[0].type,'milestone.used');
- for(const source of [{stat:'DEX',damageModifier:8},{stat:'STR',damageModifier:NaN},null]){
-  const before=JSON.stringify(state),rejected=apply(state,'ApplyDevastate',{damageSource:source});assert.equal(rejected.ok,false);assert.equal(JSON.stringify(state),before);
- }
- assert.equal(apply(r.state,'ApplyDevastate',{damageSource:source}).ok,false);
+test('Titan’s Might spends the shared STR allowance and the removed Devastate command is rejected',()=>{
+ const {state,apply}=setup();freeze(state);
+ const r=apply(state,'UseMilestone',{milestoneId:'titans-might'});assert.equal(r.ok,true);assert.equal(r.state.milestoneUses['titans-might'].usesLeft,0);
+ assert.equal(r.state.apAvail,null);assert.equal(r.state.apGiven,state.apGiven);assert.equal(r.events[0].type,'milestone.used');
+ assert.equal(apply(r.state,'UseMilestone',{milestoneId:'titans-might'}).ok,false);
+ assert.equal(apply(state,'ApplyDevastate',{damageSource:{stat:'STR',damageModifier:5}}).ok,false);
 });
 
 test('weapon milestones keep separate outside allowances through turns, combats and JSON round trips',()=>{

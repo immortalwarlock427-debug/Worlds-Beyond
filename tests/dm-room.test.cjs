@@ -26,7 +26,7 @@ function dispatch(engine, state, type, detail={}) {
   assert.equal(result.ok,true, result.error);
   return result.state;
 }
-test('imports real historical Health/AP/Armor formulas without touching player sheet', () => {
+test('imports current-stat Health/AP/Armor formulas without touching player sheet', () => {
   const w=modules();
   const original=plain(sheet);
   const p=w.WBDMCharacters.fromCharacter(sheet,'fallback');
@@ -34,7 +34,7 @@ test('imports real historical Health/AP/Armor formulas without touching player s
   assert.equal(p.actor.id,'char42');
   assert.equal(p.actor.name,'Vype');
   assert.equal(p.level,2);
-  assert.equal(p.actor.maxHp,33,'Level 1: d8 max 8 + VIT/2 8; level 2: rolled 7 + VIT/2 8; gear +2');
+  assert.equal(p.actor.maxHp,34,'VIT 16 × level 2, plus gear 2');
   assert.equal(p.actor.hp,11);
   assert.equal(p.actor.ar,4,'Gear AR 2 + VIT mod 2');
   assert.equal(p.actor.deathThreshold,18,'2 + effective VIT 16');
@@ -60,8 +60,8 @@ test('manual overrides, missing advances and older exported characters are suppo
   assert.equal(p.warnings.length,0,'Manual max overrides missing advancement');
   delete copy.over.hpMax;
   const missing=w.WBDMCharacters.fromCharacter(copy,'backup');
-  assert.ok(missing.warnings.some(s=>s.includes('level(s) 2')));
-  assert.equal(missing.actor.maxHp,18,'Uses known levels and warns; never silently implies full progression');
+  assert.equal(missing.warnings.length,0);
+  assert.equal(missing.actor.maxHp,34,'Old advancement rolls are no longer required');
   const parsed=w.WBPersistence.parseCharacterFile(w.WBPersistence.exportCharacter(sheet,'2026-10-28'));
   assert.equal(w.WBDMCharacters.fromCharacter(parsed,'backup').actor.name,'Vype');
   const legacy=w.WBPersistence.parseCharacterFile(JSON.stringify(sheet));

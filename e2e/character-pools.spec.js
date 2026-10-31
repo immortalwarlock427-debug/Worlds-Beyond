@@ -27,24 +27,24 @@ async function flushRejectedSave(page){
 
 test('favorite pays blank/full Mana and Command AP once, then survives export and reload',async({page})=>{
  await seed(page);
- await expect(page.locator('#mpMax')).toHaveValue('28');
+ await expect(page.locator('#mpMax')).toHaveValue('80');
  await expect(page.locator('#mpCur')).toHaveValue('');
  await use(page).click();
  await expect(page.locator('#favoriteFeedback')).toContainText('Used Starfire');
- await expect.poll(async()=>(await saved(page)).fields.mpCur).toBe('22');
+ await expect.poll(async()=>(await saved(page)).fields.mpCur).toBe('74');
  const state=await saved(page);
  expect(state.apAvail).toBe(13);expect(state.apGiven.n).toBe(0);
  expect(state.abilities[0].usesLeft).toBe(2);
- await expect(page.locator('#mpCur')).toHaveValue('22');
+ await expect(page.locator('#mpCur')).toHaveValue('74');
  await expect(page.locator('#apCount')).toContainText('13/15 AP');
  await openCharacterMenu(page);
  const pending=page.waitForEvent('download');
  await page.locator('#exportBtn').click();
  const exported=JSON.parse(fs.readFileSync(await (await pending).path(),'utf8'));
- expect(exported.version).toBe(1);expect(exported.state.fields.mpCur).toBe('22');
+ expect(exported.version).toBe(1);expect(exported.state.fields.mpCur).toBe('74');
  expect(exported.state.cloudSync).toEqual(state.cloudSync);
  await page.reload();
- await expect(page.locator('#mpCur')).toHaveValue('22');
+ await expect(page.locator('#mpCur')).toHaveValue('74');
  await expect(page.locator('#apCount')).toContainText('13/15 AP');
 });
 
@@ -70,10 +70,10 @@ test('payment uses character data even when displayed pool values are stale',asy
   document.querySelector('#mpCur').value='999';
  });
  await use(page).click();
- await expect.poll(async()=>(await saved(page)).fields.mpCur).toBe('22');
+ await expect.poll(async()=>(await saved(page)).fields.mpCur).toBe('74');
  expect((await saved(page)).apAvail).toBe(13);
- await expect(page.locator('#mpMax')).toHaveValue('28');
- await expect(page.locator('#mpCur')).toHaveValue('22');
+ await expect(page.locator('#mpMax')).toHaveValue('80');
+ await expect(page.locator('#mpCur')).toHaveValue('74');
  await expect(page.locator('#apMax')).toHaveValue('15');
 });
 
@@ -91,18 +91,18 @@ test('form entry pays from the old gear profile while preserving hidden Mana and
  await page.locator('#abilityLoadoutSelect').selectOption('loadmageform');
  await expect.poll(async()=>(await saved(page)).activeAbilityLoadoutId).toBe('loadmageform');
  let state=await saved(page);
- expect(state.apAvail).toBe(11);expect(state.fields.mpCur).toBe('14');
+ expect(state.apAvail).toBe(11);expect(state.fields.mpCur).toBe('72');
  expect(state.equip.head).toBe('formhelm');expect(state.formId).toBe('pmage');
  await page.locator('#abilityLoadoutSelect').selectOption('loadmageform');
  await page.locator('#abilityLoadoutSelect').selectOption('');
  await expect.poll(async()=>(await saved(page)).activeAbilityLoadoutId).toBe('');
  state=await saved(page);
- expect(state.fields.mpCur).toBe('14');expect(state.apAvail).toBe(11);expect(state.equip.head).toBe('basehelm');
+ expect(state.fields.mpCur).toBe('50');expect(state.apAvail).toBe(11);expect(state.equip.head).toBe('basehelm');
  await page.locator('[data-sheet-tab="overview"]').click();
  await expect(page.locator('#manaPool')).toBeHidden();
  await page.locator('#showManaPool').check();
- await expect(page.locator('#mpCur')).toHaveValue('14');
- await expect(page.locator('#mpMax')).toHaveValue('20');
+ await expect(page.locator('#mpCur')).toHaveValue('50');
+ await expect(page.locator('#mpMax')).toHaveValue('56');
 });
 
 test('manual Mana corrections, maximum override and Holy Power retain their existing behavior',async({page})=>{
@@ -131,6 +131,6 @@ test('manual Mana corrections, maximum override and Holy Power retain their exis
  await expect(page.locator('#mpMax')).toHaveValue('20');
  await page.locator('#mpMax').fill('');
  await page.locator('#mpMax').blur();
- await expect(page.locator('#mpMax')).toHaveValue('15');
- await expect(page.locator('#mpCur')).toHaveValue('-3');
+ await expect(page.locator('#mpMax')).toHaveValue('65');
+ await expect(page.locator('#mpCur')).toHaveValue('42');
 });

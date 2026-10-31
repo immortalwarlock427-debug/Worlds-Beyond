@@ -8,7 +8,7 @@ const hero=()=>({id:'chistoryhero',fields:{charName:'Dice Hero',level:'1',apMax:
  apAvail:20,reactAvail:1,wonderAvail:2,advMode:'norm',inCombat:true,
  resources:[{id:'resdiceenergy',name:'Energy',max:10,current:7}],
  abilities:[{id:'abildicefire',name:'Starfire',favorite:true,apCost:5,attackStat:'INT',damageDice:'1d6',damageStat:'STR',resourceId:'resdiceenergy',resourceCost:2,uses:2,usesLeft:2}],
- items:[{id:'blade',type:'onehand',name:'Blade',dmg:'1d6',stat:'STR',ar:0,abilities:[]},{id:'dagger',type:'onehand',name:'Dagger',dmg:'1d4',stat:'DEX',ar:0,abilities:[]}],
+ items:[{id:'blade',type:'onehand',properties:['Balanced','Light'],name:'Blade',dmg:'1d6',stat:'STR',ar:0,abilities:[]},{id:'dagger',type:'onehand',properties:['Balanced','Light'],name:'Dagger',dmg:'1d4',stat:'DEX',ar:0,abilities:[]}],
  equip:{main:'blade',off:'dagger'},consumables:[{id:'potion',name:'Potion',quantity:3,healingDice:'2d1+2'}]});
 async function seed(page,state=hero(),hash='#sheet/dice'){
  await page.addInitScript(({key,gameKey,state})=>{
@@ -65,22 +65,21 @@ test('invalid free dice draw nothing; constants and signed flat bonuses remain o
 test('twenty newest results survive and clearing them never refunds costs or changes stock',async({page})=>{
  await seed(page);
  for(let i=1;i<=25;i++){await free(page,'1d1','Roll '+i);await close(page);}
- await expect.poll(async()=>(await history(page)).length).toBe(20);await expect(cards(page)).toHaveCount(20);
+ await expect.poll(async()=>(await history(page))[0]?.title).toBe('Roll 25');await expect.poll(async()=>(await history(page)).length).toBe(20);await expect(cards(page)).toHaveCount(20);
  const entries=await history(page);expect(entries[0].title).toBe('Roll 25');expect(entries[19].title).toBe('Roll 6');expect(new Set(entries.map(entry=>entry.id)).size).toBe(20);
  await page.locator('#rollHistoryClear').click();await page.locator('#rollHistoryKeep').click();await expect(cards(page)).toHaveCount(20);
  await page.locator('#rollHistoryClear').click();await page.locator('#rollHistoryClearYes').click();
  await expect.poll(async()=>(await history(page)).length).toBe(0);expect((await saved(page)).apAvail).toBe(20);expect((await saved(page)).consumables[0].quantity).toBe(3);
 });
 
-test('weapon rolls retain dice draws and one payment while opportunity conversion and Devastate revise their original results',async({page})=>{
+test('weapon rolls retain dice draws and one payment while opportunity conversion revises the original result',async({page})=>{
  await seed(page,hero(),'#sheet/equipment');await dice(page,[19,0]);await attack(page).click();await expect.poll(async()=>(await history(page)).length).toBe(1);
  const attackId=(await history(page))[0].id;
  await page.locator('#toastActions [data-act="toreact"]').click();await expect.poll(async()=>(await saved(page)).apAvail).toBe(20);
  expect((await history(page))[0].id).toBe(attackId);expect((await history(page))[0].note).toContain('Opportunity attack');
  await page.locator('#toastActions [data-act="crit"]').click();await expect.poll(async()=>(await history(page)).length).toBe(2);
  const original=(await history(page))[0];expect(original.total).toBe(12);
- await page.locator('#toastActions [data-act="devastate-main"]').click();await expect.poll(async()=>(await history(page))[0].total).toBe(17);
- const revised=(await history(page))[0];expect(revised.id).toBe(original.id);expect(revised.at).toBe(original.at);expect(revised.note).toContain('Devastate');expect((await history(page)).length).toBe(2);
+ await expect(page.locator('#toastActions [data-act^="devastate"]')).toHaveCount(0);expect((await history(page)).length).toBe(2);
  expect(await page.evaluate(()=>window.rollDraws)).toBe(2);expect((await saved(page)).apAvail).toBe(20);expect((await saved(page)).reactAvail).toBe(0);
 });
 
@@ -90,8 +89,7 @@ test('dual Singularity records both natural dice and keeps the revised damage as
  await expect.poll(async()=>(await history(page)).length).toBe(1);const dual=(await history(page))[0];
  expect(dual.kind).toBe('dual');expect(dual.total).toBeNull();expect(dual.math).toContain('Main hand');expect(dual.math).toContain('Off-hand');expect(dual.note).toContain('Singularity');
  await page.locator('#toastActions [data-act="dualboth"]').click();await expect.poll(async()=>(await history(page)).length).toBe(2);
- expect((await history(page))[0].total).toBe(13);await page.locator('#toastActions [data-act="devastate-main"]').click();
- await expect.poll(async()=>(await history(page))[0].total).toBe(18);expect((await history(page)).length).toBe(2);expect(await page.evaluate(()=>window.rollDraws)).toBe(4);
+ expect((await history(page))[0].total).toBe(8);expect((await history(page)).length).toBe(2);expect(await page.evaluate(()=>window.rollDraws)).toBe(4);
 });
 
 for(const defy of [false,true])test(defy?'Defy Fate annotates a result without claiming another die roll':'Wonder records the new die roll without replacing the original',async({page})=>{
@@ -115,13 +113,13 @@ test('ability attacks, damage and consumable healing record results without dupl
  expect((await saved(page)).fields.hpCur).toBe('12');expect((await saved(page)).consumables[0].quantity).toBe(2);expect(await page.evaluate(()=>window.rollDraws)).toBe(4);
 });
 
-test('stat generation and advancement record real rolls, while redraws and reload never create extra results',async({page})=>{
+test('stat generation and short rests record real rolls, while redraws and reload never create extra results',async({page})=>{
  const state=hero();state.fields.level='2';await seed(page,state,'#sheet/attributes');await dice(page,[]);
  expect(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true);
  await page.locator('#rollAll').click();await expect.poll(async()=>(await history(page)).length).toBe(8);
  await page.locator('#rollClear').click();expect((await history(page)).length).toBe(8);
- await page.locator('.die-btn[data-roll="2"]').click();await expect.poll(async()=>(await history(page)).length).toBe(9);
- expect((await history(page))[0].kind).toBe('advancement');expect((await history(page))[0].total).toBe(Number((await saved(page)).rolls[2]));
+ await tab(page,'overview');await page.locator('.health-details > summary').click();await page.locator('#shortRest').click();await expect.poll(async()=>(await history(page)).length).toBe(9);
+ expect((await history(page))[0].kind).toBe('healing');expect((await history(page))[0].total).toBe(1);expect((await saved(page)).rolls).toBeUndefined();
  expect(await page.evaluate(()=>window.rollDraws)).toBe(25);await tab(page,'dice');await page.reload();await expect(cards(page)).toHaveCount(9);
  expect(await page.evaluate(()=>window.rollDraws)).toBe(0);
 });
