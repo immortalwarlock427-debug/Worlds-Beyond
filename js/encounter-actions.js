@@ -27,8 +27,9 @@
       deathThreshold: value.deathThreshold === undefined ? null : value.deathThreshold,
       down: value.down == null ? null : { mercy: !!value.down.mercy, stable: !!value.down.stable },
       trauma: value.trauma === undefined ? 0 : value.trauma,
-      apMax: value.apMax === undefined ? 4 : value.apMax,
-      apAvail: value.apAvail === undefined ? (value.apMax === undefined ? 4 : value.apMax) : value.apAvail,
+      apMax: value.apMax === undefined ? 15 : value.apMax,
+      apAvail: value.apAvail === undefined ? (value.apMax === undefined ? 15 : value.apMax) : value.apAvail,
+      movementMultiplier:value.movementMultiplier===undefined?1:value.movementMultiplier,
       speedFt: value.speedFt === undefined ? 5 : value.speedFt,
       surgeMax: value.surgeMax === undefined ? 0 : value.surgeMax,
       move: value.move == null ? { ft:0, left:0, surge:0 } :
@@ -47,8 +48,9 @@
         !integer(fields.ar, 0, 1000000) ||
         !(fields.deathThreshold === null || integer(fields.deathThreshold, 0, 1000000)) ||
         !integer(fields.trauma, 0, 100000) ||
-        !integer(fields.apMax, 0, 40) ||
+        !integer(fields.apMax, 0, 55) ||
         !integer(fields.apAvail, 0, fields.apMax) ||
+        !integer(fields.movementMultiplier,1,4) ||
         !integer(fields.speedFt, 0, 10000) ||
         !integer(fields.surgeMax, 0, 2) ||
         !(value.move == null || isRecord(value.move)) ||

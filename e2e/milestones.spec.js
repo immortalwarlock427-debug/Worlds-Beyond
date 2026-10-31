@@ -56,11 +56,11 @@ test('Eyes of Truth rolls a WIS check with Defy Fate without paying the mileston
 
 test('Commanding Presence shows its special CHA save DC and leaves target outcomes at the table',async({page})=>{
  await seed(page);await panel(page);await use(page,'commanding-presence').click();
- await expect(page.locator('#toastTotal')).toHaveText('22');await expect(page.locator('#toastMath')).toContainText('CHA save, DC 22');
+ await expect(page.locator('#toastTotal')).toHaveText('18');await expect(page.locator('#toastMath')).toContainText('CHA save, DC 18');
  await expect(page.locator('#toastActions button')).toHaveCount(0);await close(page);
  await overview(page);await page.locator('#turnReset').click();await page.locator('[data-sheet-tab="attributes"]').click();
  await page.locator('#mod-CHA').fill('-2');await page.locator('#mod-CHA').blur();await panel(page);
- await use(page,'commanding-presence').click();await expect(page.locator('#toastTotal')).toHaveText('6');
+ await use(page,'commanding-presence').click();await expect(page.locator('#toastTotal')).toHaveText('10');
  await expect.poll(async()=>(await saved(page)).apAvail).toBe(10);
  expect((await saved(page)).statuses[0].name).toBe('Stunned');
 });

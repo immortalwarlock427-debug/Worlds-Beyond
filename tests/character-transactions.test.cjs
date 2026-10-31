@@ -62,7 +62,7 @@ test('every rejected activation leaves all pools, trackers, effects, forms, port
   s=>{s.abilities[0].resourceId='missing';},
   s=>{s.abilities[0].loadoutIds=['loadbeastone'];},
   s=>{s.resources[0].loadoutIds=['loadbeastone'];},
-  s=>{s.abilities[0].resourceId='base-mana';s.abilities[0].resourceCost=21;},
+  s=>{s.abilities[0].resourceId='base-mana';s.abilities[0].resourceCost=57;},
   s=>{s.abilities[0].resourceId='base-mana';s.showMana=false;}
  ];
  for(const edit of cases){
@@ -76,7 +76,7 @@ test('every rejected activation leaves all pools, trackers, effects, forms, port
 test('Mana activation materializes the source blank/full balance without losing unrelated fields',()=>{
  const {api}=kernel(),s=state();s.abilities[0].resourceId='base-mana';s.abilities[0].resourceCost=6;
  freeze(s);const r=api.apply(s,activate);
- assert.equal(r.ok,true);assert.equal(r.state.fields.mpCur,'14');
+ assert.equal(r.ok,true);assert.equal(r.state.fields.mpCur,'50');
  assert.equal(r.state.fields.charName,s.fields.charName);assert.equal(r.state.resources[0].current,80);
  assert.deepEqual(Array.from(r.events,e=>e.type),['ap.changed','mana.changed','resource.changed','ability.used']);
  assert.equal(s.fields.mpCur,'');
@@ -124,13 +124,13 @@ test('named form and linked portrait commands make the same source-profile Mana 
  const portrait=api.apply(s,{type:'SelectPortrait',portraitId:'beastpic'});
  assert.equal(form.ok,true);assert.equal(portrait.ok,true);
  assert.deepEqual(plain(form.state),plain(portrait.state));
- assert.equal(form.state.fields.mpCur,'14');assert.equal(api.derive(form.state).mana.max,42);
+ assert.equal(form.state.fields.mpCur,'72');assert.equal(api.derive(form.state).mana.max,78);
  const mana=form.events.find(e=>e.type==='mana.changed');
- assert.equal(mana.previous.max,20);assert.equal(mana.current.max,42);
- assert.equal(mana.previous.current,20);assert.equal(mana.current.current,14);
+ assert.equal(mana.previous.max,56);assert.equal(mana.current.max,78);
+ assert.equal(mana.previous.current,56);assert.equal(mana.current.current,72);
  const back=api.apply(portrait.state,{type:'SelectPortrait',portraitId:'basepic'});
  assert.equal(back.state.activeAbilityLoadoutId,'');assert.equal(back.state.equip.head,'basehelm');
- assert.equal(back.state.fields.mpCur,'14');
+ assert.equal(back.state.fields.mpCur,'50');
 });
 
 test('unaffordable forms, missing targets and malformed command identifiers produce no partial change',()=>{

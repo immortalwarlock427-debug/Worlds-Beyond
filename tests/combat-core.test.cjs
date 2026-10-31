@@ -45,10 +45,10 @@ test('STR/DEX use their own modifier formula; other stats use the general one',(
 });
 test('worn gear, active ability and form bonuses are separately composed',()=>{
   const {rules,abilities}=harness(),s=state();
-  assert.equal(rules.gearArmor(s),5);
+  assert.equal(rules.gearArmor(s),3);
   assert.equal(rules.gearBonus(s,'STR'),3);
   assert.equal(rules.gearBonus(s,'AGL'),3);
-  assert.equal(rules.gearBonus(s,'STR',true),2,'Only rested gear feeds future level advancement');
+  assert.equal(rules.gearBonus(s,'STR',true),3,'Legacy settlement no longer limits current gear');
   assert.equal(rules.effectiveScore(s,'STR',12),23);
   assert.equal(rules.effectiveScore(s,'STR',12,3,4),30);
   assert.equal(rules.modifier(s,'STR',12,3,4),9);

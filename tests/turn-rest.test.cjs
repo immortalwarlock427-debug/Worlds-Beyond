@@ -73,7 +73,7 @@ test('bleeding skips stable, dead, positive and unknown Health; zero uses existi
  const s={...state,fields:{...state.fields,hpCur:'0'},down:{mercy:false,stable:false},trauma:0};
  const r=core.apply(s,{type:'StartTurn'});assert.equal(r.state.fields.hpCur,'-4');assert.equal(r.state.down.mercy,true);
 });
-test('LongRest refills legacy pools, resets timers and counters, settles only worn items, and retains statuses/capacity/combat',()=>{
+test('LongRest refills legacy pools, resets timers and counters, retains statuses/capacity/combat',()=>{
  const {state,core}=setup();freeze(state);const r=core.apply(state,{type:'LongRest'});
  assert.equal(r.ok,true);assert.equal(r.state.fields.hpCur,'30');assert.equal(r.state.fields.mpCur,'20');
  assert.equal(r.state.trauma,0);assert.equal(r.state.down,null);assert.equal(r.state.wonderAvail,null);
@@ -81,7 +81,7 @@ test('LongRest refills legacy pools, resets timers and counters, settles only wo
  assert.equal(r.state.parryOutsideSpent,0);assert.equal(r.state.resources[0].current,100);assert.equal(r.state.resources[1].current,2);
  assert.equal(r.state.abilities[0].durationLeft,0);assert.equal(r.state.abilities[0].cooldownLeft,0);
  assert.equal(r.state.abilities[0].usesLeft,2);assert.equal(r.state.abilities[0].outsideUsesSpent,0);assert.equal(r.state.abilities[0].capacityCurrent,2);
- assert.deepEqual(plain(r.state.settled),{old:true,head:true});assert.deepEqual(plain(r.state.spent),{});
+ assert.deepEqual(plain(r.state.settled),{old:true});assert.deepEqual(plain(r.state.spent),{});
  assert.deepEqual(plain(r.state.equipmentOutsideSpent),{});assert.equal(r.state.inCombat,true);
  assert.deepEqual(plain(r.state.statuses),plain(state.statuses));assert.equal(r.events.at(-1).type,'rest.completed');
  for(const key of ['consumables','rollHistory','items','equip','future'])assert.equal(r.state[key],state[key]);

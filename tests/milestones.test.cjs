@@ -80,9 +80,9 @@ test('Miracle is free and once per long rest, and neither combat nor turn change
  s=apply(s,'RestAbilities').state;assert.equal(use(s,'miracle').ok,true);
 });
 
-test('milestone plans keep Eyes of Truth as a check and Commanding Presence on its special 10 + 2x CHA DC',()=>{
+test('milestone plans keep Eyes of Truth as a check and Commanding Presence on the normal 12 + CHA DC',()=>{
  const {state,action}=setup();assert.equal(action(state,'eyes-of-truth').plan.kind,'check');assert.equal(action(state,'eyes-of-truth').plan.modifier,6);
- assert.equal(action(state,'commanding-presence').plan.total,22);state.over['mod-CHA']='−2';assert.equal(action(state,'commanding-presence').plan.total,6);
+ assert.equal(action(state,'commanding-presence').plan.total,18);state.over['mod-CHA']='−2';assert.equal(action(state,'commanding-presence').plan.total,10);
  assert.equal(action(state,'sixth-sense').ap,0);assert.equal(action(state,'sixth-sense').plan.kind,'notice');
  assert.equal(action(state,'absolute-comprehension').plan.kind,'notice');
 });

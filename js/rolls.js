@@ -3,7 +3,7 @@
 (() => {
   'use strict';
   const LIMIT=20;
-  const kinds=new Set(['free','check','attack','dual','damage','block','consumable-healing','stat','advancement']);
+  const kinds=new Set(['free','check','attack','dual','damage','block','consumable-healing','healing','status','stat','advancement']);
   const record=value=>value&&typeof value==='object'&&!Array.isArray(value);
   const collection=state=>state.rollHistory==null?[]:Array.isArray(state.rollHistory)?state.rollHistory:null;
   const text=(value,max)=>typeof value==='string'?(value.length>max?value.slice(0,max)+'… (details shortened)':value):'';

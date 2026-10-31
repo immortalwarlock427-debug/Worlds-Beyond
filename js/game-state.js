@@ -35,7 +35,7 @@
       return {
         id: typeof f.id === 'string' && f.id ? f.id.slice(0, 30) : 'e' + i, map: f.map.slice(0, 40), x: Math.round(Number(f.x)), y: Math.round(Number(f.y)),
         name: (typeof f.name === 'string' && f.name.trim() ? f.name.trim() : 'Enemy').slice(0, 30), hp: whole(f.hp, max), max,
-        ev: whole(f.ev, 10), ar: Math.max(0, whole(f.ar, 0))
+        ev: whole(f.ev, 12), ar: Math.max(0, whole(f.ar, 0))
       };
     });
     // How this browser shows the map. Older saves kept these on the map itself.

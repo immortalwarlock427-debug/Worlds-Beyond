@@ -4,16 +4,25 @@
 (function () {
   'use strict';
   const BASE = 'base';
-  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off'];
+  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','lstrapped','pants','boots'];
   const FIT = {
     head: ['head'], amulet: ['amulet'], torso: ['torso'],
     rarm: ['arms'], larm: ['arms'], rring: ['ring'], lring: ['ring'],
     belt: ['belt'], rleg: ['legs'], lleg: ['legs'],
-    main: ['onehand','twohand'], off: ['onehand','shield']
+    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],lstrapped:['onehand'],pants:['pants','legs'],boots:['boots']
   };
   const PAIRS = {arms: ['rarm','larm'], ring: ['rring','lring'], legs: ['rleg','lleg']};
+  const twoHanded=(state,item)=>window.WBCombat&&window.WBCombat.weaponRules?window.WBCombat.weaponRules(state,item).twoHanded:item.type==='twohand';
   const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   const key = id => id || BASE;
+  // Explicit equipment changes keep the chosen hand. Saved non-Light pairs
+  // remain readable until the player chooses which weapon to keep.
+  function resolveHands(state,profile,preferred='main'){
+    const output={...record(profile)},main=(state.items||[]).find(item=>item&&item.id===output.main);
+    const conflict=window.WBCombat.heldWeaponConflict(state,output);
+    if(conflict||main&&output.off&&twoHanded(state,main))delete output[preferred==='off'?'main':'off'];
+    return output;
+  }
   function sanitize(state, profile) {
     const inventory = new Map((state.items || []).filter(Boolean).map(item => [item.id, item]));
     const output = {}, seen = new Set();
@@ -24,16 +33,17 @@
       // Pairs are represented in their primary slot, and a two-handed weapon
       // occupies the offhand implicitly. Do not equip conflicting pieces.
       const pair = PAIRS[item.type];
-      if (item.pair && pair && slot !== pair[0]) continue;
-      if (slot === 'off' && output.main && inventory.get(output.main).type === 'twohand') continue;
+      const pantsItem=slot==='pants'&&item.type==='legs';
+      if (item.pair && pair && !pantsItem && slot !== pair[0]) continue;
+      if (slot === 'off' && output.main && twoHanded(state,inventory.get(output.main))) continue;
       if (pair && slot === pair[1] && output[pair[0]]) {
         const first = inventory.get(output[pair[0]]);
         if (first && first.type === item.type && first.pair) continue;
       }
       output[slot] = id;
       seen.add(id);
-      if (item.pair && pair) delete output[pair[1]];
-      if (item.type === 'twohand') delete output.off;
+      if (item.pair && pair && !pantsItem) delete output[pair[1]];
+      if(slot==='main'&&twoHanded(state,item))delete output.off;
     }
     return output;
   }
@@ -93,5 +103,5 @@
     const form = (state.abilityLoadouts || []).find(f => f.id === state.activeAbilityLoadoutId);
     return form ? form.name : 'Base';
   }
-  window.WBEquipment = { normalizeState, capture, switchForm, removeForm, removeItem, copyBase, clearCurrent, name, sanitize };
+  window.WBEquipment = { normalizeState, capture, switchForm, removeForm, removeItem, copyBase, clearCurrent, name, sanitize, resolveHands };
 })();

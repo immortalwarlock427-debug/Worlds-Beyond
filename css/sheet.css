@@ -413,6 +413,20 @@ h1 {
 .slot-x { position: absolute; right: 1px; bottom: 1px; }
 .hands-head { width: 100%; max-width: 440px; margin-top: 8px; }
 .hands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 440px; }
+.armor-extra-slots,.previous-leg-slots { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%; max-width:440px; margin:10px 0; }
+.armor-extra-slots .slot,.previous-leg-slots .slot { position:relative; width:100%; min-width:0; min-height:80px; height:auto; }
+.previous-leg-equipment { width:100%; max-width:440px; font-size:14px; }
+.previous-leg-equipment summary { cursor:pointer; min-height:44px; align-content:center; }
+.equipment-base-picker { min-width:0; }
+.equipment-base-picker > select { width:100%; min-width:0; min-height:44px; padding:8px; background:var(--field); color:var(--ink); border:1px solid var(--rule); font:inherit; }
+.equipment-base-picker .pick button { min-height:44px; }
+.forge-pack-settings { margin:.7rem 0; padding:.7rem; border:1px solid var(--rule); border-radius:.5rem; min-width:0; }
+.forge-pack-settings summary,.rule-editor summary { cursor:pointer; min-height:44px; align-content:center; }
+.weapon-roll-settings { display:grid; gap:10px; margin:12px 0; }
+.weapon-roll-settings label { min-width:0; }
+.held-weapon-conflict { width:100%; max-width:440px; padding:12px; border:1px solid var(--brass); border-radius:4px; background:var(--field); }
+.held-weapon-conflict p { margin:0 0 10px; }
+.held-weapon-conflict .btn { min-height:44px; white-space:normal; }
 .slot.hand { position: relative; left: auto; top: auto; width: auto; min-height: 74px; }
 .slot.blocked { border-style: dashed; }
 .attacks { display: grid; gap: 8px; width: 100%; max-width: 440px; }
@@ -1560,3 +1574,12 @@ main.view-dice ~ .advbar { display: none; }
   .favorite-heading h3 { font-size: 18px; }
   .favorite-ability { padding: 10px; }
 }
+
+/* Rule editors stay within a phone viewport. */
+.rule-editor,.weapon-rules{margin:.7rem 0;padding:.7rem;border:1px solid var(--line,#665f50);border-radius:.5rem;min-width:0}
+.rule-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:.7rem;margin-top:.7rem}
+.rule-fields label,.weapon-rules label{display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.rule-fields fieldset{min-width:0;display:flex;flex-wrap:wrap;gap:.5rem;grid-column:1/-1}
+.rule-fields fieldset label{display:flex;flex-direction:row;align-items:center}
+.rule-fields input:not([type=checkbox]),.rule-fields select,.weapon-rules select{max-width:100%;width:100%;min-width:0}
+.weapon-rules p{overflow-wrap:anywhere}.save-recovery{padding:.7rem;margin:.7rem 0;border:1px solid currentColor}

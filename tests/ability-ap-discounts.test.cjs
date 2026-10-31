@@ -103,7 +103,7 @@ test('normalization and JSON round trips preserve base cost, discount selection 
  for(const selection of ['STR','DEX','INT','FTH','',undefined,'WIS']){
   state.abilities[0].apDiscountStat=selection;
   const roundtrip=JSON.parse(JSON.stringify(state));abilities.normalizeState(roundtrip);
-  assert.equal(roundtrip.abilities[0].apDiscountStat,['STR','DEX','INT','FTH'].includes(selection)?selection:'');
+  assert.equal(roundtrip.abilities[0].apDiscountStat,['STR','VIT','DEX','INT','WIS','CHA','FTH'].includes(selection)?selection:'');
   assert.equal(roundtrip.abilities[0].apCost,10);
  }
  delete state.abilities[0].apDiscountStat;abilities.normalizeState(state);assert.equal(price(),10);
