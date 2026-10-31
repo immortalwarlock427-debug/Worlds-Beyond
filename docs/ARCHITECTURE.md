@@ -24,6 +24,12 @@ Health and AP/reactions are the first Overview controls, followed by current-for
 
 Overview favorites render inside the existing `WBAbilities.init` controller and use the same activation helper as library cards, including AP/resource checks, charges, cooldowns and form availability. Library search/filter settings do not hide Overview favorites. No second payment implementation or save collection is introduced. Favorite and library Use buttons both execute `ActivateAbility` through `WBCharacter`; the same transaction covers AP/Mana/custom-resource costs, charges, capacity, cooldown and duration.
 
+## Character notes
+
+The Notes sub-tab (`#sheet/notes`) adds five optional multiline fields in the existing `state.fields` map: `sessionNotes`, `backstory`, `personality`, `languages` and `allies`. `fillInputs` sets textarea values as plain text; absent legacy fields display empty. The selected tab scrolls into the phone navigation viewport for direct links; the dice-mode bar hides while writing notes without changing its stored setting. No new schema, storage key, parser, note collection or gameplay command is introduced. The regular `data-field` input handler saves narrative edits without running `refreshAll`, so typing preserves selection and textarea scroll and does not rebuild combat UI.
+
+The existing character repository and v1 envelope carry notes through local reload, export/import and owner-only manual cloud copies. Import/clear refill all inputs, preventing notes from the previous character leaking into an empty one. Notes are character-wide across forms and are outside turn/rest Undo ownership. They have no arbitrary text-length cap; ordinary browser/cloud document-size limits still apply. The existing stale-tab save guards apply unchanged, and note-only saves do not write unchanged game state.
+
 ## Repository boundary (foundation refactor)
 
 - Character repository: `load()`, `save(state)`, `remove()`. Game repository: `load()`, `save(game)`. `createLocalRepositories(() => window.localStorage)` defers accessing storage until needed; the adapter's errors propagate so the UI can display a warning. `createMemoryRepositories()` provides an isolated in-memory adapter for tests and the offline DM prototype.

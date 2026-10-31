@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261030-equipment-uses-v37">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-character-notes-v38">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 47</p>
+    <p class="meta">Homebrew rules · Draft 48</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -81,7 +81,23 @@
     <button type="button" data-sheet-tab="equipment" aria-pressed="false">Equipment</button>
     <button type="button" data-sheet-tab="abilities" aria-pressed="false">Abilities</button>
     <button type="button" data-sheet-tab="statuses" aria-pressed="false">Status Effects</button>
+    <button type="button" data-sheet-tab="notes" aria-pressed="false">Notes</button>
   </nav>
+
+  <section id="notesSec" data-sheet-section="notes" aria-labelledby="notesHead" hidden>
+    <div class="sec-head">
+      <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
+      <h2 id="notesHead">Character notes</h2>
+    </div>
+    <p class="note" id="notesHelp">Keep your story, connections and session reminders here. Notes save with this character and travel with character exports and Cloud Saves.</p>
+    <div class="character-notes-grid">
+      <label class="character-note character-note-wide" for="sessionNotes"><span>Session notes</span><textarea id="sessionNotes" data-field data-character-note rows="8" aria-describedby="notesHelp" placeholder="What happened, leads to follow, and things to remember next session."></textarea></label>
+      <label class="character-note character-note-wide" for="backstory"><span>Backstory</span><textarea id="backstory" data-field data-character-note rows="6" placeholder="Where you came from, what changed, and what you want."></textarea></label>
+      <label class="character-note" for="personality"><span>Personality</span><textarea id="personality" data-field data-character-note rows="4" placeholder="Traits, beliefs, bonds and flaws."></textarea></label>
+      <label class="character-note" for="languages"><span>Languages</span><textarea id="languages" data-field data-character-note rows="4" placeholder="Languages you speak, read or understand."></textarea></label>
+      <label class="character-note character-note-wide" for="allies"><span>Allies and connections</span><textarea id="allies" data-field data-character-note rows="4" placeholder="People, factions, relationships and promises."></textarea></label>
+    </div>
+  </section>
 
   <section class="statussec" id="statusSec" data-sheet-section="statuses" aria-labelledby="statusHead" hidden>
     <div class="sec-head">
@@ -844,18 +860,18 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/game-state.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/maps.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/routing.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/combat-core.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/equipment-profiles.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/abilities.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/character-core.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/resources.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/encounter-actions.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/status.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/sheet-layout.js?v=20261030-equipment-uses-v37"></script>
-<script src="js/app.js?v=20261030-equipment-uses-v37"></script>
+<script src="js/persistence.js?v=20261031-character-notes-v38"></script>
+<script src="js/game-state.js?v=20261031-character-notes-v38"></script>
+<script src="js/maps.js?v=20261031-character-notes-v38"></script>
+<script src="js/routing.js?v=20261031-character-notes-v38"></script>
+<script src="js/combat-core.js?v=20261031-character-notes-v38"></script>
+<script src="js/equipment-profiles.js?v=20261031-character-notes-v38"></script>
+<script src="js/abilities.js?v=20261031-character-notes-v38"></script>
+<script src="js/character-core.js?v=20261031-character-notes-v38"></script>
+<script src="js/resources.js?v=20261031-character-notes-v38"></script>
+<script src="js/encounter-actions.js?v=20261031-character-notes-v38"></script>
+<script src="js/status.js?v=20261031-character-notes-v38"></script>
+<script src="js/sheet-layout.js?v=20261031-character-notes-v38"></script>
+<script src="js/app.js?v=20261031-character-notes-v38"></script>
 </body>
 </html>
