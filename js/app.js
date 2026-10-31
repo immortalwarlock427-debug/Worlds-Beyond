@@ -117,7 +117,7 @@
   const $ = (s) => document.querySelector(s);
   const blank = () => ({
     fields: {}, over: {}, hist: {}, rolls: {},
-    pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {},
+    pool: [], alloc: {}, items: [], equip: {}, equipmentProfiles: {}, order: [], lvGear: {}, settled: {}, spent: {}, equipmentOutsideSpent:{},
     apAvail: null, reactAvail: null, wonderAvail: null, apGiven: null, move: null, portraits: [], formId: null,
     asi: {}, trauma: 0, down: null, advMode: 'norm', id: null, resources: [], showMana: true, abilities: [], milestoneUses:{}, abilityLoadouts: [], activeAbilityLoadoutId: '', statuses: []
   });
@@ -936,11 +936,7 @@
     // Given AP carries into the turn after you got it, then it's gone.
     if (state.apGiven && state.apGiven.fresh && state.apGiven.n > 0) state.apGiven = { n: state.apGiven.n, fresh: false };
     else state.apGiven = null;
-    // Per-round item abilities come back too.
-    Object.keys(state.spent).forEach((id) => {
-      const it = itemById(id);
-      Object.keys(state.spent[id] || {}).forEach((i) => { const a = it && it.abilities[i]; if (!a || a.per === 'round') delete state.spent[id][i]; });
-    });
+    // Equipment round resets share the ability lifecycle command below.
     apTracker.render();
     reactTracker.render();
     renderGiven();
@@ -977,7 +973,7 @@
   $('#longRest').addEventListener('click', () => {
     restUndo = {
       hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ abilities: state.abilities, milestoneUses:state.milestoneUses, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
+      other: JSON.stringify({ abilities: state.abilities, milestoneUses:state.milestoneUses, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, equipmentOutsideSpent:state.equipmentOutsideSpent, trauma: state.trauma, down: state.down })
     };
     resourceManager.longRest();
     abilityLibrary.longRest();
@@ -993,7 +989,6 @@
     apUndo = null;
     state.parryUsed = false;
     state.parryOutsideSpent=0;
-    state.spent = {};
     state.trauma = 0;
     state.down = null;
     // Everything worn through this rest now counts toward your next level-up.
@@ -1947,6 +1942,12 @@
   // ---------- Equipment ----------
   const packEl = $('#pack');
   const wornEl = $('#wornList');
+  wornEl.addEventListener('change',event=>{
+    const input=event.target.closest('[data-equipment-remaining]');if(!input)return;
+    const result=formEntryControls.execute({type:'SetEquipmentAbilityUses',itemId:input.dataset.equipmentRemaining,abilityIndex:Number(input.dataset.ai),value:input.value});
+    refreshAll();
+    if(result.ok)save();else showRoll({kind:'notice',title:'Equipment ability',math:result.message});
+  });
   function renderEquipmentProfile() {
     const selectedForm = (state.abilityLoadouts || []).find(f => f.id === state.activeAbilityLoadoutId);
     const label = $('#equipmentProfileName');
@@ -2008,6 +2009,7 @@
   function removeItem(id) {
     unequip(id);
     delete state.spent[id];
+    delete state.equipmentOutsideSpent[id];
     state.items = state.items.filter((it) => it.id !== id);
     window.WBEquipment.removeItem(state, id); // No deleted gear can reappear on a form switch.
     if (selected && selected.id === id) selected = null;
@@ -2035,17 +2037,21 @@
     if (n && e) return '<b>' + esc(n) + '.</b> ' + esc(e);
     return n ? '<b>' + esc(n) + '</b>' : esc(e);
   }
-  // Limited-use abilities: pips in the Equipped list, refilled at the start of your turn (per round) or by a long rest.
-  function usesLeft(id, i, a) { const sp = (state.spent[id] || {})[i] || 0; return Math.max(0, a.uses - sp); }
+  // Equipment uses share the character ability allowance derivation.
   function usesHTML(it, i, a) {
     if (!a.uses) return '';
-    const left = usesLeft(it.id, i, a);
+    const usage=window.WBAbilities.equipmentAbility(state,it.id,i).usage,left=usage.remaining;
     const nm = isSet(a.name) ? String(a.name).trim() : 'Ability';
-    let h = '<div class="uses-line"><span class="use-pips" role="group" aria-label="' + esc(nm) + ' uses">';
-    for (let j = 0; j < a.uses; j++) {
-      h += '<button type="button" class="pip' + (j < left ? ' on' : '') + '" data-use="' + esc(it.id) + '" data-ai="' + i + '" data-j="' + j + '" aria-pressed="' + (j < left) + '" aria-label="' + esc(nm) + ' use ' + (j + 1) + ': ' + (j < left ? 'ready' : 'spent') + '"></button>';
+    let h = '<div class="uses-line"><button type="button" class="btn equipment-ability-use" data-item="'+esc(it.id)+'" data-ai="'+i+'">Use '+esc(nm)+'</button>'+
+      '<span class="uses-txt">'+left+'/'+usage.maximum+' per '+usage.period+'</span>';
+    if(usage.maximum<=20){
+      h+='<span class="use-pips" role="group" aria-label="' + esc(nm) + ' uses">';
+      for (let j = 0; j < usage.maximum; j++) {
+        h += '<button type="button" class="pip' + (j < left ? ' on' : '') + '" data-use="' + esc(it.id) + '" data-ai="' + i + '" data-j="' + j + '" aria-pressed="' + (j < left) + '" aria-label="' + esc(nm) + ' use ' + (j + 1) + ': ' + (j < left ? 'ready' : 'spent') + '"></button>';
+      }
+      h+='</span>';
     }
-    return h + '</span><span class="uses-txt">' + left + '/' + a.uses + ' ' + perText(a) + '</span></div>';
+    return h+'<label class="equipment-uses-correction"><span class="foot-label">Remaining</span><input type="number" min="0" max="'+usage.maximum+'" value="'+left+'" data-equipment-remaining="'+esc(it.id)+'" data-ai="'+i+'" aria-label="'+esc(nm)+' remaining uses"></label></div>';
   }
   function cardHTML(it, ghost) {
     const sel = !ghost && !!(selected && selected.kind === 'item' && selected.id === it.id);
@@ -2212,11 +2218,12 @@
     if (b) setForgeStat(b.dataset.stat);
   });
   function syncAbilButton() { $('#addAbil').disabled = abilRows.children.length >= MAX_ABILS; }
-  function addAbilRow(a, focus) {
+  function addAbilRow(a, focus, originalIndex) {
     if (abilRows.children.length >= MAX_ABILS) return;
     abilSeq++;
     const row = document.createElement('div');
     row.className = 'abil-row';
+    if(Number.isInteger(originalIndex))row.dataset.originalIndex=String(originalIndex);
     row.innerHTML =
       '<input id="abilName' + abilSeq + '" class="abil-name" type="text" maxlength="40" placeholder="Ability name" aria-label="Ability name" autocomplete="off">' +
       '<button type="button" class="xbtn del abil-del" aria-label="Remove this ability">×</button>' +
@@ -2224,16 +2231,27 @@
       '<div class="abil-uses"><label for="abilN' + abilSeq + '">Uses</label>' +
         '<input id="abilN' + abilSeq + '" class="abil-n" type="number" inputmode="numeric" min="1" max="20" placeholder="\u221e" autocomplete="off">' +
         '<select id="abilPer' + abilSeq + '" class="abil-per" aria-label="When the uses come back"><option value="rest">per long rest</option><option value="round">per round</option></select>' +
-        '<span>Leave it empty for no limit.</span></div>';
+        '<span>Leave it empty for no limit.</span></div>'+
+      '<label class="abil-outside"><span>Outside combat</span><select class="abil-outside-stat" aria-label="Outside combat use limit">'+
+        '<option value="legacy">Keep turn reset</option><option value="">Same limit per long rest</option>'+
+        STATS.map(s=>'<option value="'+s.k+'">'+s.k+' modifier per long rest</option>').join('')+'</select></label>'+
+      '<p class="abil-outside-note">Long-rest outside limits have a separate allowance. Editing a limit carries your currently spent uses with it.</p>';
+    row.querySelector('.abil-outside-stat').value=a?window.WBAbilities.equipmentOutsideSetting(a):'';
     if (a) {
       row.querySelector('.abil-name').value = a.name || '';
       row.querySelector('.abil-effect').value = a.effect || '';
       if (a.uses) { row.querySelector('.abil-n').value = String(a.uses); row.querySelector('.abil-per').value = a.per; }
     }
+    syncEquipmentOutsideRow(row);
     abilRows.appendChild(row);
     syncAbilButton();
     if (focus) row.querySelector('.abil-name').focus();
   }
+  function syncEquipmentOutsideRow(row){
+    const round=row.querySelector('.abil-per').value==='round';
+    row.querySelector('.abil-outside').hidden=!round;row.querySelector('.abil-outside-note').hidden=!round;
+  }
+  abilRows.addEventListener('change',event=>{const row=event.target.closest('.abil-row');if(row)syncEquipmentOutsideRow(row);});
   const bonusRows = $('#bonusRows');
   const MAX_BONUSES = 8;
   let bonusSeq = 0;
@@ -2363,7 +2381,7 @@
     if (TYPES[it.type].weapon) { $('#forgeDmg').value = it.dmg || ''; $('#forgeRange').value = it.range ? String(it.range) : ''; setForgeStat(it.stat); }
     if (it.type === 'shield') $('#forgeBlock').value = it.block || '';
     $('#forgeSet').checked = isPair(it);
-    (it.abilities || []).forEach((a) => addAbilRow(a, false));
+    (it.abilities || []).forEach((a,index) => addAbilRow(a, false,index));
     (it.bonuses || []).forEach((b) => addBonusRow(b, false));
     (it.effects || []).forEach((e) => addEffRow(e, false));
     $('#forgeTitle').textContent = 'Edit ' + it.name;
@@ -2401,14 +2419,24 @@
     }
     errEl.hidden = true;
     const name = (nameEl.value.trim() || TYPES[forgeType].def).slice(0, 40);
-    const abilities = Array.from(abilRows.querySelectorAll('.abil-row'))
+    const originalItem=editingId?itemById(editingId):null;
+    const abilityEntries = Array.from(abilRows.querySelectorAll('.abil-row'))
       .map((r) => {
-        const a = { name: r.querySelector('.abil-name').value.trim(), effect: r.querySelector('.abil-effect').value.trim() };
+        const originalIndex=r.dataset.originalIndex===undefined?null:Number(r.dataset.originalIndex);
+        const prior=originalIndex===null?{}:(originalItem&&originalItem.abilities[originalIndex]||{});
+        const a = {...prior,name: r.querySelector('.abil-name').value.trim(), effect: r.querySelector('.abil-effect').value.trim() };
         const n = Math.round(num(r.querySelector('.abil-n').value));
         if (isFinite(n) && n >= 1) { a.uses = Math.min(20, n); a.per = r.querySelector('.abil-per').value === 'round' ? 'round' : 'rest'; }
-        return a;
+        else {delete a.uses;delete a.per;}
+        if(a.per==='round'){
+          const setting=r.querySelector('.abil-outside-stat').value;
+          if(setting!=='legacy')a.outsideUsesStat=setting;
+          else if(window.WBAbilities.equipmentOutsideSetting(prior)!=='legacy')delete a.outsideUsesStat;
+        }
+        return {ability:a,originalIndex};
       })
-      .filter((a) => a.name || a.effect);
+      .filter((entry) => entry.ability.name || entry.ability.effect);
+    const abilities=abilityEntries.map(entry=>entry.ability);
     const bonuses = Array.from(bonusRows.querySelectorAll('.bonus-row'))
       .map((r) => ({ t: r.querySelector('.bonus-t').value, v: Math.round(num(r.querySelector('.bonus-v').value)) }))
       .filter((b) => BONUS_BY[b.t] && isFinite(b.v) && b.v !== 0);
@@ -2458,8 +2486,8 @@
     if (asSet) data.pair = true;
     const it = editingId ? itemById(editingId) : null;
     if (it) {
+      Object.assign(state,window.WBAbilities.remapEquipmentUses(state,it.id,abilities,abilityEntries.map(entry=>entry.originalIndex)));
       Object.assign(it, data);
-      delete state.spent[it.id];
       if (!isW) { delete it.dmg; delete it.stat; }
       if (!data.range) delete it.range;
       if (!blk) delete it.block;
@@ -2657,18 +2685,24 @@
       } else {
         touched = false;
       }
+    } else if ((el = t.closest('.equipment-ability-use'))) {
+      const result=formEntryControls.execute({type:'UseEquipmentAbility',itemId:el.dataset.item,abilityIndex:Number(el.dataset.ai)});
+      if(result.ok){
+        changed=true;useFocus='.equipment-ability-use[data-item="'+CSS.escape(el.dataset.item)+'"][data-ai="'+el.dataset.ai+'"]';
+        showRoll({kind:'notice',title:result.equipmentAbilityPlan.name,math:result.equipmentAbilityPlan.effect||'Use tracked.',note:'One use tracked. Apply any listed costs and effects at the table.'});
+      }else showRoll({kind:'notice',title:'Equipment ability',math:result.message});
     } else if ((el = t.closest('button[data-use]'))) {
       const it = itemById(el.dataset.use);
       const i = Number(el.dataset.ai);
       const j = Number(el.dataset.j);
       const a = it && it.abilities[i];
       if (a && a.uses) {
-        const left = usesLeft(it.id, i, a);
+        const left = window.WBAbilities.equipmentAbility(state,it.id,i).usage.remaining;
         const nl = j < left ? j : j + 1;
-        state.spent[it.id] = Object.assign({}, state.spent[it.id], { [i]: a.uses - nl });
-        useFocus = 'button[data-use="' + it.id + '"][data-ai="' + i + '"][data-j="' + j + '"]';
+        const result=formEntryControls.execute({type:'SetEquipmentAbilityUses',itemId:it.id,abilityIndex:i,value:nl});
+        changed=result.ok;
+        useFocus = 'button[data-use="' + CSS.escape(it.id) + '"][data-ai="' + i + '"][data-j="' + j + '"]';
       }
-      changed = true;
     } else if ((el = t.closest('.worn-up, .worn-down'))) {
       const dir = el.classList.contains('worn-up') ? -1 : 1;
       moveWorn(el.dataset.slot, dir);

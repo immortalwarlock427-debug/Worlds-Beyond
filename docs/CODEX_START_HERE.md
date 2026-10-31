@@ -9,29 +9,28 @@
 - Existing optional form-entry costs (AP, Mana/Holy Power or custom resource) and linked portrait/form gear changes **must be preserved**.
 - Ability AP discounts (None/STR/DEX/INT/FTH, None default) are **implemented** through shared pricing and the atomic activation command. Cards, favorites, readiness, AP bands and sorting agree; base prices remain saved separately.
 - Optional ability-card attack/damage rolls and save DCs are **implemented**. `ActivateAbility` validates the setup and returns a pre-activation `rollPlan` on success; `app.js` draws dice and uses the existing popup. Attack, damage bonus, AP discount, save DC and target-save stats stay independent. No Wonder/Defy Fate on attacks.
-- Explicit combat mode and custom rest/combat/round use periods are **implemented**, with separate outside allowances (DM confirmed). `StartCombat` / `EndCombat` / `AdvanceAbilityTurn` / `RestAbilities` are pure commands; Parry follows the shared DEX outside allowance. Legacy equipment per-round abilities still need outside-limit configuration.
+- Explicit combat mode and custom rest/combat/round use periods are **implemented**, with separate outside allowances (DM confirmed). `StartCombat` / `EndCombat` / `AdvanceAbilityTurn` / `RestAbilities` are pure commands; Parry follows the shared DEX outside allowance. Equipment abilities now have explicit outside-limit configuration; definitions without it retain legacy turn resets.
 - Seven non-weapon milestone actions are **implemented** under Abilities → Milestone actions. `UseMilestone` adapts to the existing activation transaction; `milestoneUses` keeps separate scoped counts, `SetMilestoneUses` corrects the current allowance, and long-rest Undo includes the map. Eyes of Truth is a WIS check; Commanding Presence is target CHA DC 10 + 2 × mod. Narrative outcomes remain at the table.
 - Devastate/Singularity are **implemented**. Confirmed: Devastate applies only to STR-based damage; dual Singularity affects **one chosen hand**. `BeginWeaponAttack` atomically commits AP/reaction and Singularity, returning source snapshots; `ApplyDevastate` consumes its shared use without rerolling damage. A forced critical is distinct from natural 20.
+- Equipment Use/corrections and turn/rest resets now use shared allowance helpers/commands. `outsideUsesStat` is optional on item abilities; legacy missing metadata keeps turn resets. Fixed/stat-based outside limits spend `equipmentOutsideSpent` separately from `spent`. Forge remapping preserves counts across edits/removals and current-bank changes; long-rest Undo includes both.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — equipment ability outside-use tracking
+## Your next independent task — character notes
 
-**Scope:** continue finishing character abilities. Add explicit outside-use settings for legacy equipment abilities that currently reset every round, reusing the same combat/outside allowance derivation and command boundaries as custom abilities/milestones. Inspect Forge editing, equipped ability Use, `state.spent`, turn/rest processing and long-rest Undo first.
-
-**Compatibility:** existing item abilities contain a uses count and round/rest period but no associated outside stat. Do not infer it from a weapon stat or invent a class rule. Make that stat/fixed-limit choice explicit in the editor, preserve old item definitions and stored spends, and resolve any genuine migration/reset ambiguity before changing legacy behavior. Hidden/unequipped items and alternate worn profiles must retain their balances. Keep manual corrections available.
+**Scope:** add backstory, personality, languages, allies and session notes to the player character sheet. Keep the interface comfortable on phones and preserve notes in local saves, v1 export/import and manual cloud copies. Use optional fields with empty defaults for legacy characters; editing notes must never trigger gameplay commands or overwrite DM game state.
 
 **Preserve:**
-- Confirmed weapon milestone rules: STR-based damage only for Devastate; one chosen hand for dual Singularity; declared use spent on a miss; no natural-20-only immunity on forced criticals. Keep original damage snapshots, recomputation before zero clamps/halving, normal critical dice and opportunity/AP conversion behavior.
-- All milestone actions and counts, fixed AP payments, current-modifier plans, narrative/target-save boundaries, export/reload/cloud copies and long-rest Undo.
-- Separate combat/outside allowances, idempotent StartCombat, combat-only round refills, no refill on EndCombat and spent counts retained as maxima/unlocks change.
-- Atomic rejection, Command-first AP, source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment and independent DM saves. No Wonder/Defy Fate on attacks.
-- Pure command/state tests and actual 390px interactions. Full Health/turn/rest/Undo orchestration remains a focused B2 follow-up; do not introduce automatic triggers, unapproved resource overflow or multiplayer.
+- Equipment charge tracking and explicit outside-use choices. Missing metadata keeps legacy turn resets; do not infer an item ability stat. Keep both spent maps, Forge row remapping, current-bank manual corrections, hidden item balances and long-rest Undo.
+- Confirmed weapon milestones, actual natural dice, source damage snapshots, atomic AP/reaction + Singularity payment, one-hit Devastate and existing opportunity conversion.
+- All other milestone/custom ability flows, separate combat/outside allowances, idempotent StartCombat, combat-only scoped round refills and no refill on EndCombat.
+- Source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment, cloud revision receipts, stale-tab save protection and independent DM saves.
+- Relevant 390px browser interactions and existing regressions. Full Health/turn/rest/Undo orchestration, consumables, roll history and free dice remain subsequent focused slices; do not introduce unapproved game rules, automatic triggers or multiplayer.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the approved equipment-use slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+3. Implement the notes slice and relevant browser interactions, then run the appropriate regression checks and CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

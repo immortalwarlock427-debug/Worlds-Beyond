@@ -148,6 +148,10 @@
        if(JSON.stringify(previous)!==JSON.stringify(current))events.push({type:'milestone.changed',milestoneId:id,previous,current,command:type});
      }
    }
+   const equipment=abilities.equipmentLifecycle(next,type);
+   for(const key of ['spent','equipmentOutsideSpent'])if(JSON.stringify(equipment[key])!==JSON.stringify(state[key]||{})){
+     patch[key]=equipment[key];events.push({type:'equipment.uses.changed',pool:key,previous:state[key]||{},current:equipment[key],command:type});
+   }
    return {ok:true,state:{...state,...patch},patch,events,log:events.map(e=>type+': '+e.type),
      message:type==='StartCombat'?'Combat started. Combat and round uses restored.':type==='EndCombat'?'Combat ended. Outside uses retained.':'Ability trackers updated.'};
  }
@@ -307,6 +311,33 @@
    events.push({type:'weapon.attack.prepared',slot:plan.slot,payment,command:'BeginWeaponAttack'});
    return {ok:true,state:{...state,...patch},patch,events,weaponAttack,message:'Weapon attack prepared.',log:events.map(e=>'BeginWeaponAttack: '+e.type)};
  }
+ function applyEquipmentAbility(state,command){
+   const itemId=command.itemId,index=command.abilityIndex,abilities=window.WBAbilities;
+   const data=abilities.equipmentAbility(state,itemId,index);
+   if(!data)return {ok:false,error:'EQUIPMENT_ABILITY_NOT_FOUND',message:'Choose an existing equipment ability.'};
+   if(!data.usage.limited)return {ok:false,error:'UNLIMITED_EQUIPMENT_ABILITY',message:'This equipment ability has no use limit to track.'};
+   const key=data.usage.outside?'equipmentOutsideSpent':'spent';
+   const previous=data.usage.outside?data.ability.outsideUsesSpent:data.spent;
+   let current;
+   if(command.type==='SetEquipmentAbilityUses'){
+     const value=amount(command.value);
+     if(value===null)return {ok:false,error:'INVALID_VALUE',message:'Enter a nonnegative number of uses.'};
+     current=data.usage.maximum-Math.min(data.usage.maximum,Math.round(value));
+   }else{
+     if(data.usage.remaining<=0)return {ok:false,error:'NO_EQUIPMENT_USES',message:data.ability.name+' has no uses left until the next '+data.usage.period+'.'};
+     const working={...state,abilities:[data.ability,...(state.abilities||[])]};
+     const used=applyTransaction(working,{type:'ActivateAbility',abilityId:data.ability.id});
+     if(!used.ok)return used;
+     const ability=used.state.abilities[0];
+     current=data.usage.outside?ability.outsideUsesSpent:data.ability.uses-ability.usesLeft;
+   }
+   const patch={[key]:{...record(state[key]),[itemId]:{...record(record(state[key])[itemId]),[index]:current}}};
+   const correction=command.type==='SetEquipmentAbilityUses';
+   const events=[{type:correction?'equipment.ability.corrected':'equipment.ability.used',itemId,abilityIndex:index,previous,current,
+     period:data.usage.period,source:correction?'correction':'command',command:command.type}];
+   return {ok:true,state:{...state,...patch},patch,events,log:events.map(e=>command.type+': '+e.type),
+     message:(correction?'Adjusted ':'Used ')+data.ability.name+'.',equipmentAbilityPlan:{name:data.ability.name,effect:String(data.definition.effect||'')}};
+ }
  function apply(state,command){
    if(!state||typeof state!=='object'||Array.isArray(state)||!command||typeof command!=='object'||Array.isArray(command))
      return {ok:false,error:'INVALID_COMMAND'};
@@ -324,6 +355,7 @@
      return {...result,devastateBonus:source.damageModifier,events,log:events.map(e=>'ApplyDevastate: '+e.type)};
    }
    if(command.type==='BeginWeaponAttack')return beginWeaponAttack(state,command);
+   if(command.type==='UseEquipmentAbility'||command.type==='SetEquipmentAbilityUses')return applyEquipmentAbility(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;
