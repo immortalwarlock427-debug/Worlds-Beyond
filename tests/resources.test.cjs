@@ -221,9 +221,10 @@ test('the character sheet loads manager before app and hooks turn/rest/export', 
   assert.ok(html.indexOf('src="js/resources.js') < html.indexOf('src="js/app.js'));
   assert.match(html, /id="resourceSection"/);
   assert.match(app, /window\.WBResources\.normalizeState\(state\)/);
-  assert.match(app, /resourceManager\.turnStart\(\)/);
-  assert.match(app, /resourceManager\.longRest\(\)/);
-  assert.match(app, /resources: state\.resources/);
+  assert.match(app, /execute\(\{type:'StartTurn'\}\)/);
+  assert.match(app, /execute\(\{type:'LongRest'\}\)/);
+  const core = fs.readFileSync(path.join(__dirname, '..', 'js', 'character-core.js'), 'utf8');
+  assert.match(core, /run\(\{type:'ResourceLongRest'\}/);
   const persistence = fs.readFileSync(path.join(__dirname, '..', 'js', 'persistence.js'), 'utf8');
   assert.match(app, /WBPersistence\.exportCharacter\(state\)/);
   assert.match(persistence, /version: CHARACTER_VERSION/);

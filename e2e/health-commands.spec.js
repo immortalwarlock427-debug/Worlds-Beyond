@@ -16,7 +16,7 @@ async function seed(page,state=hero()){
  },{key,gameKey,state});
  await page.goto('/index.html');
  await page.evaluate(()=>{window.healthCalls=[];const apply=window.WBCharacter.apply;window.WBCharacter.apply=(state,command)=>{
-  if(command.type.includes('Health'))window.healthCalls.push({...command});return apply(state,command);
+  if(command.type.includes('Health'))window.healthCalls.push({...command});const result=apply(state,command);if(command.type==='StartTurn')window.healthTurnResult=result;return result;
  };});
 }
 async function close(page){await page.locator('#toastClose').click();}
@@ -34,7 +34,7 @@ test("Health commands receive final damage once and preserve resistance, armor, 
  await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-8');await expect(page.locator('#toastActions [data-act="conc"]')).toContainText('DC 50');await close(page);
  await hit(page,4);await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-12');await close(page);
  await page.locator('#turnReset').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-16');
- await expect(page.locator('#toastActions [data-act="conc"]')).toHaveCount(0);expect(await page.evaluate(()=>window.healthCalls.at(-1).source)).toBe('bleeding');await close(page);
+ await expect(page.locator('#toastActions [data-act="conc"]')).toHaveCount(0);expect(await page.evaluate(()=>window.healthTurnResult.events.filter(e=>e.type==='health.damaged').map(e=>({source:e.source,amount:e.amount})))).toEqual([{source:'bleeding',amount:4}]);await close(page);
  await page.locator('#turnReset').click();await expect.poll(async()=>(await saved(page)).fields.hpCur).toBe('-20');await expect(page.locator('#dyingTitle')).toHaveText('Dead');
  expect((await saved(page)).down.mercy).toBe(true);expect((await saved(page)).resources[0].current).toBe(7);expect(await page.evaluate(key=>localStorage.getItem(key),gameKey)).toBe(gameBefore);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);

@@ -106,7 +106,8 @@ test('character exports/imports carry statuses; dedicated sheet status tab and t
   assert.match(html,/data-sheet-tab="statuses"/);
   assert.match(html,/id="statusSec"/);
   assert.match(app,/WBStatus\.normalizeState\(state\)/);
-  assert.match(app,/statusManager\.turnStart\(\)/);
+  assert.match(app,/execute\(\{type:'StartTurn'\}\)/);
+  assert.match(read('js/character-core.js'),/WBStatus\.advanceTurn\(next\)/);
   assert.match(app,/statusManager\.render\(\)/);
   assert.match(app,/statuses: \[\]/);
   assert.match(html,/data-sheet-section="statuses"/);

@@ -200,11 +200,11 @@ test('passives cannot be activated; Mana costs require configured visible Mana',
 test('activation integration uses the same sheet AP, turn, and long-rest controls', () => {
   const app = read('js/app.js');
   const html = read('index.html');
-  assert.match(app, /abilityLibrary\.turnStart\(\)/);
-  assert.match(app, /abilityLibrary\.longRest\(\)/);
+  assert.match(app, /execute\(\{type:'StartTurn'\}\)/);
+  assert.match(app, /execute\(\{type:'LongRest'\}\)/);
   assert.match(app, /getAp: \(\) => apHave\(\)/);
   assert.match(app, /spendAp: \(cost\) => spendAp\(cost\)/);
-  assert.match(app, /abilities: state\.abilities/);
+  assert.match(read('js/character-core.js'), /run\(\{type:'RestAbilities'\}/);
   assert.match(html, /id="abilityFeedback"/);
 });
 
@@ -292,7 +292,7 @@ test('effect values and targets persist safely through character import', () => 
 test('movement panel uses derived movement bonus', () => {
   const app = read('js/app.js');
   assert.match(app, /WBAbilities\.movementBonus\(state\)/);
-  assert.match(app, /refreshAll\(\); \/\/ Update movement and the battlemap after timed effects expire/);
+  assert.match(app, /execute\(\{type:'StartTurn'\}\)[\s\S]*?fillInputs\(\);refreshAll\(\);save\(\)/);
 });
 
 test('movement display and derived speed do not double-count an active bonus', () => {

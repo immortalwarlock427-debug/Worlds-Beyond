@@ -16,14 +16,15 @@
 - Character notes are **implemented** in the Notes tab: session notes, backstory, personality, languages and allies/connections use optional plain-text `state.fields` entries. They persist through local/v1/manual-cloud saves and stay shared across forms/rests. Narrative input skips gameplay refresh/commands; character replacement clears absent note fields.
 - Consumables are **implemented** under Equipment: separate character-wide stock, Add/Edit/Remove/Use and quantity corrections through `WBCharacter`. Complete roll validation precedes consumption; optional UI healing reuses the existing Health rules once. No inferred AP price, replenishment on rests/forms or other-character writes. Definitions and unknown fields survive local/v1/manual-cloud saves; edits preserve current quantities.
 - Free dice/recent rolls are **implemented** in Dice. Complete free-expression validation uses the existing roll adapter; RecordRoll/ReviseRoll/ClearRollHistory write only bounded primitive metadata and emit no gameplay events. Actual rolls capture without extra dice RNG; Wonder creates a result, while Devastate/Defy Fate/opportunity conversion revise the original id/time. Read-only details never invoke the popup or replay effects. Local/v1/manual-cloud saves retain the newest 20; legacy/reset/import behavior and unsupported-data guards are covered.
-- Shared Health is **implemented**: state-derived maximum/current/threshold/flags and typed damage, healing, manual current/max, stability, Trauma and treatment commands. Ordinary/potion healing share recovery/cap math. Metadata hydration is pure and applied at load/save, not rendering; no gameplay events or Trauma occur from repaint/configuration. Historical gear numbers are read consistently. Full turn/rest and rest Undo remain in the controller.
+- Shared Health is **implemented**: state-derived maximum/current/threshold/flags and typed damage, healing, manual current/max, stability, Trauma and treatment commands. Ordinary/potion healing share recovery/cap math. Metadata hydration is pure and applied at load/save, not rendering; no gameplay events or Trauma occur from repaint/configuration. Historical gear numbers are read consistently. Atomic turn/rest and scoped rest Undo are also implemented.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — atomic turn and long rest
+## Your next independent task — manual runtime tracker controls
 
-**Scope:** move existing Start my turn and Long rest orchestration into atomic character transactions. Preserve AP/Command/reaction/movement resets, resource regeneration, ability/status timer order, maximum-drop reconciliation, equipment settlement, Health bleeding/rest recovery and the current selective rest Undo. Use the existing Health and ability lifecycle commands; do not refill consumables or undo unrelated later notes/history/stock edits. Keep legacy rest/resource policies unchanged; B3 overflow/rest choices remain pending. Broader transaction-history Undo remains separate.
+**Scope:** migrate remaining manual runtime tracker corrections and effect-ending controls to the shared character command boundary: custom ability uses/cooldown/duration/held capacity, Wonder/reactions and existing end-effect actions. Reuse current helpers and manual editing rules without introducing costs, auto triggers or new restrictions. Keep configuration editors separate. Atomic StartTurn/LongRest/UndoLongRest are implemented; preserve their ordering, scoped receipt and legacy resource policies. Broader transaction-history Undo and unapproved B3 resource choices remain separate.
 
 **Preserve:**
+- Atomic turn/rest failure rollback, regeneration before timer expiry/max reconciliation, statuses before bleeding, one bleed, state-derived refill and selective rest Undo. No consumable refills, lost later notes/history/stock/status edits or persisted Undo receipts.
 - Shared Health derivation/commands, signed/full sentinels, history-based maxima, current VIT/gear/form effects, Death's Mercy, recovery Trauma, manual corrections and metadata-only flag hydration. No rendering-side Health writes or extra healing applications.
 - Free-dice validation, actual-roll capture without extra RNG, bounded primitive history, id/time-preserving revisions, read-only details and character-only persistence. Viewing history must never trigger Health actions.
 - Consumable quantity/definition commands, current-count edits, optional healing and single-application results, no rest/form refills, unknown metadata and manual corrections.
@@ -38,7 +39,7 @@
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the turn/rest transaction slice with deterministic atomicity/order checks and real phone/rest-Undo interactions, then run the regression checks and CI. Update docs where status changes.
+3. Implement manual tracker commands with deterministic correction/event checks and real phone/effect-ending/rest-Undo interactions, then run the regression checks and CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

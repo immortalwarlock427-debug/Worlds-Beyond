@@ -203,6 +203,93 @@
      (e.type==='ap.changed'?e.current.total:e.current.current))};
  }
  const transactionTypes=new Set(['ActivateAbility','EnterForm','SelectPortrait']);
+ // A rest receipt is memory-only and deliberately excludes portraits, notes,
+ // inventory, consumables, history, manual statuses and DM/game data.
+ const restKeys=['abilities','milestoneUses','resources','wonderAvail','apAvail','reactAvail','apGiven','move',
+   'parryUsed','parryOutsideSpent','settled','spent','equipmentOutsideSpent','trauma','down'];
+ const transitionKeys=[...restKeys,'fields','statuses'];
+ const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+ function restReceipt(state){
+   const snapshot=(object,keys)=>Object.fromEntries(keys.map(key=>[key,
+     {present:Object.prototype.hasOwnProperty.call(object,key),value:copy(object[key])}]));
+   return {version:1,values:snapshot(state,restKeys),fields:snapshot(record(state.fields),['hpCur','mpCur'])};
+ }
+ function undoLongRest(state,command){
+   const receipt=record(command.receipt),values=record(receipt.values),fields=record(receipt.fields);
+   if(receipt.version!==1||!restKeys.every(key=>typeof record(values[key]).present==='boolean')||
+     !['hpCur','mpCur'].every(key=>typeof record(fields[key]).present==='boolean'))
+     return {ok:false,error:'INVALID_REST_RECEIPT',message:'There is no valid long rest to undo.'};
+   const patch={fields:{...record(state.fields)}},removedKeys=[];
+   for(const key of restKeys){
+     if(values[key].present)patch[key]=copy(values[key].value);
+     else {patch[key]=undefined;removedKeys.push(key);}
+   }
+   for(const key of ['hpCur','mpCur']){
+     if(fields[key].present)patch.fields[key]=copy(fields[key].value);
+     else delete patch.fields[key];
+   }
+   const next={...state,...patch};for(const key of removedKeys)delete next[key];
+   return {ok:true,state:next,patch,removedKeys,restoreRecords:true,events:[],log:[],message:'Long rest undone.'};
+ }
+ function applyTurnRest(state,command){
+   const type=command.type,rest=type==='LongRest',next={...state},events=[];
+   // Helpers see only private owned records. A failed late stage cannot leak
+   // earlier regeneration, timer ticks, tracker resets or settlement.
+   for(const key of transitionKeys)if(state[key]!==undefined)next[key]=copy(state[key]);
+   next.fields={...record(next.fields)};
+   let bleeding=null;
+   const run=(nested,stage)=>{
+     const result=apply(next,nested);
+     if(!result.ok)throw Error(result.error);
+     if(result.patch)Object.assign(next,result.patch);
+     else next.resources=result.state.resources;
+     events.push(...result.events.map(event=>({...event,command:type,stage})));
+     return result;
+   };
+   try{
+     const before=derive(state);
+     next.apAvail=null;next.reactAvail=null;next.parryUsed=false;next.move=null;
+     next.apGiven=!rest&&state.apGiven&&state.apGiven.fresh&&state.apGiven.n>0?
+       {n:state.apGiven.n,fresh:false}:null;
+     if(rest){
+       run({type:'ResourceLongRest'},'resources');
+       run({type:'RestAbilities'},'abilities');
+       const pools=derive(next);
+       if(pools.health.max!=null)next.fields.hpCur=String(pools.health.max);
+       if(pools.mana.max!=null)next.fields.mpCur=String(pools.mana.max);
+       next.wonderAvail=null;next.parryOutsideSpent=0;next.trauma=0;next.down=null;
+       next.settled={...record(next.settled)};
+       for(const slot of window.WBCombat.SLOTS){const id=record(next.equip)[slot];if(id)next.settled[id]=true;}
+     }else{
+       const previousMaxima=Object.fromEntries(Object.entries(before.resources).map(([id,r])=>[id,r.effectiveMax]));
+       run({type:'ResourceTurnStart'},'regeneration');
+       run({type:'AdvanceAbilityTurn'},'abilities');
+       run({type:'ReconcileResourceMaximums',previousMaxima},'maximums');
+       window.WBStatus.advanceTurn(next);
+       if(JSON.stringify(state.statuses||[])!==JSON.stringify(next.statuses||[]))
+         events.push({type:'statuses.changed',previous:copy(state.statuses||[]),current:copy(next.statuses||[]),command:type,stage:'statuses'});
+       const h=health(next);
+       if(h.current!=null&&h.current<=0&&!(h.down||{}).stable&&!h.dead)
+         bleeding=run({type:'DamageHealth',amount:4,source:'bleeding'},'bleeding').healthPlan;
+     }
+     Object.assign(next,healthTrackingPatch(next));
+     const after=derive(next),patch={};
+     for(const key of transitionKeys)if(JSON.stringify(state[key])!==JSON.stringify(next[key]))patch[key]=next[key];
+     for(const [id,current] of Object.entries(after.resources)){
+       const previous=before.resources[id];
+       if(previous&&previous.effectiveMax!==current.effectiveMax)
+         events.push({type:'resource.maximum.changed',resourceId:id,previous:previous.effectiveMax,
+           current:current.effectiveMax,command:type,stage:'complete'});
+     }
+     for(const pool of ['ap','mana','reactions'])if(JSON.stringify(before[pool])!==JSON.stringify(after[pool]))
+       events.push({type:pool+'.changed',previous:before[pool],current:after[pool],command:type,stage:'complete'});
+     if(rest&&JSON.stringify(before.health)!==JSON.stringify(after.health))
+       events.push({type:'health.changed',previous:before.health,current:after.health,source:'rest',command:type,stage:'complete'});
+     events.push({type:rest?'rest.completed':'turn.started',previous:before,current:after,command:type});
+     return {ok:true,state:next,patch,events,log:events.map(e=>type+': '+e.type),
+       transitionPlan:{bleeding},...(rest?{restReceipt:restReceipt(state)}:{}),message:rest?'Long rest completed.':'Turn started.'};
+   }catch(error){return {ok:false,error:'TRANSACTION_FAILED',message:'The '+(rest?'long rest':'turn')+' could not be completed. Nothing changed.'};}
+ }
  const lifecycleTypes=new Set(['StartCombat','EndCombat','AdvanceAbilityTurn','RestAbilities']);
  function applyAbilityLifecycle(state,command){
    const type=command.type,abilities=window.WBAbilities;
@@ -478,6 +565,8 @@
    if(poolTypes.has(command.type))return applyPools(state,command);
    if(healthTypes.has(command.type))return applyHealth(state,command);
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
+   if(command.type==='StartTurn'||command.type==='LongRest')return applyTurnRest(state,command);
+   if(command.type==='UndoLongRest')return undoLongRest(state,command);
    if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
    if(command.type==='UseMilestone'||command.type==='SetMilestoneUses')return applyMilestone(state,command);
    if(command.type==='ApplyDevastate'){
