@@ -8,7 +8,7 @@
   const STATS = ['STR','VIT','DEX','AGL','INT','WIS','CHA','FTH'];
   const ASI_LEVELS = [4,8,12,16,19];
   const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring',
-    'belt','rleg','lleg','main','off','strapped','lstrapped','pants'];
+    'belt','rleg','lleg','main','off','strapped','lstrapped','pants','boots'];
   const record = obj => obj && typeof obj === 'object' && !Array.isArray(obj) ? obj : {};
   const isSet = v => v != null && String(v).trim() !== '';
   const num = v => {
@@ -70,8 +70,9 @@
     let rank=-1;for(const item of items)rank=Math.max(rank,weights.indexOf(item.armorWeight));
     const type=weights[rank]||'';const by=slot=>items.find(it=>it.id===record(state.equip)[slot]);const ne=it=>Math.max(0,Number(it?.lightEvasion)||0);
     const armNE=Math.max(ne(by('rarm')),ne(by('larm'))),legNE=by('rleg')?.pair?ne(by('rleg')):by('lleg')?.pair?ne(by('lleg')):by('rleg')&&by('lleg')?Math.max(ne(by('rleg')),ne(by('lleg'))):0;
+    const pairedIds=new Set(['rarm','larm','rleg','lleg'].map(slot=>record(state.equip)[slot]).filter(Boolean));
     return {type,heavy:type==='heavy',aglPenalty:type==='heavy'?Math.min(3,Math.max(0,gearArmor(state)-items.filter(it=>it.type==='shield').reduce((n,it)=>n+(Number(it.ar)||0),0)-3)):0,
-      evasionBonus:type==='light'?armNE+legNE+items.filter(it=>!['arms','legs'].includes(it.type)).reduce((sum,it)=>sum+ne(it),0):0,
+      evasionBonus:type==='light'?armNE+legNE+items.filter(it=>!pairedIds.has(it.id)).reduce((sum,it)=>sum+ne(it),0):0,
       movementMultiplier:(type==='heavy'?2:1)*((state.statuses||[]).some(s=>String(s.preset||s.name).toLowerCase()==='prone')?2:1)};
   }
   function statBonus(state,stat,temporary=true){

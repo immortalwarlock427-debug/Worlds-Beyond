@@ -4,12 +4,12 @@
 (function () {
   'use strict';
   const BASE = 'base';
-  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','lstrapped','pants'];
+  const SLOTS = ['head','amulet','torso','rarm','larm','rring','lring','belt','rleg','lleg','main','off','strapped','lstrapped','pants','boots'];
   const FIT = {
     head: ['head'], amulet: ['amulet'], torso: ['torso'],
     rarm: ['arms'], larm: ['arms'], rring: ['ring'], lring: ['ring'],
     belt: ['belt'], rleg: ['legs'], lleg: ['legs'],
-    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],lstrapped:['onehand'],pants:['pants']
+    main: ['onehand','twohand'], off: ['onehand','shield'],strapped:['onehand'],lstrapped:['onehand'],pants:['pants','legs'],boots:['boots']
   };
   const PAIRS = {arms: ['rarm','larm'], ring: ['rring','lring'], legs: ['rleg','lleg']};
   const twoHanded=(state,item)=>window.WBCombat&&window.WBCombat.weaponRules?window.WBCombat.weaponRules(state,item).twoHanded:item.type==='twohand';
@@ -25,7 +25,8 @@
       // Pairs are represented in their primary slot, and a two-handed weapon
       // occupies the offhand implicitly. Do not equip conflicting pieces.
       const pair = PAIRS[item.type];
-      if (item.pair && pair && slot !== pair[0]) continue;
+      const pantsItem=slot==='pants'&&item.type==='legs';
+      if (item.pair && pair && !pantsItem && slot !== pair[0]) continue;
       if (slot === 'off' && output.main && twoHanded(state,inventory.get(output.main))) continue;
       if (pair && slot === pair[1] && output[pair[0]]) {
         const first = inventory.get(output[pair[0]]);
@@ -33,7 +34,7 @@
       }
       output[slot] = id;
       seen.add(id);
-      if (item.pair && pair) delete output[pair[1]];
+      if (item.pair && pair && !pantsItem) delete output[pair[1]];
       if(slot==='main'&&twoHanded(state,item))delete output.off;
     }
     return output;

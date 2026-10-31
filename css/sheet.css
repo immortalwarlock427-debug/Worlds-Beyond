@@ -413,8 +413,10 @@ h1 {
 .slot-x { position: absolute; right: 1px; bottom: 1px; }
 .hands-head { width: 100%; max-width: 440px; margin-top: 8px; }
 .hands { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 440px; }
-.armor-extra-slots { width:100%; max-width:440px; margin:10px 0; }
-.armor-extra-slots .slot { position:relative; width:100%; min-height:80px; height:auto; }
+.armor-extra-slots,.previous-leg-slots { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; width:100%; max-width:440px; margin:10px 0; }
+.armor-extra-slots .slot,.previous-leg-slots .slot { position:relative; width:100%; min-width:0; min-height:80px; height:auto; }
+.previous-leg-equipment { width:100%; max-width:440px; font-size:14px; }
+.previous-leg-equipment summary { cursor:pointer; min-height:44px; align-content:center; }
 .equipment-base-picker { min-width:0; }
 .equipment-base-picker > select { width:100%; min-width:0; min-height:44px; padding:8px; background:var(--field); color:var(--ink); border:1px solid var(--rule); font:inherit; }
 .equipment-base-picker .pick button { min-height:44px; }

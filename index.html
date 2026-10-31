@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-equipment-forge-v46">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-pants-boots-v47">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 54</p>
+    <p class="meta">Homebrew rules · Draft 55</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -583,7 +583,7 @@
       <svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg>
       <h2 id="equipHead">Equipment</h2>
     </div>
-    <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm, leg pieces either leg and rings either hand, unless the piece is a set, like boots, which fills both. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Health and Mana use current stats and gear. Changes to a maximum move the current pool by the same amount. Hit dice heal on short rests.</p>
+    <p class="note">Forge a piece, then drag it onto the body or a hand, or tap the piece and then a slot. Arm pieces fit either arm and rings either hand, unless configured as a set. Pants cover both legs. Boots always use one slot for the pair. Shields go in your off hand. Worn gear adds to your Armor Rating and its bonuses count right away, milestones included. Health and Mana use current stats and gear. Changes to a maximum move the current pool by the same amount. Hit dice heal on short rests.</p>
     <div class="consumables-panel" id="consumablesPanel" aria-labelledby="consumablesHead">
       <div class="consumables-heading"><h3 id="consumablesHead">Consumables</h3><button type="button" class="btn" id="consumableAdd">Add consumable</button></div>
       <p class="note">Use tracks one item. Optional healing rolls can be applied to your Health from the roll popup; listed AP costs and other effects are handled at the table.</p>
@@ -619,8 +619,10 @@
             <ellipse class="plinth" cx="200" cy="470" rx="68" ry="6"/>
             <path class="part" data-part="rarm" d="M147 136 C135 138 128 148 127 164 L123 232 L119 306 C118 320 139 322 140 308 L145 234 L153 176 Z"/>
             <path class="part" data-part="larm" d="M253 136 C265 138 272 148 273 164 L277 232 L281 306 C282 320 261 322 260 308 L255 234 L247 176 Z"/>
-            <path class="part" data-part="rleg" d="M170 278 L198 278 L196 364 L191 444 L195 466 L161 466 L165 444 L166 364 Z"/>
-            <path class="part" data-part="lleg" d="M230 278 L202 278 L204 364 L209 444 L205 466 L239 466 L235 444 L234 364 Z"/>
+            <path class="part" data-part="pants" d="M170 278 L198 278 L196 364 L191 444 L165 444 L166 364 Z"/>
+            <path class="part" data-part="boots" d="M165 444 H191 L195 466 H155 V456 Z"/>
+            <path class="part" data-part="pants" d="M230 278 L202 278 L204 364 L209 444 L235 444 L234 364 Z"/>
+            <path class="part" data-part="boots" d="M209 444 H235 L245 456 V466 H205 Z"/>
             <path class="body" d="M190 104 V126 H210 V104 Z"/>
             <path class="part" data-part="torso" d="M150 132 C170 120 230 120 250 132 L243 202 L231 276 L169 276 L157 202 Z"/>
             <path class="seam" d="M200 132 V246"/>
@@ -639,14 +641,14 @@
             <path class="lead" data-part="belt" d="M288 249 H245 L234 256"/>
             <path class="lead" data-part="rring" d="M112 347 H118 L126 309"/>
             <path class="lead" data-part="lring" d="M288 347 H282 L274 309"/>
-            <path class="lead" data-part="rleg" d="M112 445 H150 L177 427"/>
-            <path class="lead" data-part="lleg" d="M288 445 H250 L223 427"/>
+            <path class="lead" data-part="pants" d="M112 445 H150 L177 427"/>
+            <path class="lead" data-part="boots" d="M288 445 H250 L223 427"/>
             <circle class="anchor" data-part="head" cx="179" cy="72" r="3.5"/>
             <circle class="anchor" data-part="torso" cx="183" cy="211" r="3.5"/>
             <circle class="anchor" data-part="rarm" cx="139" cy="178" r="3.5"/>
             <circle class="anchor" data-part="larm" cx="261" cy="178" r="3.5"/>
-            <circle class="anchor" data-part="rleg" cx="179" cy="426" r="3.5"/>
-            <circle class="anchor" data-part="lleg" cx="221" cy="426" r="3.5"/>
+            <circle class="anchor" data-part="pants" cx="179" cy="426" r="3.5"/>
+            <circle class="anchor" data-part="boots" cx="221" cy="426" r="3.5"/>
           </svg>
           <div class="slot cl r1" data-drop="slot" data-slot="head"></div>
           <div class="slot cr r1" data-drop="slot" data-slot="amulet"></div>
@@ -656,10 +658,17 @@
           <div class="slot cr r3" data-drop="slot" data-slot="belt"></div>
           <div class="slot cl r4" data-drop="slot" data-slot="rring"></div>
           <div class="slot cr r4" data-drop="slot" data-slot="lring"></div>
-          <div class="slot cl r5" data-drop="slot" data-slot="rleg"></div>
-          <div class="slot cr r5" data-drop="slot" data-slot="lleg"></div>
+
         </div>
-        <div class="armor-extra-slots"><div class="slot" data-drop="slot" data-slot="pants"></div></div>
+        <div class="armor-extra-slots">
+          <div class="slot" data-drop="slot" data-slot="pants"></div>
+          <div class="slot" data-drop="slot" data-slot="boots"></div>
+        </div>
+        <details id="previousLegEquipment" class="previous-leg-equipment" hidden>
+          <summary>Previously worn leg pieces</summary>
+          <p>These saved pieces remain worn with their existing stats and uses. Equipping pants replaces them; the pieces stay in your pack.</p>
+          <div class="previous-leg-slots"><div class="slot" data-slot="rleg"></div><div class="slot" data-slot="lleg"></div></div>
+        </details>
         <div class="doll-total">
           <span class="foot-label">Armor Rating</span>
           <span class="doll-ar" id="dollAr">0</span>
@@ -733,7 +742,7 @@
               <button type="button" data-type="pants" aria-pressed="false">Pants</button><button type="button" data-type="head" aria-pressed="true">Head</button>
               <button type="button" data-type="torso" aria-pressed="false">Torso</button>
               <button type="button" data-type="arms" aria-pressed="false">Arms</button>
-              <button type="button" data-type="legs" aria-pressed="false">Legs</button>
+              <button type="button" data-type="boots" aria-pressed="false">Boots (pair)</button>
               <button type="button" data-type="ring" aria-pressed="false">Ring</button>
               <button type="button" data-type="amulet" aria-pressed="false">Amulet</button>
               <button type="button" data-type="belt" aria-pressed="false">Belt</button>
@@ -766,9 +775,10 @@
             <label><span><input id="forgeAmmoEnabled" type="checkbox"> Ammunition stack</span></label>
             <label>Ammunition quantity (stacks of 5)<input id="forgeAmmo" type="number" min="0"></label>
           </div></details>
+          <p class="fhint" id="bootsPairNote" hidden>Boots are always a pair. Enter the stats for the whole pair; bonuses and effects count once.</p>
           <div class="set-row" id="setRow" hidden>
             <label class="chk" for="forgeSet"><input type="checkbox" id="forgeSet"><span id="setLab">Set: worn on both legs</span></label>
-            <p class="fhint">For a piece that only works as a pair, like boots. It fills both slots, and its armor, bonuses and effects count once for the whole set. Leave it off for something worn on one side, like a single gauntlet.</p>
+            <p class="fhint">For a piece that only works as a pair, like matching arm guards. It fills both slots, and its armor, bonuses and effects count once for the whole set. Leave it off for something worn on one side, like a single gauntlet.</p>
           </div>
           <div class="forge-row" id="shieldRow" hidden>
             <div class="field ar-field">
@@ -940,21 +950,21 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/game-state.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/maps.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/routing.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/combat-core.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/equipment-profiles.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/rules-catalog.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/abilities.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/rolls.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/character-core.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/resources.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/encounter-actions.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/status.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/consumables.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/sheet-layout.js?v=20261031-equipment-forge-v46"></script>
-<script src="js/app.js?v=20261031-equipment-forge-v46"></script>
+<script src="js/persistence.js?v=20261031-pants-boots-v47"></script>
+<script src="js/game-state.js?v=20261031-pants-boots-v47"></script>
+<script src="js/maps.js?v=20261031-pants-boots-v47"></script>
+<script src="js/routing.js?v=20261031-pants-boots-v47"></script>
+<script src="js/combat-core.js?v=20261031-pants-boots-v47"></script>
+<script src="js/equipment-profiles.js?v=20261031-pants-boots-v47"></script>
+<script src="js/rules-catalog.js?v=20261031-pants-boots-v47"></script>
+<script src="js/abilities.js?v=20261031-pants-boots-v47"></script>
+<script src="js/rolls.js?v=20261031-pants-boots-v47"></script>
+<script src="js/character-core.js?v=20261031-pants-boots-v47"></script>
+<script src="js/resources.js?v=20261031-pants-boots-v47"></script>
+<script src="js/encounter-actions.js?v=20261031-pants-boots-v47"></script>
+<script src="js/status.js?v=20261031-pants-boots-v47"></script>
+<script src="js/consumables.js?v=20261031-pants-boots-v47"></script>
+<script src="js/sheet-layout.js?v=20261031-pants-boots-v47"></script>
+<script src="js/app.js?v=20261031-pants-boots-v47"></script>
 </body>
 </html>

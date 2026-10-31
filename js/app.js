@@ -24,18 +24,19 @@
     { k: 'rring',  n: 'Right Ring', fits: 'ring' },
     { k: 'lring',  n: 'Left Ring',  fits: 'ring' },
     { k: 'belt',   n: 'Belt',       fits: 'belt' },
-    { k: 'rleg',   n: 'Right Leg',  fits: 'legs' },
-    { k: 'lleg',   n: 'Left Leg',   fits: 'legs' },
+    { k: 'rleg',   n: 'Previous leg piece 1',  fits: 'legs' },
+    { k: 'lleg',   n: 'Previous leg piece 2',  fits: 'legs' },
     { k: 'main',   n: 'Main Hand',  fits: 'onehand twohand' },
     { k: 'off',    n: 'Off Hand',   fits: 'onehand shield' },
     { k: 'strapped', n:'Right strapped',fits:'onehand' },
     { k: 'lstrapped', n:'Left strapped',fits:'onehand' },
-    { k:'pants',n:'Pants',fits:'pants' }
+    { k:'pants',n:'Pants',fits:'pants legs' },
+    { k:'boots',n:'Boots (pair)',fits:'boots' }
   ];
   const ORDER = SLOTS.map((s) => s.k);
   const SLOT_BY = {};
   SLOTS.forEach((s) => { SLOT_BY[s.k] = s; });
-  // Sets: a piece that only works as a pair, like boots, fills both slots of its kind.
+  // Arm and ring sets fill both slots of their kind; old leg sets remain readable.
   // It sits in the first slot and covers the second, the way a two-handed weapon covers the off hand.
   const PAIRS = {
     arms: { a: 'rarm',  b: 'larm',  n: 'Both Arms',  on: 'both arms' },
@@ -44,10 +45,11 @@
   };
   const TYPES = {
     pants: {n:'Pants',def:'Pants'},
+    boots: {n:'Boots (pair)',def:'Boots'},
     head:   { n: 'Head',   def: 'Helmet' },
     torso:  { n: 'Torso',  def: 'Chestpiece' },
     arms:   { n: 'Arms',   def: 'Arm guards' },
-    legs:   { n: 'Legs',   def: 'Leg guards' },
+    legs:   { n: 'Leg armor',   def: 'Leg guards' },
     ring:   { n: 'Ring',   def: 'Ring' },
     amulet: { n: 'Amulet', def: 'Amulet' },
     belt:   { n: 'Belt',   def: 'Belt' },
@@ -114,6 +116,7 @@
     shield: SVG_OPEN + '<path d="M12 3l7 2.5V11c0 4.6-3 8-7 10-4-2-7-5.4-7-10V5.5z"/><path d="M12 3v18M5 11h14"/></svg>'
   };
   ICONS.pants=ICONS.legs;
+  ICONS.boots=ICONS.legs;
   const PEN = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 13l.8-3.2L10.5 3 13 5.5 6.2 12.2z"/><path d="M9.3 4.2l2.5 2.5"/></svg>';
   const UP = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.5V3.5M4.5 7L8 3.5 11.5 7"/></svg>';
   const DOWN = '<svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5v9M4.5 9L8 12.5 11.5 9"/></svg>';
@@ -171,6 +174,8 @@
   function fits(type, slot) { const s = SLOT_BY[slot]; return !!s && s.fits.split(' ').includes(type); }
   function slotOf(id) { const s = SLOTS.find((x) => state.equip[x.k] === id); return s ? s.k : null; }
   const isPair = (it) => !!(it && it.pair && PAIRS[it.type]);
+  const previousLegItems=()=>['rleg','lleg'].map(slot=>itemById(state.equip[slot])).filter(Boolean);
+  const wornSlotLabel=(item,slot)=>['pants','boots','rleg','lleg'].includes(slot)?SLOT_BY[slot].n:isPair(item)?PAIRS[item.type].n:SLOT_BY[slot].n;
   // The piece covering a slot from elsewhere: a two-handed weapon over the off hand, or a set over its second slot.
   function coveredBy(slot) {
     if (slot === 'off') { const m = itemById(state.equip.main); return m && m.type === 'twohand' ? m : null; }
@@ -1907,14 +1912,16 @@
     if (!it) return;
     if(window.WBCombat.weaponProperties(it).includes('Strapped'))slot=['off','lstrapped'].includes(slot)?'lstrapped':'strapped';
     else if (it.type === 'twohand') slot = 'main';
-    if (isPair(it)) slot = PAIRS[it.type].a;
+    if(it.type==='legs')slot='pants';
+    else if (isPair(it)) slot = PAIRS[it.type].a;
     if (!fits(it.type, slot)||['strapped','lstrapped'].includes(slot)&&!window.WBCombat.weaponProperties(it).includes('Strapped')) return;
     const from = slotOf(id);
     const prev = state.equip[slot];
     if (from) delete state.equip[from];
     state.equip[slot] = id;
+    if(slot==='pants'){toPack('rleg');toPack('lleg');}
     // Moving between two arm, ring, leg or hand slots swaps the pieces. A set can't swap, so it goes to the pack.
-    if (prev && prev !== id && from) {
+    if (prev && prev !== id && from && !['rleg','lleg'].includes(from)) {
       const p = itemById(prev);
       if (p && fits(p.type, from) && !isPair(p)) state.equip[from] = prev;
     }
@@ -1922,7 +1929,7 @@
     if (slot==='main'&&window.WBCombat.weaponRules(state,it).twoHanded) toPack('off');
     if (slot === 'off') { const m = itemById(state.equip.main); if (m && m.type === 'twohand') toPack('main'); }
     // A set fills both slots; a single piece in a set's second slot puts the set away.
-    if (isPair(it)) toPack(PAIRS[it.type].b);
+    if (isPair(it)&&it.type!=='legs') toPack(PAIRS[it.type].b);
     else {
       const t = Object.keys(PAIRS).find((k) => PAIRS[k].b === slot);
       if (t && isPair(itemById(state.equip[PAIRS[t].a]))) toPack(PAIRS[t].a);
@@ -2016,12 +2023,16 @@
   }
   function renderEquip() {
     renderEquipmentProfile();
+    const previous=previousLegItems();
+    $('#previousLegEquipment').hidden=!previous.length;
+    if(!previous.length)$('#previousLegEquipment').open=false;
     SLOTS.forEach((s) => {
       const el = document.querySelector('.slot[data-slot="' + s.k + '"]');
       const it = itemById(state.equip[s.k]);
       const sel = !!(it && selected && selected.kind === 'item' && selected.id === it.id);
       const blockedBy = it ? null : coveredBy(s.k);
-      const label = isPair(it) ? PAIRS[it.type].n : s.n;
+      const label = wornSlotLabel(it,s.k);
+      const previousPants=s.k==='pants'&&!it&&previous.length?previous.map(item=>item.name).join(' + '):'';
       el.classList.toggle('blocked', !!blockedBy);
       el.classList.toggle('filled', !!it);
       el.classList.toggle('selected', sel);
@@ -2030,14 +2041,14 @@
       el.title = it ? it.name : blockedBy ? blockedBy.name : '';
       const coverText = blockedBy ? (blockedBy.type === 'twohand' ? 'Both hands: ' : PAIRS[blockedBy.type].n + ': ') + blockedBy.name : '';
       el.innerHTML =
-        '<button type="button" class="slot-main" aria-label="' + esc(label + (it ? ': ' + it.name + ', armor rating ' + it.ar : blockedBy ? ': ' + coverText : ': empty')) + '">' +
+        '<button type="button" class="slot-main" aria-label="' + esc(label + (it ? ': ' + it.name + ', armor rating ' + it.ar : previousPants?': '+previousPants+', manage previous leg pieces':blockedBy ? ': ' + coverText : ': empty')) + '">' +
           '<span class="slot-label">' + label + '</span>' +
           (it
             ? '<span class="slot-name">' + esc(it.name) + '</span><span class="slot-ar">' + (TYPES[it.type].weapon ? esc(it.dmg) + modText(mod(it.stat)) : 'AR ' + it.ar) + '</span>'
-            : '<span class="slot-empty">' + (blockedBy ? esc(coverText) : 'Empty') + '</span>') +
+            : previousPants?'<span class="slot-name">'+esc(previousPants)+'</span><span class="slot-empty">Manage previous pieces</span>':'<span class="slot-empty">' + (blockedBy ? esc(coverText) : 'Empty') + '</span>') +
         '</button>' +
         (it ? '<button type="button" class="xbtn del slot-x" aria-label="Take off ' + esc(it.name) + '">×</button>' : '');
-      document.querySelectorAll('.figure [data-part="' + s.k + '"]').forEach((p) => p.classList.toggle('worn', !!it || !!blockedBy));
+      document.querySelectorAll('.figure [data-part="' + s.k + '"]').forEach((p) => p.classList.toggle('worn', !!it || !!blockedBy || !!previousPants));
     });
 
     // Equipped list, in body order unless the player has reordered it
@@ -2048,7 +2059,7 @@
           const it = itemById(state.equip[k]);
           const ab = it.abilities || [];
           return '<li class="worn-row">' +
-            '<span class="worn-slot">' + (isPair(it) ? PAIRS[it.type].n : SLOT_BY[k].n) + '</span>' +
+            '<span class="worn-slot">' + wornSlotLabel(it,k) + '</span>' +
             '<div class="worn-body">' +
               '<div class="worn-top"><span class="worn-name">' + esc(it.name) + '</span><span class="worn-ar">' + (TYPES[it.type].weapon ? esc(it.dmg) + ' ' + it.stat : 'AR ' + it.ar) + '</span></div>' +
               (gearLine(it).length ? '<p class="worn-bonus">' + esc(gearLine(it).join(' \u00b7 ')) + '</p>' : '') +
@@ -2143,7 +2154,7 @@
   let editingId = null;
   let abilSeq = 0;
   let forgeCategory='armor',baseEquipment='';
-  const armorTypes=['head','torso','arms','legs','pants'];
+  const armorTypes=['head','torso','arms','legs','pants','boots'];
   const forgeNumbers=[['forgeDamageMultiplier','diceMultiplier'],['forgeThrownRange','thrownRange'],['forgeThrownLongRange','thrownLongRange'],
     ['forgeLongRange','longRange'],['forgeLoading','loadingCapacity'],['forgeLightEv','lightEvasion'],['forgeBlockMultiplier','blockMultiplier'],
     ['forgeSlots','inventorySlots'],['forgeBackpack','backpackBonus'],['forgeAmmo','ammoQuantity']];
@@ -2217,11 +2228,12 @@
   forgeEl.addEventListener('change',syncForgeFields);
   function setForgeType(t) {
     forgeType = TYPES[t] ? t : 'head';
-    $('#forgeType').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.type === forgeType)));
+    $('#forgeType').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.type === forgeType||forgeType==='legs'&&x.dataset.type==='pants')));
     $('#forgeName').placeholder = TYPES[forgeType].def;
     $('#weaponRow').hidden = !TYPES[forgeType].weapon;
     $('#shieldRow').hidden = forgeType !== 'shield';
-    $('#setRow').hidden = !PAIRS[forgeType];
+    $('#setRow').hidden = !PAIRS[forgeType]||forgeType==='legs';
+    $('#bootsPairNote').hidden=forgeType!=='boots';
     if (PAIRS[forgeType]) $('#setLab').textContent = 'Set: worn on ' + PAIRS[forgeType].on;
     syncForgeFields();
   }
@@ -2552,6 +2564,7 @@
     const it = itemById(id);
     if (!it) return;
     SLOTS.forEach((s) => {
+      if(['rleg','lleg'].includes(s.k))return;
       const strapped=window.WBCombat.weaponProperties(it).includes('Strapped');
       if(['strapped','lstrapped'].includes(s.k)?!strapped:strapped||!fits(it.type,s.k)&&!(it.type==='twohand'&&s.k==='off'))return;
       document.querySelector('.slot[data-slot="' + s.k + '"]').classList.add('drop-ok');
@@ -2720,6 +2733,8 @@
       } else if (state.equip[k]) {
         const id = state.equip[k];
         selected = selected && selected.id === id ? null : { kind: 'item', id };
+      } else if(k==='pants'&&previousLegItems().length){
+        $('#previousLegEquipment').open=true;$('#previousLegEquipment').scrollIntoView({block:'nearest'});
       } else {
         touched = false;
       }
