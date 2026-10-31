@@ -15,26 +15,28 @@
 - Equipment Use/corrections and turn/rest resets now use shared allowance helpers/commands. `outsideUsesStat` is optional on item abilities; legacy missing metadata keeps turn resets. Fixed/stat-based outside limits spend `equipmentOutsideSpent` separately from `spent`. Forge remapping preserves counts across edits/removals and current-bank changes; long-rest Undo includes both.
 - Character notes are **implemented** in the Notes tab: session notes, backstory, personality, languages and allies/connections use optional plain-text `state.fields` entries. They persist through local/v1/manual-cloud saves and stay shared across forms/rests. Narrative input skips gameplay refresh/commands; character replacement clears absent note fields.
 - Consumables are **implemented** under Equipment: separate character-wide stock, Add/Edit/Remove/Use and quantity corrections through `WBCharacter`. Complete roll validation precedes consumption; optional UI healing reuses the existing Health rules once. No inferred AP price, replenishment on rests/forms or other-character writes. Definitions and unknown fields survive local/v1/manual-cloud saves; edits preserve current quantities.
+- Free dice/recent rolls are **implemented** in Dice. Complete free-expression validation uses the existing roll adapter; RecordRoll/ReviseRoll/ClearRollHistory write only bounded primitive metadata and emit no gameplay events. Actual rolls capture without extra dice RNG; Wonder creates a result, while Devastate/Defy Fate/opportunity conversion revise the original id/time. Read-only details never invoke the popup or replay effects. Local/v1/manual-cloud saves retain the newest 20; legacy/reset/import behavior and unsupported-data guards are covered.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — free dice and recent rolls
+## Your next independent task — shared Health commands
 
-**Scope:** add a free dice box such as `3d6+2` and a bounded recent-roll history (about 20 entries, with times) so players can show rolls at the table. Reuse complete dice validation and existing popup/roll adapters; no rerolls on render or duplicate gameplay costs. Keep history ownership and export behavior explicit, with no DM game writes or false claims of authoritative rolls. Preserve phone usability, old saves and manual cloud copies.
+**Scope:** migrate existing own-character damage, healing and current-Health corrections to pure `WBCharacter` commands. Reuse the existing `WBCombat` formulas, current Health maximum/blank-value semantics, Death's Mercy, Trauma and recovery rules. Route consumable healing and existing Health buttons through the same path. Keep dice, prompts and target/DM ownership in their existing adapters; do not add Temporary Health, change armor order or invent new healing/death rules. Full turn/rest and transaction Undo remain subsequent focused slices.
 
 **Preserve:**
+- Free-dice validation, actual-roll capture without extra RNG, bounded primitive history, id/time-preserving revisions, read-only details and character-only persistence. Viewing history must never trigger Health actions.
 - Consumable quantity/definition commands, current-count edits, optional healing and single-application results, no rest/form refills, unknown metadata and manual corrections.
 - Notes fields and exact multiline text, narrative-only editing, legacy empty defaults and character replacement/reset behavior.
 - Equipment charge tracking and explicit outside-use choices. Missing metadata keeps legacy turn resets; do not infer an item ability stat. Keep both spent maps, Forge row remapping, current-bank manual corrections, hidden item balances and long-rest Undo.
 - Confirmed weapon milestones, actual natural dice, source damage snapshots, atomic AP/reaction + Singularity payment, one-hit Devastate and existing opportunity conversion.
 - All other milestone/custom ability flows, separate combat/outside allowances, idempotent StartCombat, combat-only scoped round refills and no refill on EndCombat.
 - Source-profile Mana, independent ability roll fields, UI-only dice, form/portrait/gear alignment, cloud revision receipts, stale-tab save protection and independent DM saves.
-- Relevant 390px browser interactions and existing regressions. Full Health/turn/rest/Undo orchestration remains a subsequent focused slice; do not introduce unapproved game rules, automatic triggers or multiplayer.
+- Relevant 390px browser interactions and existing regressions. Full turn/rest/Undo orchestration remains a subsequent focused slice; do not introduce unapproved game rules, automatic triggers or multiplayer.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the free-dice/recent-roll slice with relevant validation and phone/browser interactions, then run the appropriate regression checks and CI. Update docs where status changes.
+3. Implement the Health-command slice with deterministic purity/rejection checks and real Health/consumable phone interactions, then run the regression checks and CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 
