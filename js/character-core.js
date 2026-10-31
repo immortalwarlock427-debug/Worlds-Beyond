@@ -116,6 +116,30 @@
      (e.type==='ap.changed'?e.current.total:e.current.current))};
  }
  const transactionTypes=new Set(['ActivateAbility','EnterForm','SelectPortrait']);
+ const lifecycleTypes=new Set(['StartCombat','EndCombat','AdvanceAbilityTurn','RestAbilities']);
+ function applyAbilityLifecycle(state,command){
+   const type=command.type,abilities=window.WBAbilities;
+   if(type==='StartCombat'&&state.inCombat===true||type==='EndCombat'&&state.inCombat!==true)
+     return {ok:true,state,patch:{},events:[],log:[],message:type==='StartCombat'?'Already in combat.':'Already outside combat.'};
+   const patch={},next={...state,abilities:(state.abilities||[]).map(a=>({...a}))};
+   if(type==='StartCombat'){
+     patch.inCombat=true;next.inCombat=true;patch.parryUsed=false;
+     for(const a of next.abilities)if(['combat','round'].includes(a.usesPer))a.usesLeft=a.uses===''?null:a.uses;
+   }else if(type==='EndCombat'){patch.inCombat=false;next.inCombat=false;}
+   else if(type==='AdvanceAbilityTurn')abilities.advanceTurn(next);
+   else abilities.resetForRest(next);
+   const events=[];
+   if(type==='StartCombat'||type==='EndCombat')events.push({type:type==='StartCombat'?'combat.started':'combat.ended',command:type});
+   const snapshot=a=>({usesLeft:a.usesLeft,outsideUsesSpent:a.outsideUsesSpent||0,
+     cooldownLeft:a.cooldownLeft,durationLeft:a.durationLeft});
+   for(let i=0;i<next.abilities.length;i++){
+     const previous=snapshot(state.abilities[i]),current=snapshot(next.abilities[i]);
+     if(JSON.stringify(previous)!==JSON.stringify(current))events.push({type:'ability.changed',abilityId:next.abilities[i].id,previous,current,command:type});
+   }
+   if(JSON.stringify(next.abilities)!==JSON.stringify(state.abilities||[]))patch.abilities=next.abilities;
+   return {ok:true,state:{...state,...patch},patch,events,log:events.map(e=>type+': '+e.type),
+     message:type==='StartCombat'?'Combat started. Combat and round uses restored.':type==='EndCombat'?'Combat ended. Outside uses retained.':'Ability trackers updated.'};
+ }
  function applyTransaction(state,command){
    const type=command.type,abilities=window.WBAbilities;
    const reject=(error,message)=>({ok:false,error,message});
@@ -166,7 +190,7 @@
    }catch(error){return reject('TRANSACTION_FAILED','The character change could not be completed. No costs were spent.');}
    if(type==='ActivateAbility'){
      const ability=next.abilities.find(a=>a.id===command.abilityId);
-     for(const key of ['usesLeft','capacityCurrent','cooldownLeft','durationLeft'])
+     for(const key of ['usesLeft','outsideUsesSpent','capacityCurrent','cooldownLeft','durationLeft'])
        if(ability[key]!=null&&(!finite(ability[key])||numeric(ability[key])<0))
          return reject('INVALID_CHARACTER_STATE','This ability has unreadable tracker values. No costs were spent.');
    }
@@ -194,7 +218,7 @@
    if(type==='ActivateAbility'){
      const snapshot=s=>{
        const a=s.abilities.find(a=>a.id===command.abilityId);
-       return {usesLeft:a.usesLeft,cooldownLeft:a.cooldownLeft,
+       return {usesLeft:a.usesLeft,outsideUsesSpent:a.outsideUsesSpent||0,cooldownLeft:a.cooldownLeft,
          durationLeft:a.durationLeft,capacityCurrent:a.capacityCurrent};
      };
      emit({type:'ability.used',abilityId:command.abilityId,previous:snapshot(state),current:snapshot(next)});
@@ -216,6 +240,7 @@
      return {ok:false,error:'INVALID_COMMAND'};
    if(poolTypes.has(command.type))return applyPools(state,command);
    if(transactionTypes.has(command.type))return applyTransaction(state,command);
+   if(lifecycleTypes.has(command.type))return applyAbilityLifecycle(state,command);
    const resources=(Array.isArray(state.resources)?state.resources:[]).map(r=>({...r}));
    const next={...state,resources};
    const before=derive(state).resources;

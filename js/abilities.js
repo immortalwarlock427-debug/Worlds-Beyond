@@ -14,13 +14,26 @@
   const TYPES = ['active', 'passive', 'reaction', 'other'];
   const propNames = ['name', 'category', 'type', 'description', 'apCost', 'apDiscountStat', 'resourceId',
     'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes',
-    'attackStat','damageDice','damageType','damageStat','saveDcStat','targetSaveStat'];
+    'attackStat','damageDice','damageType','damageStat','saveDcStat','targetSaveStat','usesPer','outsideUsesStat'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
   const DISCOUNT_STATS = ['STR', 'DEX', 'INT', 'FTH'];
   const discountStat = ability => DISCOUNT_STATS.includes(ability.apDiscountStat) ? ability.apDiscountStat : '';
   const rollStats = new Set(['attackStat','damageStat','saveDcStat','targetSaveStat']);
   const rollStat = value => STATS.includes(value)?value:'';
+  const usesPer = ability => ['combat','round'].includes(ability.usesPer)?ability.usesPer:'rest';
+  function usageState(state,ability) {
+    if(ability.uses===''||ability.uses==null)return {limited:false,maximum:null,remaining:null,period:'',outside:false};
+    const per=usesPer(ability),outside=per!=='rest'&&state.inCombat!==true;
+    let maximum=Number(ability.uses)||0;
+    if(outside&&per==='round'&&rollStat(ability.outsideUsesStat)){
+      const stat=ability.outsideUsesStat,combat=window.WBCombat;
+      maximum=Math.max(0,Math.floor(combat.modifier(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat))));
+    }
+    return {limited:true,maximum,outside,
+      remaining:outside?Math.max(0,maximum-(Number(ability.outsideUsesSpent)||0)):ability.usesLeft,
+      period:outside||per==='rest'?'long rest':per};
+  }
   const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
   const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const MAX_EFFECTS = 12;
@@ -310,6 +323,8 @@
       cooldown: optionalNumber(value.cooldown),
       duration: optionalNumber(value.duration),
       uses: optionalNumber(value.uses),
+      usesPer: usesPer(value), outsideUsesStat: rollStat(value.outsideUsesStat),
+      outsideUsesSpent: optionalNumber(value.outsideUsesSpent)||0,
       usesLeft: optionalNumber(value.uses) === '' ? null :
         Math.min(optionalNumber(value.uses), value.usesLeft == null ? optionalNumber(value.uses) : optionalNumber(value.usesLeft)),
       // Capacity limits how many creations/objects can exist at once. Unlike limited
@@ -327,6 +342,7 @@
   }
 
   function normalizeState(state) {
+    state.inCombat=state.inCombat===true;
     const ids = new Set();
     state.abilityLoadouts = (Array.isArray(state.abilityLoadouts) ? state.abilityLoadouts : [])
       .filter(x => x && typeof x === 'object' && !Array.isArray(x) && clean(x.name,60).trim())
@@ -371,7 +387,8 @@
     if (!loadoutVisible(state, a)) return { ok: false, message: a.name + ' is unavailable in your current ability form.' };
     if (a.type === 'passive') return { ok: false, message: 'Passive abilities do not need activation.' };
     if (a.cooldownLeft > 0) return { ok: false, message: a.name + ' is cooling down for ' + a.cooldownLeft + ' more turn(s).' };
-    if (a.uses !== '' && a.usesLeft <= 0) return { ok: false, message: a.name + ' has no uses left.' };
+    const usage=usageState(state,a);
+    if (usage.limited && usage.remaining <= 0) return { ok: false, message: a.name + ' has no uses left until the next '+usage.period+'.' };
     if (a.capacityMax !== '' && a.capacityCurrent >= a.capacityMax) {
       return { ok: false, message: a.name + ' is at its limit (' + a.capacityCurrent + '/' + a.capacityMax + '). Release something first.' };
     }
@@ -425,7 +442,11 @@
       }
       else resource.current -= cost;
     }
-    if (a.uses !== '') a.usesLeft = Math.max(0, a.usesLeft - 1);
+    const usage=usageState(state,a);
+    if(usage.limited){
+      if(usage.outside)a.outsideUsesSpent=(Number(a.outsideUsesSpent)||0)+1;
+      else a.usesLeft=Math.max(0,a.usesLeft-1);
+    }
     if (a.capacityMax !== '') a.capacityCurrent += 1;
     a.cooldownLeft = a.cooldown === '' ? 0 : a.cooldown;
     a.durationLeft = a.duration === '' ? 0 : a.duration;
@@ -463,7 +484,7 @@
           (apMode === '6-10' && !(ap >= 6 && ap <= 10)) ||
           (apMode === '11+' && ap < 11)) return false;
       if (status === 'cooldown' && !(a.cooldownLeft > 0)) return false;
-      if (status === 'exhausted' && !(a.uses !== '' && a.usesLeft <= 0)) return false;
+      if (status === 'exhausted' && !(usageState(state,a).limited && usageState(state,a).remaining <= 0)) return false;
       if (status === 'active' && !(a.durationLeft > 0)) return false;
       if (status === 'passive' && a.type !== 'passive') return false;
       if (status === 'usable' && !checkActivation(state, a.id, controls).ok) return false;
@@ -483,6 +504,7 @@
   function advanceTurn(state) {
     let changed = false;
     for (const a of state.abilities) {
+      if(state.inCombat===true&&usesPer(a)==='round'&&a.uses!==''&&a.usesLeft!==a.uses){a.usesLeft=a.uses;changed=true;}
       if (a.cooldownLeft > 0) { a.cooldownLeft -= 1; changed = true; }
       if (a.durationLeft > 0) { a.durationLeft -= 1; changed = true; }
     }
@@ -494,6 +516,7 @@
       a.cooldownLeft = 0;
       a.durationLeft = 0;
       a.usesLeft = a.uses === '' ? null : a.uses;
+      a.outsideUsesSpent=0;
     }
   }
 
@@ -671,7 +694,8 @@
       }
       if (ability.cooldown !== '') badges.push(ability.cooldown + '-turn cooldown');
       if (ability.duration !== '') badges.push(ability.duration + '-turn duration');
-      if (ability.uses !== '') badges.push(ability.usesLeft + '/' + ability.uses + ' uses');
+      const usage=usageState(getState(),ability);
+      if (usage.limited) badges.push(usage.remaining + '/' + usage.maximum + ' uses / '+usage.period);
       if (ability.capacityMax !== '') badges.push(ability.capacityCurrent + '/' + ability.capacityMax + ' active');
       if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
       if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
@@ -685,13 +709,14 @@
       });
       return badges;
     }
-    function statField(label,prop,value) {
+    function statField(label,prop,value,emptyLabel='None') {
       return '<label class="ability-field"><span class="foot-label">'+label+'</span><select data-ability-prop="'+prop+'">'+
-        '<option value="">None</option>'+STATS.map(stat=>'<option value="'+stat+'"'+(value===stat?' selected':'')+'>'+stat+'</option>').join('')+'</select></label>';
+        '<option value="">'+emptyLabel+'</option>'+STATS.map(stat=>'<option value="'+stat+'"'+(value===stat?' selected':'')+'>'+stat+'</option>').join('')+'</select></label>';
     }
     function card(ability) {
       const inactive = !loadoutVisible(getState(), ability);
       const badges = abilityBadges(ability);
+      const usage=usageState(getState(),ability);
       return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') +
         (inactive ? ' ability-inactive' : '') + '" data-ability-id="' + esc(ability.id) + '">' +
         '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
@@ -736,8 +761,17 @@
           '<div class="ability-editor-row">' +
             field('Cooldown (turns)', 'cooldown', ability.cooldown, 'number') +
             field('Duration (turns)', 'duration', ability.duration, 'number') +
-            field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Limits activations until rest; leave blank for unlimited."') +
+            field('Uses / charges (blank = unlimited)', 'uses', ability.uses, 'number', ' placeholder="Unlimited" title="Limits activations in the selected reset period; leave blank for unlimited."') +
           '</div>' +
+          '<div class="ability-editor-row ability-cost-row">' +
+            '<label class="ability-field"><span class="foot-label">Uses reset</span><select data-ability-prop="usesPer">'+
+              [['rest','Long rest'],['combat','New combat'],['round','Turn start']].map(([value,label])=>
+                '<option value="'+value+'"'+(usesPer(ability)===value?' selected':'')+'>'+label+'</option>').join('')+'</select></label>' +
+            (usesPer(ability)==='round'?statField('Outside uses from stat modifier','outsideUsesStat',ability.outsideUsesStat,'Same number of uses'):'') +
+          '</div>' +
+          (usesPer(ability)==='rest'?'':'<p class="ability-effect-hint">Combat and outside allowances are separate. Outside combat: '+
+            (usesPer(ability)==='round'&&ability.outsideUsesStat?ability.outsideUsesStat+' modifier':'the same number of uses')+
+            ' per long rest. Starting a turn outside combat does not refill them.</p>') +
           '<details class="ability-roll-config"'+(ability.attackStat||ability.damageDice||ability.saveDcStat||ability.targetSaveStat?' open':'')+'>' +
             '<summary>Optional rolls</summary><div class="ability-roll-fields">' +
             '<p class="ability-effect-hint">Use pays once, then opens the roll popup. Damage costs no extra AP. Leave these blank for a tracker-only ability.</p>' +
@@ -775,12 +809,12 @@
               : '<button type="button" class="btn strong" data-ability-action="use"' + (inactive ? ' disabled' : '') + '>Use ability</button>' +
                 '<span class="ability-status">' +
                   (ability.cooldownLeft ? 'Cooldown: ' + ability.cooldownLeft + ' turn(s)' :
-                    ability.uses !== '' && ability.usesLeft <= 0 ? 'Out of uses' : 'Ready') +
+                    usage.limited && usage.remaining <= 0 ? 'Out of uses' : 'Ready') +
                   (ability.durationLeft ? ' · Active for ' + ability.durationLeft + ' more turn(s)' : '') +
                 '</span>') +
             (ability.durationLeft ? '<button type="button" class="btn" data-ability-action="end">End effect</button>' : '') +
           '</div>' +
-          (ability.uses !== '' ? '<label class="ability-field ability-uses-left"><span class="foot-label">Uses remaining (adjust manually)</span><input data-ability-prop="usesLeft" type="number" min="0" max="' + ability.uses + '" value="' + ability.usesLeft + '"></label>' : '') +
+          (usage.limited ? '<label class="ability-field ability-uses-left"><span class="foot-label">Uses remaining (current allowance; adjust manually)</span><input data-ability-prop="usesLeft" type="number" min="0" max="' + usage.maximum + '" value="' + usage.remaining + '"></label>' : '') +
           '<div class="ability-card-actions">' +
             '<button type="button" class="btn" data-ability-action="reset">Reset ability tracker</button>' +
             '<button type="button" class="btn" data-ability-action="favorite" aria-pressed="' +
@@ -974,18 +1008,24 @@
       }
       if (prop === 'usesLeft') {
         if (ability.uses !== '') {
-          ability.usesLeft = Math.min(ability.uses, optionalNumber(input.value) === '' ? ability.usesLeft : optionalNumber(input.value));
+          const usage=usageState(getState(),ability),entered=optionalNumber(input.value);
+          if(entered!==''){
+            const remaining=Math.min(usage.maximum,entered);
+            if(usage.outside)ability.outsideUsesSpent=usage.maximum-remaining;
+            else ability.usesLeft=remaining;
+          }
           save();
         }
         return { ability, prop };
       }
       if (!propNames.includes(prop)) return null;
-      ability[prop] = rollStats.has(prop)?rollStat(input.value):
+      ability[prop] = prop==='usesPer'?usesPer({usesPer:input.value}):
+        prop==='outsideUsesStat'?rollStat(input.value):rollStats.has(prop)?rollStat(input.value):
         prop==='apDiscountStat' ? discountStat({apDiscountStat:input.value}) :
         numerical.has(prop) ? optionalNumber(input.value) :
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : prop==='damageDice'?120:prop==='damageType'?60:100);
-      if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
+      if (prop === 'uses') {ability.usesLeft = ability.uses === '' ? null : ability.uses;ability.outsideUsesSpent=0;}
       if (prop === 'capacityMax') {
         ability.capacityCurrent = ability.capacityMax === '' ? 0 :
           Math.min(ability.capacityMax, ability.capacityCurrent);
@@ -1061,6 +1101,7 @@
         const copy = normalizeAbility(Object.assign({}, ability, {
           id: id(), name: 'Copy of ' + ability.name, favorite: false,
           usesLeft: ability.uses === '' ? null : ability.uses, cooldownLeft: 0, durationLeft: 0,
+          outsideUsesSpent:0,
           capacityCurrent: 0,
           loadoutIds: [...ability.loadoutIds],
           effects: ability.effects.map((e) => Object.assign({}, e, { id: effectId() }))
@@ -1086,7 +1127,9 @@
       } else if (action === 'reset') {
         ability.cooldownLeft = 0;
         ability.durationLeft = 0;
-        ability.usesLeft = ability.uses === '' ? null : ability.uses;
+        const usage=usageState(getState(),ability);
+        if(usage.outside)ability.outsideUsesSpent=0;
+        else ability.usesLeft = ability.uses === '' ? null : ability.uses;
         feedback.textContent = 'Reset ' + ability.name + ' tracker (previous AP and resource costs are not refunded).';
         feedback.classList.remove('ability-error');
       } else if (action === 'end') {
@@ -1110,15 +1153,15 @@
     render();
     return {
       render,
-      turnStart() { if (advanceTurn(getState())) { render(); save(); } },
-      longRest() { resetForRest(getState()); render(); }
+      turnStart() { const r=execute({type:'AdvanceAbilityTurn'});if(r.ok){render();save();} },
+      longRest() { execute({type:'RestAbilities'});render(); }
     };
   }
 
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, abilityApCost, abilityRollPlan, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
+    formStatBonus, abilityApCost, abilityRollPlan, usageState, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };

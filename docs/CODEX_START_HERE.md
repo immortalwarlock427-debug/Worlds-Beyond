@@ -9,25 +9,26 @@
 - Existing optional form-entry costs (AP, Mana/Holy Power or custom resource) and linked portrait/form gear changes **must be preserved**.
 - Ability AP discounts (None/STR/DEX/INT/FTH, None default) are **implemented** through shared pricing and the atomic activation command. Cards, favorites, readiness, AP bands and sorting agree; base prices remain saved separately.
 - Optional ability-card attack/damage rolls and save DCs are **implemented**. `ActivateAbility` validates the setup and returns a pre-activation `rollPlan` on success; `app.js` draws dice and uses the existing popup. Attack, damage bonus, AP discount, save DC and target-save stats stay independent. No Wonder/Defy Fate on attacks.
+- Explicit combat mode and custom rest/combat/round use periods are **implemented**, with separate outside allowances (DM confirmed). `StartCombat` / `EndCombat` / `AdvanceAbilityTurn` / `RestAbilities` are pure commands; Parry follows the shared DEX outside allowance. Legacy equipment per-round abilities still need outside-limit configuration.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — explicit combat/rest lifecycle
+## Your next independent task — milestone actions and use tracking
 
-**Scope:** continue finishing the character sheet. Work out explicit in-combat/out-of-combat transitions and per-combat/per-round/long-rest use tracking before expanding milestone buttons. Keep offline DM/game saves separate; a local character combat switch is not encounter synchronization.
+**Scope:** continue finishing the character sheet. Turn the remaining milestone tooltip descriptions into usable actions and counters in a focused slice, reusing existing character payments, roll popup, combat mode and allowance derivation. Keep narrative outcomes at the table. Read the current tooltip/rule text before choosing which milestone actions form one reviewable change.
 
-**Before coding:** inspect the current turn/rest behavior and confirmed milestone rules. Resolve the missing reset semantics with the DM: what starts/ends combat, which counters reset when, how out-of-combat uses work, and how to avoid refilling uses by repeatedly toggling combat. Present the concrete proposed behavior and genuinely unresolved choices before implementing rule-dependent resets. Do not treat previous review suggestions as final rules.
+**Confirmed reset rules:** combat and outside allowances are separate. New combat restores combat/round uses; Start my turn restores round uses only in combat; End combat refills nothing; long rest restores outside allowances. Do not create mode changes during load/render, auto-refill outside uses when entering combat, or refill AP/resources on combat transitions. The modifier used for an outside allowance is independent of attack, damage, discount and save stats. Keep spent counts when maxima change.
 
 **Preserve:**
-- Existing turn/rest processing, form/portrait/gear alignment, hidden pools, source-profile Mana, active effects and v1 saves. Health, broader manual tracker commands and transaction-level Undo remain focused B2 follow-ups.
-- The shared optional AP discount and one atomic `ActivateAbility` payment path. Blank/zero remains free, None stays flat, negative modifiers raise price; Command AP is spent first and combined costs reject atomically.
-- Ability roll setup validation before payment, the pre-activation stat/gear snapshot returned on success, independent attack/damage/save/discount statistics, UI-only dice and no extra payment for damage follow-ups. Target saves resolve at the table; no new hit/crit/kill triggers.
-- Pure command/state tests plus actual 390px interactions, legacy reload/import/export/cloud copies and existing DM regression coverage. Do not introduce resource-overflow defaults, automatic triggers, multiplayer or a separate spell system in this slice.
+- The shared `WBAbilities.usageState` model, legacy long-rest defaults, current-allowance manual corrections, idempotent StartCombat, Parry's separate outside count and long-rest Undo. Legacy per-round equipment abilities need explicit outside-limit metadata; do not guess the associated stat for existing items.
+- Existing turn/rest processing order, form/portrait/gear alignment, hidden pools, source-profile Mana, active effects and v1 saves. Full Health/turn/rest/Undo command orchestration remains a focused B2 follow-up.
+- Atomic ability payments, Command-first AP, independent AP-discount/attack/damage/save fields, pre-activation roll snapshots and UI-only dice. No Wonder/Defy Fate on attack rolls. Save targets resolve outcomes at the table.
+- Pure command/state tests plus actual 390px interactions, reload/import/export/cloud copies and existing DM regression coverage. Do not introduce resource-overflow defaults, automatic triggers, multiplayer or a separate spell system in this slice.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the approved lifecycle slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+3. Implement the approved milestone slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

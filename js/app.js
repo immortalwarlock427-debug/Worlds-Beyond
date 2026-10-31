@@ -235,6 +235,7 @@
     });
   });
   state.trauma = Math.max(0, Math.floor(Number(state.trauma)) || 0);
+  state.parryOutsideSpent=Math.max(0,Math.round(Number(state.parryOutsideSpent))||0);
   if (!state.down || typeof state.down !== 'object') state.down = null;
   if (!['adv', 'dis', 'norm'].includes(state.advMode)) state.advMode = 'norm';
   // Older drafts: hand-set modifiers, one score per stat, a level table with stored stats, a typed armor value.
@@ -657,6 +658,11 @@
     rollAbility: (plan) => rollAbility(plan)
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
+  $('#combatToggle').addEventListener('click',()=>{
+    const r=formEntryControls.execute({type:state.inCombat?'EndCombat':'StartCombat'});
+    $('#combatFeedback').textContent=r.message;
+    if(r.ok){refreshAll();save();}
+  });
   const statusManager = window.WBStatus.init(() => state, save, { refresh: () => refreshAll() });
   function updateManaKind() {
     const holy = kind() === 'holy';
@@ -968,7 +974,7 @@
   $('#longRest').addEventListener('click', () => {
     restUndo = {
       hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ abilities: state.abilities, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
+      other: JSON.stringify({ abilities: state.abilities, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, trauma: state.trauma, down: state.down })
     };
     resourceManager.longRest();
     abilityLibrary.longRest();
@@ -983,6 +989,7 @@
     state.move = null;
     apUndo = null;
     state.parryUsed = false;
+    state.parryOutsideSpent=0;
     state.spent = {};
     state.trauma = 0;
     state.down = null;
@@ -1029,6 +1036,10 @@
     ['#incAtk', '#incDmg', '#incType'].forEach((sel) => { $(sel).value = ''; });
     ['#incArea', '#incNat', '#incOF', '#incNoAr', '#incAlly'].forEach((sel) => { $(sel).checked = false; });
     renderDefense();
+  }
+  function parryUsage() {
+    return window.WBAbilities.usageState(state,{uses:1,usesLeft:state.parryUsed?0:1,
+      usesPer:'round',outsideUsesStat:'DEX',outsideUsesSpent:state.parryOutsideSpent||0});
   }
   function renderDefense() {
     const guard = canGuard();
@@ -1078,14 +1089,17 @@
     $('#parryNum').textContent = fmt(mod('DEX') + defBonus('parry'));
     $('#defParry').classList.toggle('ready', ready && armed);
     const btn = $('#parryBtn');
-    btn.disabled = !ready || !armed || !!state.parryUsed;
-    btn.textContent = state.parryUsed ? 'Used this round' : 'Parry';
+    const parry=parryUsage();
+    btn.disabled = !ready || !armed || parry.remaining<=0;
+    btn.textContent = parry.remaining<=0?(state.inCombat?'Used this round':'No Parry uses until long rest'):
+      state.inCombat?'Parry':'Parry ('+parry.remaining+'/'+parry.maximum+' until rest)';
     const reach = num($('#speed').value);
     $('#parryRel').textContent = !ready
       ? 'Unlocks at DEX 21' + (dex != null ? ' (yours is ' + dex + ').' : '.')
       : !armed
         ? 'Put a weapon or shield in your hand to parry.'
-        : 'Reach: anyone within ' + (isNaN(reach) ? 5 : reach) + ' ft (1 AP of movement). You move in front of the attack. Ready again at the start of your turn.';
+        : 'Reach: anyone within ' + (isNaN(reach) ? 5 : reach) + ' ft (1 AP of movement). You move in front of the attack. '+
+          (state.inCombat?'Ready again at the start of your turn.':'Outside combat: DEX modifier uses per long rest.');
   }
   $('#incoming').addEventListener('input', renderDefense);
   $('#incoming').addEventListener('change', renderDefense);
@@ -1111,7 +1125,7 @@
   function useDefense(type) {
     const name = type.charAt(0).toUpperCase() + type.slice(1);
     const inc = incoming();
-    if (type === 'parry' && state.parryUsed) return;
+    if (type === 'parry' && parryUsage().remaining<=0) return;
     if (type === 'block' && (!canBlock() || (inc.ally && !shieldInHand()))) return;
     if (type === 'dodge' && (inc.ally || inc.nat)) return;
     if (reactTracker.avail() < 1) {
@@ -1119,7 +1133,10 @@
       return;
     }
     state.reactAvail = reactTracker.avail() - 1;
-    if (type === 'parry') state.parryUsed = true;
+    if (type === 'parry') {
+      if(state.inCombat)state.parryUsed=true;
+      else state.parryOutsideSpent=(Number(state.parryOutsideSpent)||0)+1;
+    }
     reactTracker.render();
     renderDefense();
     save();
@@ -4152,6 +4169,9 @@
   function refreshAll() {
     log = computeLog();
     $('#sheetCharacterName').textContent = String(state.fields.charName || '').trim() || 'Worlds Beyond';
+    $('#combatState').textContent=state.inCombat?'In combat':'Out of combat';
+    $('#combatToggle').textContent=state.inCombat?'End combat':'New combat';
+    $('#combatToggle').setAttribute('aria-label',state.inCombat?'End combat':'Start new combat');
     const active = document.activeElement;
     for (const id of ['mpCur', 'apMax']) {
       const input = $('#' + id);

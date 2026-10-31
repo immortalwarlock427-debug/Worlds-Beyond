@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261030-ability-rolls-v33">
+<link rel="stylesheet" href="css/sheet.css?v=20261030-combat-uses-v34">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 43</p>
+    <p class="meta">Homebrew rules · Draft 44</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -255,7 +255,7 @@
       </div>
       <div class="tracker" id="turnTracker">
         <div class="tr-top">
-          <div class="tr-head"><span class="tr-title">Action Points</span></div>
+          <div class="tr-head"><span class="tr-title">Action Points</span><span id="combatState" class="combat-state">Out of combat</span></div>
           <div class="tr-max"><label for="apMax">Max</label><input id="apMax" data-field type="number" inputmode="numeric" min="0" placeholder="15" autocomplete="off"></div>
         </div>
         <div class="pips" id="apPips" role="group" aria-label="Action points. Tap to spend or restore."></div>
@@ -270,9 +270,10 @@
         </div>
         <div class="pips" id="reactPips" role="group" aria-label="Reactions. Tap to spend or restore."></div>
         <div class="tr-foot">
-          <span class="tr-count"><span id="apCount" aria-live="polite"></span> · <span id="reactCount" aria-live="polite"></span></span>
-          <button type="button" class="btn" id="turnReset">Start my turn</button>
+          <span class="tr-count turn-counts"><span id="apCount" aria-live="polite"></span><span id="reactCount" aria-live="polite"></span></span>
+          <div class="turn-buttons"><button type="button" class="btn" id="combatToggle" aria-label="Start new combat">New combat</button><button type="button" class="btn" id="turnReset">Start my turn</button></div>
         </div>
+        <p class="ability-feedback" id="combatFeedback" role="status" aria-live="polite"></p>
         <details class="turn-actions"><summary>Command &amp; other actions</summary>
           <p class="tr-src">Spend given AP before your own.</p><p class="tr-src">1, plus 1 at AGL 21 and 1 at AGL 28. Back at the start of your turn.</p><div class="acts-row">
             <div class="act">
@@ -300,6 +301,7 @@
       <div id="favoriteList" class="favorite-list"></div>
     </div>
     <details class="vitals-help"><summary>How these values work</summary>
+      <p class="note">Start new combat restores combat and round uses. Ending combat restores nothing. Outside allowances are separate and return on long rest. AP, reactions, cooldowns and resources keep their values when combat starts or ends; use Start my turn when your turn begins.</p>
       <p class="note">Evasion, Initiative, Movement, Hit Die, Reactions and Wonder fill in from your attributes, Armor Rating is your VIT mod (half your VIT once your VIT reaches 28) plus the armor you're wearing, and gear bonuses count while they're worn. Max Health and Mana add up from the Advancement table once you enter VIT and INT or FTH. Health can drop below 0: you bleed out at 4 a turn and die at your Death Threshold. Numbers in <b>brass</b> were typed over by hand. Clear one to go back to the automatic value.</p></details>
     <div class="vitals-grid">
       <div class="pools">
@@ -835,18 +837,18 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/game-state.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/maps.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/routing.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/combat-core.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/equipment-profiles.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/abilities.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/character-core.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/resources.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/encounter-actions.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/status.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/sheet-layout.js?v=20261030-ability-rolls-v33"></script>
-<script src="js/app.js?v=20261030-ability-rolls-v33"></script>
+<script src="js/persistence.js?v=20261030-combat-uses-v34"></script>
+<script src="js/game-state.js?v=20261030-combat-uses-v34"></script>
+<script src="js/maps.js?v=20261030-combat-uses-v34"></script>
+<script src="js/routing.js?v=20261030-combat-uses-v34"></script>
+<script src="js/combat-core.js?v=20261030-combat-uses-v34"></script>
+<script src="js/equipment-profiles.js?v=20261030-combat-uses-v34"></script>
+<script src="js/abilities.js?v=20261030-combat-uses-v34"></script>
+<script src="js/character-core.js?v=20261030-combat-uses-v34"></script>
+<script src="js/resources.js?v=20261030-combat-uses-v34"></script>
+<script src="js/encounter-actions.js?v=20261030-combat-uses-v34"></script>
+<script src="js/status.js?v=20261030-combat-uses-v34"></script>
+<script src="js/sheet-layout.js?v=20261030-combat-uses-v34"></script>
+<script src="js/app.js?v=20261030-combat-uses-v34"></script>
 </body>
 </html>

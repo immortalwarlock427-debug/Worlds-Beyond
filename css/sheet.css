@@ -1123,6 +1123,11 @@ main.view-map > .sheet-tabs { display: none; }
 .ability-roll-config { min-width:0; border:1px solid var(--rule); padding:10px; border-radius:6px; }
 .ability-roll-config > summary { cursor:pointer; color:var(--brass); }
 .ability-roll-fields { display:grid; gap:10px; margin-top:10px; }
+.combat-state { color:var(--muted); font-size:10px; white-space:nowrap; margin-left:8px; }
+.turn-counts { display:grid; gap:2px; }
+.turn-buttons { display:flex; gap:6px; }
+#combatFeedback { margin:0; }
+#combatFeedback:empty { display:none; }
 .ability-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 @media(max-width:560px) { .ability-editor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:380px) { .ability-editor-row, .ability-editor-row.ability-cost-row { grid-template-columns:minmax(0,1fr); } }

@@ -26,6 +26,8 @@ For custom abilities, enter **Base AP cost** and optionally choose **Discounted 
 
 Expand **Optional rolls** on an ability to choose independent attack, damage bonus and save-DC stats, damage dice/type and the target save. **Use** pays its costs once, then opens the existing roll popup; damage follows without another payment. Attack rolls follow the bottom dice mode and offer critical damage on a natural 20. Wonder/Defy Fate do not apply to attacks. Save DCs are shown for the target to resolve at the table. Blank roll fields keep the existing tracker-only behavior.
 
+Use **New combat / End combat** beside **Start my turn** to track the current mode. Starting combat restores custom combat/round uses and Parry; ending combat restores nothing. Health, AP, reactions, resources, cooldowns and effects keep their values when modes change. In an ability, **Uses reset** chooses Long rest (the default), New combat or Turn start. Combat and outside allowances are separate. Outside uses return on long rest; round abilities can use a selected stat modifier or the same fixed count. Parry uses the DEX modifier outside combat.
+
 If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
 ## Offline DM Room
