@@ -1118,10 +1118,11 @@ main.view-map > .sheet-tabs { display: none; }
 .ability-card[open] .ability-summary-arrow { transform:rotate(180deg); }
 .ability-editor { display:grid; gap:12px; padding:12px; border-top:1px solid var(--rule); }
 .ability-editor-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.ability-editor-row.ability-cost-row { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .ability-editor textarea { resize:vertical; min-height:70px; }
 .ability-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 @media(max-width:560px) { .ability-editor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:380px) { .ability-editor-row { grid-template-columns:1fr; } }
+@media(max-width:380px) { .ability-editor-row, .ability-editor-row.ability-cost-row { grid-template-columns:minmax(0,1fr); } }
 
 /* File actions live near the Sheet / Battlemap switch, not at the bottom of the sheet. */
 .sheet-actions { justify-content: flex-start; padding-top: 12px; border-top: 1px solid var(--rule); }

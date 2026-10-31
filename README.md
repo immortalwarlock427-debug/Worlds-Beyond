@@ -22,6 +22,8 @@ Overview starts with Health, AP/reactions and your current-form favorite abiliti
 
 Overview, Attributes, Equipment, Abilities and Status Effects tabs provide editable stats, advancement, Health/Mana, AP, reactions, Wonder, defenses, equipment/Forge, custom resources, custom abilities and timed effects. Named forms can link portraits, select different worn gear and charge optional entry costs. Returning to Base is free. The separate Battlemap supports fog, light, terrain, targeting and AP-based movement.
 
+For custom abilities, enter **Base AP cost** and optionally choose **Discounted by: STR, DEX, INT or FTH**. Cards and Overview favorites show the current price and its base. The discount uses your current modifier, with a minimum of half the base cost rounded up; negative modifiers increase the price, and blank/zero stays free. **None** keeps a flat cost and is the default for existing abilities.
+
 If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
 ## Offline DM Room

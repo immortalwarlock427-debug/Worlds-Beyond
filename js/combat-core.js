@@ -82,6 +82,12 @@
     return score == null ? 0 : autoMod(stat,score);
   }
   function attackApCost(mod) { return Math.max(5,10-mod); }
+  function abilityApCost(baseCost,modifier) {
+    const base=Number(baseCost);
+    if(!Number.isFinite(base)||base<=0)return 0;
+    const discount=Number.isFinite(Number(modifier))?Number(modifier):0;
+    return Math.max(Math.ceil(base/2),base-discount);
+  }
   function trackerMax(value,fallback) {
     let m=num(value);
     if (isNaN(m)) m=num(fallback);
@@ -286,7 +292,7 @@
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
-    autoMod,modifier,attackApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
+    autoMod,modifier,attackApCost,abilityApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
     hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
     attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,

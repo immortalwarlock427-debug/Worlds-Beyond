@@ -12,10 +12,12 @@
     return Number.isFinite(value) ? Math.max(0, Math.min(999999, Math.round(value))) : '';
   };
   const TYPES = ['active', 'passive', 'reaction', 'other'];
-  const propNames = ['name', 'category', 'type', 'description', 'apCost', 'resourceId',
+  const propNames = ['name', 'category', 'type', 'description', 'apCost', 'apDiscountStat', 'resourceId',
     'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax', 'notes'];
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
+  const DISCOUNT_STATS = ['STR', 'DEX', 'INT', 'FTH'];
+  const discountStat = ability => DISCOUNT_STATS.includes(ability.apDiscountStat) ? ability.apDiscountStat : '';
   const effectTargets = ['none', 'movement', 'armor', 'evasion', 'stat', 'resource-max'];
   const effectId = () => 'eff' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
   const MAX_EFFECTS = 12;
@@ -43,6 +45,15 @@
     if (!STATS.includes(stat)) return 0;
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
     return form && form.statBonuses ? formAdjustment(form.statBonuses[stat]) : 0;
+  }
+  function abilityApCost(state,ability) {
+    const base=ability.apCost===''?0:Number(ability.apCost)||0;
+    const stat=discountStat(ability);
+    if(!stat)return base; // Legacy/None abilities retain their entered price.
+    const combat=window.WBCombat;
+    const modifier=combat.modifier(state,stat,combat.level(state),
+      effectBonus(state,'stat',stat),formStatBonus(state,stat));
+    return combat.abilityApCost(base,modifier);
   }
   function planPoolPayment(controls,ap,mana,allowHiddenMana=false) {
     if(!(ap||mana)||!controls||typeof controls.planPools!=='function'||
@@ -268,6 +279,7 @@
       description: clean(value.description, 12000),
       notes: clean(value.notes, 6000),
       apCost: optionalNumber(value.apCost),
+      apDiscountStat: discountStat(value),
       resourceId: clean(value.resourceId, 100),
       resourceCost: optionalNumber(value.resourceCost),
       cooldown: optionalNumber(value.cooldown),
@@ -345,7 +357,7 @@
         !(state.resources || []).some((r) => r.id === e.resourceId));
       if (missing) return { ok: false, message: 'Choose an existing custom resource for the maximum-resource effect.' };
     }
-    const ap = a.apCost === '' ? 0 : a.apCost;
+    const ap = abilityApCost(state,a);
     if (!controls || typeof controls.getAp !== 'function' || typeof controls.spendAp !== 'function') {
       return { ok: false, message: 'AP tracker is not available.' };
     }
@@ -406,7 +418,7 @@
     const apMode = AP_MODES.includes(filters.ap) ? filters.ap : 'all';
     const sorting = SORT_MODES.includes(filters.sort) ? filters.sort : 'favorites';
     const showAll = filters.showAll === true;
-    const apOf = a => a.apCost === '' ? 0 : Number(a.apCost) || 0;
+    const apOf = a => abilityApCost(state,a);
     const matches = (state.abilities || []).filter(a => {
       if (!showAll && !loadoutVisible(state, a)) return false;
       const searchOK = !searchText ||
@@ -612,7 +624,9 @@
       if (!Array.isArray(ability.effects)) ability.effects = normalizeEffects(ability);
       const badges = [ability.type.charAt(0).toUpperCase() + ability.type.slice(1)];
       if (!loadoutVisible(getState(), ability)) badges.push('Other form');
-      if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
+      const stat=discountStat(ability);
+      if (stat) badges.push(abilityApCost(getState(),ability)+' AP ('+(ability.apCost||0)+' base · '+stat+')');
+      else if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
       if (ability.resourceId && ability.resourceCost !== '') {
         const s = getState();
         const r = ability.resourceId === 'base-mana'
@@ -664,8 +678,18 @@
           '<label class="ability-field"><span class="foot-label">Description / effect</span>' +
             '<textarea data-ability-prop="description" rows="3" maxlength="12000" placeholder="Describe what this ability does.">' +
             esc(ability.description) + '</textarea></label>' +
-          '<div class="ability-editor-row">' +
-            field('AP cost', 'apCost', ability.apCost, 'number') +
+          '<div class="ability-editor-row ability-cost-row">' +
+            field('Base AP cost', 'apCost', ability.apCost, 'number') +
+            '<label class="ability-field"><span class="foot-label">Discounted by</span>' +
+              '<select data-ability-prop="apDiscountStat"><option value="">None</option>' +
+                DISCOUNT_STATS.map(stat=>'<option value="'+stat+'"'+
+                  (ability.apDiscountStat===stat?' selected':'')+'>'+stat+'</option>').join('') +
+              '</select></label>' +
+          '</div>' +
+          '<p class="ability-effect-hint" data-ability-ap-price>Current cost: '+abilityApCost(getState(),ability)+
+            ' AP. '+(discountStat(ability)?'Minimum half the base cost, rounded up. Negative modifiers increase the price. Blank or 0 stays free.':
+            'None keeps the base AP cost.')+'</p>' +
+          '<div class="ability-editor-row ability-cost-row">' +
             '<label class="ability-field"><span class="foot-label">Resource</span>' +
               '<select data-ability-prop="resourceId">' + resourceOptions(ability.resourceId) + '</select></label>' +
             field('Resource cost', 'resourceCost', ability.resourceCost, 'number') +
@@ -902,7 +926,8 @@
         return { ability, prop };
       }
       if (!propNames.includes(prop)) return null;
-      ability[prop] = numerical.has(prop) ? optionalNumber(input.value) :
+      ability[prop] = prop==='apDiscountStat' ? discountStat({apDiscountStat:input.value}) :
+        numerical.has(prop) ? optionalNumber(input.value) :
         clean(input.value, prop === 'name' ? 100 : prop === 'category' ? 60 :
           prop === 'description' ? 12000 : prop === 'notes' ? 6000 : 100);
       if (prop === 'uses') ability.usesLeft = ability.uses === '' ? null : ability.uses;
@@ -1038,7 +1063,7 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
+    formStatBonus, abilityApCost, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
