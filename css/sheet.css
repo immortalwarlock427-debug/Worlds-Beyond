@@ -1140,6 +1140,9 @@ main.view-map > .sheet-tabs { display: none; }
 .milestone-action-controls .ability-field { max-width:150px; }
 .milestone-action input { min-height:44px; }
 #milestoneFeedback:empty { display:none; }
+.weapon-milestone { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 0; font-size:13px; color:var(--muted); }
+.weapon-milestone select { min-height:44px; max-width:100%; padding:7px; border:1px solid var(--rule); border-radius:3px; background:var(--field); color:var(--ink); font:inherit; }
+.atk-btns .btn, .toast-actions [data-act^="devastate"], .toast-actions [data-act^="dual"], .toast-actions [data-act="crit"] { min-height:44px; }
 .ability-card-actions { display:flex; flex-wrap:wrap; gap:8px; }
 @media(max-width:560px) { .ability-editor-row { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:380px) { .ability-editor-row, .ability-editor-row.ability-cost-row { grid-template-columns:minmax(0,1fr); } }

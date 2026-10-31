@@ -18,9 +18,9 @@
   const numerical = new Set(['apCost', 'resourceCost', 'cooldown', 'duration', 'uses', 'capacityMax']);
   const STATS = ['STR', 'VIT', 'DEX', 'AGL', 'INT', 'WIS', 'CHA', 'FTH'];
   const milestoneDescriptions = {
-    STR: ["Once each round, you can add your Strength modifier to an attack's damage twice instead of once.", "Your weapon and unarmed attacks can't have their damage reduced below half by anything, blocks and parries included. A dodge still avoids them entirely, since the attack never connects, and this doesn't bypass immunities."],
+    STR: ["Once each round, when an attack uses STR for damage, you can apply that Strength damage modifier twice instead of once. Devastate does not apply to DEX-based damage.", "Your weapon and unarmed attacks can't have their damage reduced below half by anything, blocks and parries included. A dodge still avoids them entirely, since the attack never connects, and this doesn't bypass immunities."],
     VIT: ["Once per combat, when a status effect that physically restrains or damages you would take hold, such as stunned, paralyzed or restrained, you can negate it so it never affects you. Mind-based effects like charmed or frightened don't count. Also, when you're dropped below 0 Health, you can roll a d20 + your Vitality modifier against DC 12. On a success you stop bleeding, though you're still unconscious.", "Your Armor Rating becomes half your Vitality, rounded down, plus the armor you're wearing, instead of your Vitality modifier plus your armor."],
-    DEX: ["Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement, moving in front of the attack to do it. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.", "Once each round, before rolling a weapon attack (melee or ranged), you can concentrate all of your power into a single point. If the attack hits, it's a critical hit. If it misses, Singularity is spent for the round."],
+    DEX: ["Once each round, as a reaction, you can parry a physical attack you can see, melee or ranged, made against you or anyone you could reach with 1 AP of movement, moving in front of the attack to do it. You need a weapon or shield in hand. Roll a d20 and add your Dexterity modifier. If the result is higher than the attack roll, you negate all of the attack's damage and any non-magical effects it would apply.", "Once each round, before rolling a weapon attack (melee or ranged), you can concentrate all of your power into a single point. Choose one hand for a dual attack. If that hand hits, it's a critical hit; its miss still spends Singularity for the round. This does not turn the roll into a natural 20."],
     AGL: ["Each turn, you get 2 AP of movement for free. You also gain an additional reaction.", "You move so fast that you can't be hit by opportunity attacks, and any attack that relies on sight to hit you rolls with disadvantage, whether it's melee, ranged or a spell. You also have advantage on saves against spells that need sight to target you. You also gain an additional reaction."],
     INT: ["Once per round, for 5 AP, you can give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your Intelligence modifier.", "Once per round, for 5 AP, you can analyze a creature, ability, object or phenomenon you can perceive to learn one significant property, weakness or underlying principle, if one can be inferred from the information available."],
     WIS: ["You have a supernatural sense for danger directed at you. Whenever you face a danger you don't know about, the GM secretly makes a Wisdom check for you against the danger's DC, like an ambusher's stealth roll or a trap's DC. On a success you aren't told what's wrong, only that something is, like a sudden aversion to drinking from a cup. Once per round, at no AP cost, you can also ask the GM whether a specific choice is dangerous, and you get a feeling back: good, bad or unsure.", "You naturally see through illusions and can see invisible creatures within 30 ft. Once per round, for 5 AP, you can attempt to perceive the true intent behind anything in sight, whether a creature (hostile, afraid, lying or hiding something) or the things around you, like what a trap or ritual is meant to do. Make a Wisdom check, contested by a creature's Charisma if it's hiding something, or against a DC the GM sets."],
@@ -33,6 +33,8 @@
   const rollStat = value => STATS.includes(value)?value:'';
   const usesPer = ability => ['combat','round'].includes(ability.usesPer)?ability.usesPer:'rest';
   const milestoneDefinitions = [
+    {id:'devastate',name:'Devastate',stat:'STR',at:21,ap:0,per:'round',weapon:true},
+    {id:'singularity',name:'Singularity',stat:'DEX',at:28,ap:0,per:'round',weapon:true},
     {id:'indomitable-status',name:'Indomitable: negate status',stat:'VIT',at:21,ap:0,per:'combat'},
     {id:'stratagem',name:'Stratagem',stat:'INT',at:21,ap:5,per:'round'},
     {id:'absolute-comprehension',name:'Absolute Comprehension',stat:'INT',at:28,ap:5,per:'round'},
@@ -59,7 +61,8 @@
     const score=combat.effectiveScore(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
     const modifier=combat.modifier(state,stat,combat.level(state),effectBonus(state,'stat',stat),formStatBonus(state,stat));
     const ability=milestoneAbility(state,id),plan={title:definition.name,kind:'notice',total:null,text:''};
-    if(id==='indomitable-status')plan.text='Negate one incoming status that physically restrains or damages you, such as stunned, paralyzed or restrained. Mind-based effects such as charmed or frightened do not count. Use when the status would take hold; resolve eligibility at the table.';
+    if(definition.weapon){plan.kind=id==='devastate'?'weapon-damage':'weapon-attack';plan.text=milestoneDescriptions[stat][definition.at===28?1:0];}
+    else if(id==='indomitable-status')plan.text='Negate one incoming status that physically restrains or damages you, such as stunned, paralyzed or restrained. Mind-based effects such as charmed or frightened do not count. Use when the status would take hold; resolve eligibility at the table.';
     else if(id==='stratagem'){
       plan.total=modifier;plan.text='Give a plan to an ally who can hear you. Their next attack roll or ability check before your next turn adds your INT modifier ('+(modifier>=0?'+':'')+modifier+').';
     }else if(id==='sixth-sense')plan.text='Ask the GM whether one specific choice is dangerous. The answer is a feeling: good, bad or unsure. Your passive secret danger check is resolved by the GM.';
@@ -132,6 +135,26 @@
     const modifier=combat.modifier(state,stat,combat.level(state),
       effectBonus(state,'stat',stat),formStatBonus(state,stat));
     return combat.abilityApCost(base,modifier);
+  }
+  function weaponSource(state,weaponId) {
+    const weapon=(state.items||[]).find(item=>item&&item.id===weaponId);
+    if(!weapon||!['onehand','twohand'].includes(weapon.type))return null;
+    const combat=window.WBCombat,stat=weapon.stat==='DEX'?'DEX':'STR';
+    const modifier=key=>combat.modifier(state,key,combat.level(state),effectBonus(state,'stat',key),formStatBonus(state,key));
+    const effects=combat.attackEffects(state,weapon.id);
+    const sum=kind=>effects.reduce((total,e)=>total+(e.k===kind?Number(e.v)||0:0),0);
+    return {weaponId:weapon.id,name:String(weapon.name||'Weapon'),stat,type:weapon.type,dice:String(weapon.dmg||'1d6'),
+      attackModifier:modifier(stat)+sum('atk'),damageModifier:modifier(stat),flatBonus:sum('flat'),
+      extras:effects.filter(e=>e.k==='dmg').map(e=>({dice:String(e.dice||''),type:String(e.dt||'')})),
+      hits:effects.filter(e=>e.k==='onhit').map(e=>String(e.text||''))};
+  }
+  function weaponAttackPlan(state,slot) {
+    if(!['main','off','dual'].includes(slot))return {ok:false,message:'Choose a weapon in hand.'};
+    const equip=state.equip||{},main=weaponSource(state,equip.main),off=weaponSource(state,equip.off);
+    const source=slot==='off'?off:main;
+    if(!source||slot==='off'&&main&&main.type==='twohand'||slot==='dual'&&(!off||main.type!=='onehand'||off.type!=='onehand'||main.weaponId===off.weaponId))
+      return {ok:false,message:'Choose an equipped weapon, or two one-handed weapons for a dual attack.'};
+    return {ok:true,slot,dual:slot==='dual',main:source,off:slot==='dual'?off:null,apCost:window.WBCombat.attackApCost(source.damageModifier)};
   }
   function abilityRollPlan(state,ability) {
     const attackStat=rollStat(ability.attackStat),damageStat=rollStat(ability.damageStat);
@@ -593,7 +616,8 @@
         '<article class="milestone-action" data-milestone-id="'+a.id+'"><div class="milestone-action-head"><h3>'+esc(a.name)+'</h3>'+
           '<span class="ability-tag">'+a.ap+' AP · '+a.usage.remaining+'/'+a.usage.maximum+' uses / '+a.usage.period+'</span></div>'+
           '<p class="pool-src">'+esc(a.plan.text)+'</p><div class="milestone-action-controls">'+
-          '<button type="button" class="btn strong" data-milestone-use="'+a.id+'">Use '+esc(a.name)+'</button>'+
+          (a.weapon?'<a class="btn" href="#sheet/equipment">Use with a weapon</a>':
+            '<button type="button" class="btn strong" data-milestone-use="'+a.id+'">Use '+esc(a.name)+'</button>')+
           '<label class="ability-field"><span class="foot-label">Uses remaining</span><input type="number" min="0" max="'+a.usage.maximum+'" value="'+a.usage.remaining+'" data-milestone-remaining="'+a.id+'"></label>'+
           '</div></article>').join(''):'<p class="pool-src">These actions unlock when their effective attribute reaches 21 or 28.</p>';
       locked.innerHTML=actions.filter(a=>!a.unlocked).map(a=>'<li>'+esc(a.name)+' — '+a.stat+' '+a.at+'</li>').join('');
@@ -1256,7 +1280,7 @@
     normalizeState, init, initMilestones, activate, checkActivation, filterAbilities, loadoutVisible,
     milestoneDescriptions, milestoneAbility, milestoneAction, milestoneActions, milestoneLifecycle,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, abilityApCost, abilityRollPlan, usageState, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
+    formStatBonus, abilityApCost, abilityRollPlan, weaponSource, weaponAttackPlan, usageState, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };

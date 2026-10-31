@@ -22,7 +22,7 @@ async function overview(page){await page.locator('[data-sheet-tab="overview"]').
 async function close(page){await page.locator('#toastClose').click();}
 
 test('Stratagem pays fixed AP with Command first and keeps separate round/outside allowances',async({page})=>{
- await seed(page);await panel(page);await expect(page.locator('#milestoneCount')).toHaveText('7 unlocked');
+ await seed(page);await panel(page);await expect(page.locator('#milestoneCount')).toHaveText('9 unlocked');
  await use(page,'stratagem').click();await expect(page.locator('#toastTitle')).toHaveText('Stratagem');
  await expect(page.locator('#toastTotal')).toHaveText('6');await expect(page.locator('#toastMath')).toContainText('next attack roll or ability check');
  await expect.poll(async()=>(await saved(page)).apAvail).toBe(13);let s=await saved(page);
