@@ -89,6 +89,7 @@
     return Math.max(Math.ceil(base/2),base-discount);
   }
   function abilitySaveDc(modifier) { return 12+modifier; }
+  function commandingPresenceDc(modifier) { return 10+2*modifier; }
   // Dice are parsed here, but drawn by the UI. Reject partial expressions so
   // an ability never spends its costs and silently rolls only part of its dice.
   function parseDamageDice(value) {
@@ -325,7 +326,7 @@
   window.WBCombat = {
     STATS,ASI_LEVELS,SLOTS,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
-    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,givenAp,apAvailable,
+    autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,commandingPresenceDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
     hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
     attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,

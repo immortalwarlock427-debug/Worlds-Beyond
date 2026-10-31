@@ -10,25 +10,27 @@
 - Ability AP discounts (None/STR/DEX/INT/FTH, None default) are **implemented** through shared pricing and the atomic activation command. Cards, favorites, readiness, AP bands and sorting agree; base prices remain saved separately.
 - Optional ability-card attack/damage rolls and save DCs are **implemented**. `ActivateAbility` validates the setup and returns a pre-activation `rollPlan` on success; `app.js` draws dice and uses the existing popup. Attack, damage bonus, AP discount, save DC and target-save stats stay independent. No Wonder/Defy Fate on attacks.
 - Explicit combat mode and custom rest/combat/round use periods are **implemented**, with separate outside allowances (DM confirmed). `StartCombat` / `EndCombat` / `AdvanceAbilityTurn` / `RestAbilities` are pure commands; Parry follows the shared DEX outside allowance. Legacy equipment per-round abilities still need outside-limit configuration.
+- Seven non-weapon milestone actions are **implemented** under Abilities → Milestone actions. `UseMilestone` adapts to the existing activation transaction; `milestoneUses` keeps separate scoped counts, `SetMilestoneUses` corrects the current allowance, and long-rest Undo includes the map. Eyes of Truth is a WIS check; Commanding Presence is target CHA DC 10 + 2 × mod. Narrative outcomes remain at the table.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent task — milestone actions and use tracking
+## Your next independent task — Devastate and Singularity weapon rolls
 
-**Scope:** continue finishing the character sheet. Turn the remaining milestone tooltip descriptions into usable actions and counters in a focused slice, reusing existing character payments, roll popup, combat mode and allowance derivation. Keep narrative outcomes at the table. Read the current tooltip/rule text before choosing which milestone actions form one reviewable change.
+**Scope:** finish the weapon-affecting milestone actions using existing attack/damage popups, shared rules and milestone-use commands. Keep Devastate/Singularity counts in the same milestone model instead of independent flags. Preserve weapon AP, opportunity attacks, advantage/disadvantage, dice maximum + rolled dice criticals and off-hand half damage.
 
-**Confirmed reset rules:** combat and outside allowances are separate. New combat restores combat/round uses; Start my turn restores round uses only in combat; End combat refills nothing; long rest restores outside allowances. Do not create mode changes during load/render, auto-refill outside uses when entering combat, or refill AP/resources on combat transitions. The modifier used for an outside allowance is independent of attack, damage, discount and save stats. Keep spent counts when maxima change.
+**Resolve genuine rule ambiguities before coding:** Devastate says to add the STR modifier twice instead of once; confirm how it applies to attacks whose damage normally uses DEX. Singularity says a weapon attack becomes critical on a hit; confirm which hand(s) it covers during a dual attack. Clarify any analogous unsupported custom ability interaction instead of silently applying weapon-only wording to every ability. A forced critical is distinct from a natural 20 and must not automatically gain natural-20-only Dodge immunity.
 
 **Preserve:**
-- The shared `WBAbilities.usageState` model, legacy long-rest defaults, current-allowance manual corrections, idempotent StartCombat, Parry's separate outside count and long-rest Undo. Legacy per-round equipment abilities need explicit outside-limit metadata; do not guess the associated stat for existing items.
-- Existing turn/rest processing order, form/portrait/gear alignment, hidden pools, source-profile Mana, active effects and v1 saves. Full Health/turn/rest/Undo command orchestration remains a focused B2 follow-up.
-- Atomic ability payments, Command-first AP, independent AP-discount/attack/damage/save fields, pre-activation roll snapshots and UI-only dice. No Wonder/Defy Fate on attack rolls. Save targets resolve outcomes at the table.
-- Pure command/state tests plus actual 390px interactions, reload/import/export/cloud copies and existing DM regression coverage. Do not introduce resource-overflow defaults, automatic triggers, multiplayer or a separate spell system in this slice.
+- The seven existing manual milestone actions and shared descriptions, effective-score unlocks, fixed-five-AP costs, current-modifier plans, narrative/target-save boundaries, manual corrections, export/reload/cloud copies and long-rest Undo.
+- Separate combat/outside allowances, idempotent StartCombat, turn-only round resets in combat, no refill on EndCombat, spent counts retained as maxima/unlocks change, and Parry's existing integration.
+- Atomic activation/payment rejection, Command-first AP, independent AP-discount/attack/damage/save fields, pre-activation roll snapshots and UI-only dice. No Wonder/Defy Fate on attack rolls.
+- Existing turn/rest order, form/portrait/gear alignment, resource maxima and independent DM saves. Full Health/turn/rest/Undo command orchestration and legacy equipment outside-limit metadata remain follow-ups.
+- Pure command/state tests and actual 390px weapon interactions. Do not invent balance rules, resource-overflow defaults, automatic triggers or multiplayer.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the approved milestone slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+3. Implement the approved weapon-milestone slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

@@ -28,6 +28,8 @@ Expand **Optional rolls** on an ability to choose independent attack, damage bon
 
 Use **New combat / End combat** beside **Start my turn** to track the current mode. Starting combat restores custom combat/round uses and Parry; ending combat restores nothing. Health, AP, reactions, resources, cooldowns and effects keep their values when modes change. In an ability, **Uses reset** chooses Long rest (the default), New combat or Turn start. Combat and outside allowances are separate. Outside uses return on long rest; round abilities can use a selected stat modifier or the same fixed count. Parry uses the DEX modifier outside combat.
 
+In **Abilities → Milestone actions**, effective attributes unlock seven actions with AP/use tracking: Indomitable status negation, Stratagem, Absolute Comprehension, Sixth Sense, Eyes of Truth, Commanding Presence and Miracle. Use opens the appropriate rule prompt, WIS check or target save DC. Combat and outside allowances remain separate; adjust Uses remaining to correct mistakes. Outcomes involving the GM or another creature resolve at the table. Devastate and Singularity are the next weapon-roll additions.
+
 If another tab restores, imports or edits this character, an older sheet pauses autosave. Export any edits you want to keep, then select **Reload saved character**. Unreadable saved data is kept and can be downloaded from the recovery notice. Separate browser tabs are not a transactional collaboration system; edit a character in one tab at a time.
 
 ## Offline DM Room

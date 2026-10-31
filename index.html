@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261030-combat-uses-v34">
+<link rel="stylesheet" href="css/sheet.css?v=20261030-milestone-actions-v35">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 44</p>
+    <p class="meta">Homebrew rules · Draft 45</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -732,6 +732,13 @@
   </section>
 
   <section class="ability-section" id="abilitySection" data-sheet-section="abilities" aria-labelledby="abilityHead" hidden>
+  <details class="milestone-panel" id="milestonePanel">
+    <summary>Milestone actions <span id="milestoneCount" class="pool-src"></span></summary>
+    <p class="note">Use spends the listed AP and tracks the current allowance. Combat and outside uses are separate. Resolve narrative outcomes and target saves at the table; adjust uses to correct a mistake.</p>
+    <p id="milestoneFeedback" class="ability-feedback" role="status" aria-live="polite"></p>
+    <div id="milestoneList" class="milestone-list"></div>
+    <details><summary>Locked milestone actions</summary><ul id="milestoneLocked"></ul></details>
+  </details>
     <div class="sec-head"><svg class="star" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" fill="currentColor"/><rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/></svg><h2 id="abilityHead">Ability Library</h2></div>
     <p class="note">Create custom techniques, spells, traits, and passives. Use ability spends configured AP and resources once, starts charge and cooldown tracking, and opens any configured attack/damage rolls or save DC. Targets resolve saves at the table. Starting your turn advances cooldowns and durations. Configured effects on Movement, Armor, Evasion, stats and custom resource maximums apply automatically; other effects remain descriptive.</p>
     <div class="ability-loadouts" aria-label="Ability forms and loadouts">
@@ -837,18 +844,18 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261030-combat-uses-v34"></script>
-<script src="js/game-state.js?v=20261030-combat-uses-v34"></script>
-<script src="js/maps.js?v=20261030-combat-uses-v34"></script>
-<script src="js/routing.js?v=20261030-combat-uses-v34"></script>
-<script src="js/combat-core.js?v=20261030-combat-uses-v34"></script>
-<script src="js/equipment-profiles.js?v=20261030-combat-uses-v34"></script>
-<script src="js/abilities.js?v=20261030-combat-uses-v34"></script>
-<script src="js/character-core.js?v=20261030-combat-uses-v34"></script>
-<script src="js/resources.js?v=20261030-combat-uses-v34"></script>
-<script src="js/encounter-actions.js?v=20261030-combat-uses-v34"></script>
-<script src="js/status.js?v=20261030-combat-uses-v34"></script>
-<script src="js/sheet-layout.js?v=20261030-combat-uses-v34"></script>
-<script src="js/app.js?v=20261030-combat-uses-v34"></script>
+<script src="js/persistence.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/game-state.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/maps.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/routing.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/combat-core.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/equipment-profiles.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/abilities.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/character-core.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/resources.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/encounter-actions.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/status.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/sheet-layout.js?v=20261030-milestone-actions-v35"></script>
+<script src="js/app.js?v=20261030-milestone-actions-v35"></script>
 </body>
 </html>
