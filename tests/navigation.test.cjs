@@ -22,7 +22,7 @@ test('main destinations are separate from five character tabs without duplicatin
     ['advHead','attributes']]) {
     assert.match(html, new RegExp('<section[^>]*data-sheet-section="' + group + '"[^>]*aria-labelledby="' + head + '"'));
   }
-  assert.match(html, /<section class="top" data-sheet-section="overview" aria-label="Character"/);
+  assert.match(html, /<section class="top"[^>]*data-sheet-section="overview" aria-label="Character"/);
   assert.ok(html.indexOf('id="sheetTabs"') > html.indexOf('id="footBtns"'));
   assert.ok(html.indexOf('id="mapSec"') > html.indexOf('id="sheetTabs"'));
   assert.equal((html.match(/id="abilitySection"/g)||[]).length, 1);

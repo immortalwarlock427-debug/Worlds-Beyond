@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {openCharacterMenu}=require('./helpers/sheet.cjs');
 test.use({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
 const key='worlds-beyond-sheet-v1';
 const project='https://bribnpmgptnktvlbhzdm.supabase.co';
@@ -104,6 +105,8 @@ test('cloud restore pauses stale sheet writes; reload adopts the restored revisi
   await sheet.waitForTimeout(400);
   expect((await saved(sheet)).fields.charName).toBe('Laptop level-up');
   expect((await saved(sheet)).cloudSync.revision).toBe(4);
+  await openCharacterMenu(sheet);
+  await sheet.locator('#characterReset > summary').click();
   await sheet.locator('#clearBtn').click();
   await sheet.locator('#clearYes').click();
   expect((await saved(sheet)).fields.charName).toBe('Laptop level-up');

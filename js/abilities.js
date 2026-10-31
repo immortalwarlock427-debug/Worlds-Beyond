@@ -584,11 +584,10 @@
       renderLoadoutConfig();
     }
 
-    function card(ability) {
+    function abilityBadges(ability, includeEffects = true) {
       if (!Array.isArray(ability.effects)) ability.effects = normalizeEffects(ability);
-      const inactive = !loadoutVisible(getState(), ability);
       const badges = [ability.type.charAt(0).toUpperCase() + ability.type.slice(1)];
-      if (inactive) badges.push('Other form');
+      if (!loadoutVisible(getState(), ability)) badges.push('Other form');
       if (ability.apCost !== '') badges.push(ability.apCost + ' AP');
       if (ability.resourceId && ability.resourceCost !== '') {
         const s = getState();
@@ -603,7 +602,7 @@
       if (ability.capacityMax !== '') badges.push(ability.capacityCurrent + '/' + ability.capacityMax + ' active');
       if (ability.cooldownLeft) badges.push('Ready in ' + ability.cooldownLeft + ' turn(s)');
       if (ability.durationLeft) badges.push('Active: ' + ability.durationLeft + ' turn(s)');
-      (ability.effects || []).forEach((e) => {
+      if (includeEffects) (ability.effects || []).forEach((e) => {
         if (e.target === 'none' || !e.value) return;
         const name = e.target === 'movement' ? 'ft/AP' :
           e.target === 'armor' ? 'Armor' : e.target === 'evasion' ? 'Evasion' :
@@ -611,6 +610,11 @@
           ((getState().resources || []).find((r) => r.id === e.resourceId) || { name: 'Missing resource' }).name + ' max';
         badges.push((e.value > 0 ? '+' : '') + e.value + ' ' + name + (ability.durationLeft ? ' active' : ''));
       });
+      return badges;
+    }
+    function card(ability) {
+      const inactive = !loadoutVisible(getState(), ability);
+      const badges = abilityBadges(ability);
       return '<div class="ability-item' + (ability.type === 'passive' ? '' : ' has-quick-use') +
         (inactive ? ' ability-inactive' : '') + '" data-ability-id="' + esc(ability.id) + '">' +
         '<details class="ability-card" data-ability-id="' + esc(ability.id) + '"' +
@@ -692,6 +696,39 @@
         '</div>';
     }
 
+    const favoriteList = document.getElementById('favoriteList');
+    const favoriteFeedback = document.getElementById('favoriteFeedback');
+    function renderFavorites() {
+      if (!favoriteList) return;
+      const state = getState();
+      const chosen = state.abilities.filter(a => a.favorite && loadoutVisible(state, a));
+      favoriteList.innerHTML = chosen.length ? chosen.map(a =>
+        '<article class="favorite-ability" data-favorite-id="' + esc(a.id) + '">' +
+          '<div><h4>' + esc(a.name) + '</h4><p>' +
+          abilityBadges(a, false).map(esc).join(' · ') + '</p></div>' +
+          (a.type === 'passive' ? '<span class="favorite-passive">Passive</span>' :
+            '<button type="button" class="btn strong" data-favorite-use="' + esc(a.id) +
+            '" aria-label="Use ' + esc(a.name) + '">Use</button>') +
+        '</article>').join('') :
+        '<p class="favorite-empty">Star abilities in the Abilities tab to keep them here. Only favorites available in your current form appear.</p>';
+    }
+    function useAbility(ability, output) {
+      const result = activate(getState(), ability.id, controls);
+      output.textContent = result.message;
+      output.classList.toggle('ability-error', !result.ok);
+      if (result.ok && controls.refresh) controls.refresh();
+    }
+    if (favoriteList) favoriteList.addEventListener('click', event => {
+      const button = event.target.closest('[data-favorite-use]');
+      const ability = button && byId(button.dataset.favoriteUse);
+      if (!ability) return;
+      useAbility(ability, favoriteFeedback);
+      render();
+      save();
+      const next = favoriteList.querySelector('[data-favorite-use="' + ability.id + '"]');
+      if (next) next.focus({preventScroll:true});
+    });
+
     function rememberOpen() {
       list.querySelectorAll('details.ability-card').forEach((detail) => {
         const abilityId = detail.dataset.abilityId;
@@ -703,6 +740,7 @@
       const state = getState();
       const abilities = state.abilities;
       rememberOpen();
+      renderFavorites();
       renderLoadouts();
       const selectedCategory = category.value || '';
       const categories = [...new Set(abilities.map(a => a.category))].sort((a,b) => a.localeCompare(b));
@@ -942,10 +980,7 @@
       } else if (action === 'favorite') {
         ability.favorite = !ability.favorite;
       } else if (action === 'use') {
-        const result = activate(getState(), ability.id, controls);
-        feedback.textContent = result.message;
-        feedback.classList.toggle('ability-error', !result.ok);
-        if (result.ok && controls.refresh) controls.refresh();
+        useAbility(ability, feedback);
       } else if (action === 'reset') {
         ability.cooldownLeft = 0;
         ability.durationLeft = 0;

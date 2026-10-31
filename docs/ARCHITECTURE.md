@@ -2,7 +2,7 @@
 
 ## Files
 
-- Navigation: a top-level Character/Battlemap switch and nested character sub-tabs. `js/app.js` toggles the existing section nodes with `data-sheet-section`; no duplicated data or new persistence format. URL fragments `#map`, `#status`, `#sheet` and `#sheet/<tab>` remain supported.
+- Navigation: a Character/Battlemap switch inside Character menu and persistent character sub-tabs. `js/app.js` toggles the existing section nodes with `data-sheet-section`; no duplicated data or new persistence format. URL fragments `#map`, `#status`, `#sheet` and `#sheet/<tab>` remain supported.
 - `index.html` holds the markup for both views (Sheet and Battlemap, switched with `#sheet` / `#map` in the link). Character Export, Import, and Clear actions are in the top toolbar and work from either view.
 - `css/sheet.css` holds every style. Colors are tokens on `:root` with a dark theme.
 - `js/persistence.js` owns the browser-independent character JSON file contract and injectable local/in-memory **CharacterRepository** / **GameRepository** adapters. Local storage keeps the same two keys. The app uses the repositories instead of calling localStorage directly. Future cloud adapters should preserve this data ownership boundary.
@@ -17,6 +17,12 @@
   loading and saving, rules math, pools, trackers, AP and movement, Command, defenses, dice and attacks, health and
   death, stat increases, equipment and the Forge, drag and drop, advancement, portraits, the battlemap, rendering,
   export and import. Continue extracting pure character commands in the B1/B2 stages (see the roadmap); the offline DM screen already exists.
+
+## Character Overview presentation
+
+Health and AP/reactions are the first Overview controls, followed by current-form favorites. The original controls are moved rather than copied: their ids, editable values and save fields stay unchanged. The damage shortcut stays visible; healing/recovery details and Command actions are disclosures. Profile/portrait fields remain on Overview below the live controls, reachable from Character details. Character menu contains export/import, links and the main view switch; destructive reset requires its own disclosure and the existing confirmation. `js/sheet-layout.js` handles disclosure keyboard/focus behavior only.
+
+Overview favorites render inside the existing `WBAbilities.init` controller and use the same activation helper as library cards, including AP/resource checks, charges, cooldowns and form availability. Library search/filter settings do not hide Overview favorites. No second payment implementation or save collection is introduced. Their costs still use the existing character callbacks pending B1/B2.
 
 ## Repository boundary (foundation refactor)
 
