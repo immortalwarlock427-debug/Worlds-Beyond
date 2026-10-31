@@ -19,7 +19,7 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 39)
+## What the site does (Draft 40)
 
 The following features **already exist** in the live site:
 
@@ -28,6 +28,7 @@ The following features **already exist** in the live site:
 - **Equipment:** Pack, Forge, worn slots, weapon actions and bonuses. Named forms use one shared inventory but may wear different equipment profiles.
 - **Custom Ability Library:** create/edit/duplicate/delete/favorite, categories, search/sort/filters, compact display, optional AP/Mana/Holy Power/custom-resource costs, Use action, limited uses, held creations, cooldown, duration, ongoing numerical effects and turn/long-rest processing. Active effects support movement, Armor Rating, Evasion, stat scores and custom-resource maximums.
 - **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Named forms may charge optional AP and/or resource entry costs; returning to Base and reselecting the current form are free.** Effective scores may exceed 28 and unlock milestones.
+- **Shared character payments:** `WBCharacter` derives AP and Mana/Holy Power from saved data and applies pure payment/correction commands. Command AP is spent first; AP/Mana costs are validated together. Blank trackers still mean full, hidden Mana retains its balance, and form entry pays against the source gear profile. Full ability/form transactions and rest/turn orchestration remain the next migration.
 - **Custom resources:** independent named pools with current/max, colors/display, manual spend/restore, turn regeneration, long-rest refill, ability costs and form availability.
 - **Status Effects:** shows active timed ability effects and their bonuses, plus manually added Buff, Debuff, Condition and Other entries with optional expiration timers. Manual statuses are descriptive until an actual rule applies.
 - **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware planning uses shared `js/routing.js`.
@@ -277,4 +278,4 @@ See [ROADMAP.md](ROADMAP.md) for pending items and [ARCHITECTURE.md](ARCHITECTUR
 
 ## Character command foundation (merged PR #35)
 
-`WBCharacter.derive/apply` now provides pure, DOM-free **custom resource** derivation and typed adjustments. The resource UI routes Spend/Restore/Fill, current/max edits, regeneration and long rest through it. Loading, importing and rendering no longer truncate a valid above-base resource when a temporary max modifier is running; an actual max decrease is reconciled through a gameplay transition. **AP, built-in Mana, Health, forms and ability activations are not yet fully migrated. Automatic triggers, configurable hard overflow caps and the general rule editor do not exist yet.** The details and unresolved choices are in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md); the immediate Codex task is in [CODEX_START_HERE.md](CODEX_START_HERE.md).
+`WBCharacter.derive/apply` provides pure, DOM-free **custom resource, AP and Mana/Holy Power** derivation and typed adjustments/payments. The resource UI routes Spend/Restore/Fill, current/max edits, regeneration and long rest through it. Loading, importing and rendering no longer truncate a valid above-base resource when a temporary max modifier is running; an actual max decrease is reconciled through a gameplay transition. **AP/Mana payment primitives and manual pool corrections are migrated; Health, full ability/form transactions and turn/rest orchestration are not yet fully migrated. Automatic triggers, configurable hard overflow caps and the general rule editor do not exist yet.** The details and unresolved choices are in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md); the immediate Codex task is in [CODEX_START_HERE.md](CODEX_START_HERE.md).

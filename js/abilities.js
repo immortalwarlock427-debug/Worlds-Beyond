@@ -44,6 +44,12 @@
     const form = (state.abilityLoadouts || []).find(x => x.id === state.activeAbilityLoadoutId);
     return form && form.statBonuses ? formAdjustment(form.statBonuses[stat]) : 0;
   }
+  function planPoolPayment(controls,ap,mana,allowHiddenMana=false) {
+    if(!(ap||mana)||!controls||typeof controls.planPools!=='function'||
+        typeof controls.commitPools!=='function')return null;
+    return controls.planPools({ap,mana,allowHiddenMana});
+  }
+  const poolPaymentError=()=>({ok:false,message:'The AP or Mana payment could not be completed. Check the current pools and retry.'});
   // Plan the entire entry payment before any portrait, loadout, equipment or
   // tracker changes. Returning to Base and selecting the active form are free.
   function entryCost(state, identifier, controls) {
@@ -78,7 +84,9 @@
           return {ok:false,message:'Not enough '+resource.name+' to enter '+form.name+' (requires '+cost+').'};
       }
     }
-    return {ok:true,ap,cost,resource,resourceId,form};
+    const poolPayment=planPoolPayment(controls,ap,resourceId==='base-mana'?cost:0,true);
+    if(poolPayment&&!poolPayment.ok)return poolPaymentError();
+    return {ok:true,ap,cost,resource,resourceId,form,poolPayment};
   }
   function commitFormEntry(state, identifier, controls) {
     const payment=entryCost(state,identifier,controls);
@@ -86,9 +94,14 @@
     if(state.activeAbilityLoadoutId===identifier)return payment;
     if(window.WBEquipment && !window.WBEquipment.switchForm(state,identifier))
       return {ok:false,message:'Could not switch equipment profiles.'};
-    if(payment.ap)controls.spendAp(payment.ap);
+    // A blank Mana field means full in the original gear profile. Commit the
+    // payment planned before switching equipment, not a newly derived balance.
+    if(payment.poolPayment)controls.commitPools(payment.poolPayment);
+    else if(payment.ap)controls.spendAp(payment.ap);
     if(payment.cost) {
-      if(payment.resourceId==='base-mana')controls.spendMana(payment.cost);
+      if(payment.resourceId==='base-mana'){
+        if(!payment.poolPayment)controls.spendMana(payment.cost);
+      }
       else payment.resource.current=Math.max(0,Number(payment.resource.current)-payment.cost);
     }
     state.activeAbilityLoadoutId=identifier;
@@ -351,17 +364,22 @@
         if (resource.current < cost) return { ok: false, message: 'Not enough ' + resource.name + ' to use ' + a.name + '.' };
       }
     }
-    return { ok: true, ability: a, ap, cost, resource };
+    const poolPayment=planPoolPayment(controls,ap,a.resourceId==='base-mana'?cost:0);
+    if(poolPayment&&!poolPayment.ok)return poolPaymentError();
+    return { ok: true, ability: a, ap, cost, resource, poolPayment };
   }
 
   function activate(state, abilityId, controls) {
     const check = checkActivation(state, abilityId, controls);
     if (!check.ok) return check;
-    const { ability: a, ap, cost, resource } = check;
+    const { ability: a, ap, cost, resource, poolPayment } = check;
     // Validate all costs first. Only then commit the expenditure as one activation.
-    if (ap) controls.spendAp(ap);
+    if (poolPayment) controls.commitPools(poolPayment);
+    else if (ap) controls.spendAp(ap);
     if (cost) {
-      if (a.resourceId === 'base-mana') controls.spendMana(cost);
+      if (a.resourceId === 'base-mana') {
+        if (!poolPayment) controls.spendMana(cost);
+      }
       else resource.current -= cost;
     }
     if (a.uses !== '') a.usesLeft = Math.max(0, a.usesLeft - 1);

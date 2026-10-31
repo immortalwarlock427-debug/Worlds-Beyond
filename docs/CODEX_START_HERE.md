@@ -4,36 +4,36 @@
 
 ## Current state (verified)
 
-- PR #35 is **merged**. `js/character-core.js` exists and contains pure, deterministic **custom resource** `derive/apply` only. The real resource UI uses it. The active +100 max effect 150/200 reload problem has a regression test.
+- PR #35 is **merged**. `js/character-core.js` contains pure, deterministic resource and AP/Mana derivation/payment commands. The resource UI and AP/Mana payment/correction hooks use them. The active +100 max effect 150/200 reload problem has a regression test.
 - **Not implemented:** a single command path for all character state; form `effects`; configurable overcharge/hard caps; automatic/manual rules; trigger queue/editor/log; live session multiplayer.
 - Existing optional form-entry costs (AP, Mana/Holy Power or custom resource) and linked portrait/form gear changes **must be preserved**.
 - Current ability AP discounts (by STR/DEX/INT/FTH) are **planned, not implemented**.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent coding task — B1
+## Your next independent coding task — B2: ability/form transactions
 
-**Title suggestion:** `Codex: Derive and migrate character AP/Mana through pure commands`
+**Title suggestion:** `Codex: Apply ability and form changes as atomic character commands`
 
-**Scope:** strengthen `WBCharacter.derive/apply` so AP and built-in Mana/Holy Power are read and mutated through a tested pure contract. Derivation must not use `document`, DOM inputs, localStorage or rendering. Investigate actual field names, default/null AP behavior, maximum calculation, Command-granted AP spending priority, Mana visibility/form rules and manual overrides **before coding**. Keep the original game rules exactly the same. Prefer migrating one related group of existing buttons/callbacks rather than rewriting the sheet.
+**Scope:** build on B1's `SpendPools`/AP/Mana primitives, rather than recreating them. Migrate one focused group of ability/form operations into pure commands that atomically cover custom-resource payment, charges, cooldowns/durations and form/portrait/equipment changes. Reuse the existing `WBAbilities` and `WBEquipment` behavior; preserve free-to-Base and same-form selection. Keep the payment anchored to the source gear profile. A failed operation must leave every balance, tracker, form, portrait and worn slot unchanged.
 
 **Important tests / behavior:**
-- A blank/full AP tracker remains full, and Command-granted AP is spent in the existing order; AP cannot be accidentally created by a form/ability action.
-- Built-in Mana/Holy Power availability is form-aware without erasing a hidden pool; manual corrections remain possible.
-- Insufficient AP or Mana rejects the command with no partially mutated state.
-- Preserve character export/import, cloud copy compatibility, timed abilities, form entry-cost validation and linked portraits.
-- Tests prove command purity, exact math and user-click behavior at 390px. Check the existing CI and browser suite.
-- **Do not implement** actual automatic triggers, overcharge settings, new forms/effects, DM multiplayer or redesign the ability library in B1. If a combined AP + resource transaction cannot safely be covered in B1, identify and schedule its migration in B2 rather than introducing a parallel partial-payment path.
+- B1 already covers blank/full trackers, Command-first spending, historical Mana/Holy Power maxima, manual overrides/corrections, hidden balances and rejection of partial AP/Mana payments.
+- Extend those checks to combined AP plus custom resources, ability charges/cooldowns/effects and form/portrait/equipment transitions. Validate before changing anything; don't add a second payment formula.
+- Keep derive/render/load free from gameplay mutations. Preserve v1 exports, cloud revision receipts, character/game separation and current-form Overview favorites.
+- Add pure transaction tests and at least one actual 390px interaction. Retain existing AP/Mana, cloud and phone regressions.
+- Keep Health, turn/rest orchestration and transaction-level undo in subsequent focused B2 slices if they cannot fit safely in this change.
+- **Do not implement** automation triggers, overcharge defaults, new form effects or DM/multiplayer features. The independent ability-discount feature remains next to this payment work; its stat field must stay separate from attack/DC fields.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
-2. Read the real modules and tests; propose the smallest safe change. If B1 reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement B1, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+2. Read the real modules and tests; propose the smallest safe change. If B2 reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
+3. Implement the focused B2 slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
-5. Wait for DM to test/merge before moving to B2 or the next independent task.
+5. Wait for DM to test/merge before starting the next dependent slice.
 
 ## Architectural review checklist
 
 The hard parts to protect are: old character saves; no silent truncation of boosted resources; derived numbers independent of the DOM; no duplicate payment paths; form/portrait/worn-gear alignment; stable deterministic events for future multiplayer; safe schema migration; preserving players' ability to edit homebrew numbers freely.
 
-After B1, the next tasks are in the Delivery section of [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md). The DM will decide unresolved Rage design choices before B3. If you encounter an unknown choice, document it in your PR instead of guessing.
+The remaining tasks are in the Delivery section of [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md). The DM will decide unresolved Rage design choices before B3. If you encounter an unknown choice, document it in your PR instead of guessing.

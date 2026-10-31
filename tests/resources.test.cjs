@@ -37,6 +37,8 @@ function setup() {
     document: { getElementById },
     Date, Math, Set
   };
+  for(const name of ['combat-core','abilities'])
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname,'..','js',name+'.js'),'utf8'),context);
   vm.runInNewContext(pure, context, { filename: 'character-core.js' });
   vm.runInNewContext(script, context, { filename: 'resources.js' });
   const api = context.window.WBResources;

@@ -2,6 +2,8 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const context={window:{}};
+vm.runInNewContext(read('js/combat-core.js'),context);
+vm.runInNewContext(read('js/abilities.js'),context);
 vm.runInNewContext(read('js/character-core.js'),context,{filename:'character-core.js'});
 const api=context.window.WBCharacter;
 const simple=()=>({resources:[{id:'resabcdefg',name:'Rage',max:100,current:80,regen:8,refillOnRest:true,loadoutIds:[]}],abilities:[]});
