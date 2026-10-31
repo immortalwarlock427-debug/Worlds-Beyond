@@ -234,9 +234,11 @@
   function weaponAttackPlan(state,slot) {
     if(!['main','off','dual','strapped','lstrapped'].includes(slot))return {ok:false,message:'Choose a weapon in hand or strapped attachment.'};
     const equip=state.equip||{},main=weaponSource(state,equip.main),off=weaponSource(state,equip.off);
+    if(['main','off','dual'].includes(slot)&&window.WBCombat.heldWeaponConflict(state))
+      return {ok:false,message:'Two held weapons must both have Light. Choose which weapon to keep; the other returns to your pack.'};
     const source=slot==='off'?off:['strapped','lstrapped'].includes(slot)?weaponSource(state,equip[slot]):main;
     if(!source||slot==='off'&&main&&main.twoHanded||slot==='dual'&&(!off||!main.light||!off.light||main.twoHanded||off.twoHanded||main.weaponId===off.weaponId))
-      return {ok:false,message:'Dual attacks require a Light weapon in each hand. Other weapons can attack separately.'};
+      return {ok:false,message:'Dual wielding requires a Light weapon in each hand and neither may be using two hands.'};
     if(!window.WBCombat.parseDamageDice(source.dice)||slot==='dual'&&!window.WBCombat.parseDamageDice(off.dice))return {ok:false,message:'Check the weapon damage dice before attacking.'};
     const offSource=slot==='dual'?{...off,damageModifier:0}:null;
     return {ok:true,slot,dual:slot==='dual',main:source,off:offSource,apCost:window.WBCombat.attackApCost(source.apModifier)};

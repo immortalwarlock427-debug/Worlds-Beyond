@@ -15,7 +15,7 @@ const select=(page,id)=>page.locator('#pack .card[data-id="'+id+'"] .card-main')
 const slot=(page,name)=>page.locator('.slot[data-slot="'+name+'"] .slot-main').click();
 test.afterEach(async({page})=>{expect(page.bootErrors||[]).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);});
 test('new characters see Pants and Boots pair, with no separate leg or boot-side controls',async({page})=>{
- await seed(page);await expect(page.locator('.armor-extra-slots .slot')).toHaveCount(2);await expect(page.locator('.armor-extra-slots [data-slot="pants"] .slot-label')).toHaveText('Pants');
+ await seed(page);await expect(page.locator('.armor-extra-slots .slot')).toHaveCount(2);await expect(page.locator('.doll [data-slot="pants"] .slot-label')).toHaveText('Pants');
  await expect(page.locator('.armor-extra-slots [data-slot="boots"] .slot-label')).toHaveText('Boots (pair)');await expect(page.locator('#previousLegEquipment')).toBeHidden();
  await expect(page.locator('[data-slot="rleg"]')).toBeHidden();await expect(page.locator('[data-slot="lleg"]')).toBeHidden();
  await page.locator('#forgeType [data-type="boots"]').click();await expect(page.locator('#bootsPairNote')).toContainText('always a pair');await expect(page.locator('#setRow')).toBeHidden();

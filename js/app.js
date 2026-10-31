@@ -1500,9 +1500,11 @@
     if (dual ? !dualReady() : !itemById(state.equip[slot])) return;
     const w = dual ? itemById(state.equip.main) : itemById(state.equip[slot]);
     const foe = foeId ? foeById(foeId) : null;
-    const cost = window.WBAbilities.weaponAttackPlan(state,slot).apCost;
+    const check = window.WBAbilities.weaponAttackPlan(state,slot);
+    const cost = check.apCost;
     const have = apHave();
     const name = (dual ? 'Dual wield attack' : w.name + ' attack') + (foe ? ' on ' + foe.name : '');
+    if(!check.ok){showRoll({kind:'notice',title:name,math:check.message});return;}
     if (have < cost) {
       const rl = reactTracker.avail();
       showRoll({ kind: 'notice', title: name, math: 'This attack costs ' + cost + ' AP and you have ' + have + ' left.', weapon: w, oppSlot: slot, oppFoe: foe ? foe.id : null,
@@ -1531,6 +1533,8 @@
       const dual = slot === 'dual';
       if (dual ? !dualReady() : !itemById(state.equip[slot])) return;
       const w = dual ? itemById(state.equip.main) : itemById(state.equip[slot]);
+      const check=window.WBAbilities.weaponAttackPlan(state,slot);
+      if(!check.ok){showRoll({kind:'notice',title:'Weapon setup',math:check.message});return;}
       if (b.classList.contains('atk-opp')) {
         opportunity(slot);
       } else if (b.classList.contains('atk-roll')) {
@@ -1900,6 +1904,11 @@
     refreshAll();
     save();
   });
+  $('#heldWeaponConflict').addEventListener('click',event=>{
+    const button=event.target.closest('[data-keep-held]');if(!button||!window.WBCombat.heldWeaponConflict(state))return;
+    event.stopPropagation();state.equip=window.WBEquipment.resolveHands(state,state.equip,button.dataset.keepHeld);
+    selected=null;refreshAll();save();
+  });
   packEl.addEventListener('click',event=>{const b=event.target.closest('[data-draw-weapon]');if(!b)return;event.stopPropagation();const result=formEntryControls.execute({type:'DrawWeapon',weaponId:b.dataset.drawWeapon,slot:b.dataset.hand});refreshAll();save();showRoll({kind:'notice',title:'Draw / swap',math:result.message});});
   function newId() { return 'i' + Date.now().toString(36) + randInt(1e6).toString(36); }
   function toPack(slot) {
@@ -1911,7 +1920,7 @@
     const it = itemById(id);
     if (!it) return;
     if(window.WBCombat.weaponProperties(it).includes('Strapped'))slot=['off','lstrapped'].includes(slot)?'lstrapped':'strapped';
-    else if (it.type === 'twohand') slot = 'main';
+    else if (TYPES[it.type].weapon&&window.WBCombat.weaponRules(state,it).twoHanded) slot = 'main';
     if(it.type==='legs')slot='pants';
     else if (isPair(it)) slot = PAIRS[it.type].a;
     if (!fits(it.type, slot)||['strapped','lstrapped'].includes(slot)&&!window.WBCombat.weaponProperties(it).includes('Strapped')) return;
@@ -1925,9 +1934,7 @@
       const p = itemById(prev);
       if (p && fits(p.type, from) && !isPair(p)) state.equip[from] = prev;
     }
-    // A two-handed weapon needs both hands; a weapon in the off hand puts a two-handed one away.
-    if (slot==='main'&&window.WBCombat.weaponRules(state,it).twoHanded) toPack('off');
-    if (slot === 'off') { const m = itemById(state.equip.main); if (m && m.type === 'twohand') toPack('main'); }
+    if(['main','off'].includes(slot))state.equip=window.WBEquipment.resolveHands(state,state.equip,slot);
     // A set fills both slots; a single piece in a set's second slot puts the set away.
     if (isPair(it)&&it.type!=='legs') toPack(PAIRS[it.type].b);
     else {
@@ -2023,6 +2030,9 @@
   }
   function renderEquip() {
     renderEquipmentProfile();
+    const conflict=window.WBCombat.heldWeaponConflict(state);
+    $('#heldWeaponConflict').hidden=!conflict;
+    if(conflict)for(const hand of ['main','off'])$('#heldWeaponConflict [data-keep-held="'+hand+'"]').textContent='Keep '+itemById(conflict[hand]).name;
     const previous=previousLegItems();
     $('#previousLegEquipment').hidden=!previous.length;
     if(!previous.length)$('#previousLegEquipment').open=false;
@@ -3223,8 +3233,8 @@
     const offW = itemById(state.equip.off);
     const dual = dualReady();
     const out = [];
-    if (mainW && TYPES[mainW.type].weapon) out.push({ slot: 'main', w: mainW, label: mainW.name, range: rangeOf(mainW) });
-    if (offW && TYPES[offW.type].weapon && !(mainW && window.WBCombat.weaponRules(state,mainW).twoHanded)) out.push({ slot: 'off', w: offW, label: offW.name, range: rangeOf(offW) });
+    if (mainW && TYPES[mainW.type].weapon&&window.WBAbilities.weaponAttackPlan(state,'main').ok) out.push({ slot: 'main', w: mainW, label: mainW.name, range: rangeOf(mainW) });
+    if (offW && TYPES[offW.type].weapon && window.WBAbilities.weaponAttackPlan(state,'off').ok) out.push({ slot: 'off', w: offW, label: offW.name, range: rangeOf(offW) });
     if (dual) out.push({ slot: 'dual', w: mainW, label: 'Both weapons', range: Math.min(rangeOf(mainW), rangeOf(offW)) });
     for(const slot of ['strapped','lstrapped']){const item=itemById(state.equip[slot]);if(item)out.push({slot,w:item,label:SLOT_BY[slot].n+': '+item.name,range:rangeOf(item)});}
     return out;

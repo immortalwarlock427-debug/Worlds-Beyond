@@ -71,7 +71,7 @@ test('pants stay with armor and light Evasion appears only for light armor',asyn
  await page.locator('#forgeWeight').selectOption('light');await expect(page.locator('#forgeLightEv')).toBeVisible();await page.locator('#forgeLightEv').fill('2');
  await page.locator('#forgeSubmit').click();await expect.poll(async()=>(await saved(page)).items.length).toBe(1);
  const item=(await saved(page)).items[0];expect(item).toMatchObject({type:'pants',ar:1,armorWeight:'light',lightEvasion:2});expect(item.properties).toBeUndefined();
- await expect(page.locator('.armor-extra-slots [data-slot="pants"]')).toHaveCount(1);await expect(page.locator('.hands [data-slot="pants"]')).toHaveCount(0);
+ await expect(page.locator('.doll [data-slot="pants"]')).toHaveCount(1);await expect(page.locator('.hands [data-slot="pants"]')).toHaveCount(0);
 });
 test('shields load Block and price and expose shield settings without weapon or light-armor fields',async({page})=>{
  await seed(page);await category(page,'shield');await base(page,'Plate shield');await rules(page);

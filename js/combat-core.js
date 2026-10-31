@@ -378,6 +378,13 @@
       puncture:(Array.isArray(item.signatures)?item.signatures:[]).includes('Puncture')?2:0,loading:has('Loading')?Math.max(1,Math.min(1000,Number(item.loadingCapacity)||1)):0};
   }
   function scaleDice(expression,tier){const parsed=parseDamageDice(expression);if(!parsed)return null;return parsed.expression.replace(/(\d*)d(\d+)/gi,(_,n,sides)=>((Number(n)||1)*tier)+'d'+sides);}
+  function heldWeaponConflict(state,equip=record(state.equip)){
+    const by=slot=>(state.items||[]).find(item=>item&&item.id===equip[slot]);
+    const main=by('main'),off=by('off'),weapon=item=>item&&['onehand','twohand'].includes(item.type);
+    if(!weapon(main)||!weapon(off))return null;
+    const a=weaponRules(state,main),b=weaponRules(state,off);
+    return a.light&&b.light&&!a.twoHanded&&!b.twoHanded?null:{main:main.id,off:off.id};
+  }
   function inventory(state){
     const worn=new Set(Object.values(record(state.equip))),items=(state.items||[]).filter(Boolean),stock=Array.isArray(state.consumables)?state.consumables:[];
     const incomplete=state.consumables!=null&&!Array.isArray(state.consumables)||stock.some(it=>!it||!Number.isFinite(Number(it.quantity)));
@@ -386,7 +393,7 @@
     return {used,incomplete,capacity:Math.max(0,10+currentModifier(state,'STR')+items.reduce((sum,it)=>sum+Math.max(0,Number(it.backpackBonus)||0),0))};
   }
   window.WBCombat = {
-    STATS,ASI_LEVELS,SLOTS,weaponPropertyNames,signatureNames,weaponProperties,weaponRules,scaleDice,inventory,
+    STATS,ASI_LEVELS,SLOTS,weaponPropertyNames,signatureNames,weaponProperties,weaponRules,heldWeaponConflict,scaleDice,inventory,
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,wornItems,armorProfile,currentScore,currentModifier,evasion,armorRating,initiative,speed,apMaximum,scalingTier,blockDice,effectiveScore,
     autoMod,modifier,attackApCost,abilityApCost,abilitySaveDc,parseDamageDice,attackEffects,trackerMax,trackerAvailable,reactionMaximum,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,

@@ -633,9 +633,9 @@
      const paid=applyPools(state,{type:'SpendAP',amount:cost});if(!paid.ok)return {...paid,message:'Drawing/swapping costs '+cost+' AP.'};
      const slot=rules.props.includes('Strapped')?(['off','lstrapped'].includes(command.slot)?'lstrapped':'strapped'):rules.twoHanded?'main':command.slot==='off'?'off':'main';
      const equip={...record(state.equip)};for(const key of Object.keys(equip))if(equip[key]===item.id)delete equip[key];
-     equip[slot]=item.id;if(slot==='main'&&rules.twoHanded)delete equip.off;
-     if(slot==='off'){const main=(state.items||[]).find(it=>it.id===equip.main);if(main&&window.WBCombat.weaponRules(state,main).twoHanded)delete equip.main;}
-     const patch={...paid.patch,equip,equipmentProfiles:copy(state.equipmentProfiles||{})},next={...state,...patch};
+     equip[slot]=item.id;
+     const hands=['main','off'].includes(slot)?window.WBEquipment.resolveHands(state,equip,slot):equip;
+     const patch={...paid.patch,equip:hands,equipmentProfiles:copy(state.equipmentProfiles||{})},next={...state,...patch};
      window.WBEquipment.capture(next);patch.equipmentProfiles=next.equipmentProfiles;
      return {...paid,state:next,patch,message:'Drew/swapped '+item.name+' for '+cost+' AP.'};
    }

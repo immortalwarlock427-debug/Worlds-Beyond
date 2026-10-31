@@ -424,6 +424,9 @@ h1 {
 .forge-pack-settings summary,.rule-editor summary { cursor:pointer; min-height:44px; align-content:center; }
 .weapon-roll-settings { display:grid; gap:10px; margin:12px 0; }
 .weapon-roll-settings label { min-width:0; }
+.held-weapon-conflict { width:100%; max-width:440px; padding:12px; border:1px solid var(--brass); border-radius:4px; background:var(--field); }
+.held-weapon-conflict p { margin:0 0 10px; }
+.held-weapon-conflict .btn { min-height:44px; white-space:normal; }
 .slot.hand { position: relative; left: auto; top: auto; width: auto; min-height: 74px; }
 .slot.blocked { border-style: dashed; }
 .attacks { display: grid; gap: 8px; width: 100%; max-width: 440px; }

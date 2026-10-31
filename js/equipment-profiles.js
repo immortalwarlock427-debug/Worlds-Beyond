@@ -15,6 +15,14 @@
   const twoHanded=(state,item)=>window.WBCombat&&window.WBCombat.weaponRules?window.WBCombat.weaponRules(state,item).twoHanded:item.type==='twohand';
   const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   const key = id => id || BASE;
+  // Explicit equipment changes keep the chosen hand. Saved non-Light pairs
+  // remain readable until the player chooses which weapon to keep.
+  function resolveHands(state,profile,preferred='main'){
+    const output={...record(profile)},main=(state.items||[]).find(item=>item&&item.id===output.main);
+    const conflict=window.WBCombat.heldWeaponConflict(state,output);
+    if(conflict||main&&output.off&&twoHanded(state,main))delete output[preferred==='off'?'main':'off'];
+    return output;
+  }
   function sanitize(state, profile) {
     const inventory = new Map((state.items || []).filter(Boolean).map(item => [item.id, item]));
     const output = {}, seen = new Set();
@@ -95,5 +103,5 @@
     const form = (state.abilityLoadouts || []).find(f => f.id === state.activeAbilityLoadoutId);
     return form ? form.name : 'Base';
   }
-  window.WBEquipment = { normalizeState, capture, switchForm, removeForm, removeItem, copyBase, clearCurrent, name, sanitize };
+  window.WBEquipment = { normalizeState, capture, switchForm, removeForm, removeItem, copyBase, clearCurrent, name, sanitize, resolveHands };
 })();

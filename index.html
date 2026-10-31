@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Alegreya+Sans+SC:wght@500;700&family=Marcellus+SC&display=swap">
-<link rel="stylesheet" href="css/sheet.css?v=20261031-pants-boots-v47">
+<link rel="stylesheet" href="css/sheet.css?v=20261031-light-held-v48">
 </head>
 <body class="character-page">
 <main class="sheet character-sheet">
@@ -16,7 +16,7 @@
       <p class="eyebrow">Character Sheet</p>
       <h1 id="sheetCharacterName">Worlds Beyond</h1>
     </div>
-    <p class="meta">Homebrew rules · Draft 55</p>
+    <p class="meta">Homebrew rules · Draft 56</p>
     <svg class="ornament" viewBox="0 0 20 20" aria-hidden="true">
       <rect x="4" y="4" width="12" height="12" fill="currentColor"/>
       <rect x="4" y="4" width="12" height="12" fill="currentColor" transform="rotate(45 10 10)"/>
@@ -655,13 +655,13 @@
           <div class="slot cl r2" data-drop="slot" data-slot="rarm"></div>
           <div class="slot cr r2" data-drop="slot" data-slot="larm"></div>
           <div class="slot cl r3" data-drop="slot" data-slot="torso"></div>
-          <div class="slot cr r3" data-drop="slot" data-slot="belt"></div>
+          <div class="slot cr r3" data-drop="slot" data-slot="pants"></div>
           <div class="slot cl r4" data-drop="slot" data-slot="rring"></div>
           <div class="slot cr r4" data-drop="slot" data-slot="lring"></div>
 
         </div>
         <div class="armor-extra-slots">
-          <div class="slot" data-drop="slot" data-slot="pants"></div>
+          <div class="slot" data-drop="slot" data-slot="belt"></div>
           <div class="slot" data-drop="slot" data-slot="boots"></div>
         </div>
         <details id="previousLegEquipment" class="previous-leg-equipment" hidden>
@@ -676,7 +676,7 @@
         </div>
         <div class="tr-head hands-head">
           <span class="tr-title">Weapons</span>
-          <span class="tr-src">A one-handed weapon fits either hand. A two-handed weapon takes both. With a Light weapon in each hand you can attack with both for the same AP; the off-hand hit omits its modifier and does half damage. Strapped weapons have a separate attachment on each arm.</span>
+          <span class="tr-src">A one-handed weapon fits either hand, but you can hold two weapons only when both have Light. A non-Light weapon may still be used with a shield. A Two-handed weapon takes both hands. Dual Light attacks use the same AP; the off-hand hit omits its modifier and does half damage. Strapped attachments are separate from held weapons.</span>
         </div>
         <div class="hands">
           <div class="slot hand" data-drop="slot" data-slot="main"></div>
@@ -685,6 +685,10 @@
           <div class="slot hand" data-drop="slot" data-slot="lstrapped"></div>
         </div>
         <div class="weapon-roll-settings"><label><input type="checkbox" id="fastRoll"> Fast Roll weapon and Block dice (criticals roll every die)</label><label>Mounted straight approach (ft)<input type="number" id="mountApproach" min="0" step="5"></label></div>
+        <div id="heldWeaponConflict" class="held-weapon-conflict" role="status" hidden>
+          <p>Two held weapons must both have Light. Choose which weapon to keep; the other returns to your pack. Shields and strapped attachments are allowed.</p>
+          <div class="atk-btns"><button type="button" class="btn" data-keep-held="main">Keep main-hand weapon</button><button type="button" class="btn" data-keep-held="off">Keep off-hand weapon</button></div>
+        </div>
         <div class="attacks" id="attacks"></div>
       </div>
 
@@ -950,21 +954,21 @@
   </div>
 </div>
 
-<script src="js/persistence.js?v=20261031-pants-boots-v47"></script>
-<script src="js/game-state.js?v=20261031-pants-boots-v47"></script>
-<script src="js/maps.js?v=20261031-pants-boots-v47"></script>
-<script src="js/routing.js?v=20261031-pants-boots-v47"></script>
-<script src="js/combat-core.js?v=20261031-pants-boots-v47"></script>
-<script src="js/equipment-profiles.js?v=20261031-pants-boots-v47"></script>
-<script src="js/rules-catalog.js?v=20261031-pants-boots-v47"></script>
-<script src="js/abilities.js?v=20261031-pants-boots-v47"></script>
-<script src="js/rolls.js?v=20261031-pants-boots-v47"></script>
-<script src="js/character-core.js?v=20261031-pants-boots-v47"></script>
-<script src="js/resources.js?v=20261031-pants-boots-v47"></script>
-<script src="js/encounter-actions.js?v=20261031-pants-boots-v47"></script>
-<script src="js/status.js?v=20261031-pants-boots-v47"></script>
-<script src="js/consumables.js?v=20261031-pants-boots-v47"></script>
-<script src="js/sheet-layout.js?v=20261031-pants-boots-v47"></script>
-<script src="js/app.js?v=20261031-pants-boots-v47"></script>
+<script src="js/persistence.js?v=20261031-light-held-v48"></script>
+<script src="js/game-state.js?v=20261031-light-held-v48"></script>
+<script src="js/maps.js?v=20261031-light-held-v48"></script>
+<script src="js/routing.js?v=20261031-light-held-v48"></script>
+<script src="js/combat-core.js?v=20261031-light-held-v48"></script>
+<script src="js/equipment-profiles.js?v=20261031-light-held-v48"></script>
+<script src="js/rules-catalog.js?v=20261031-light-held-v48"></script>
+<script src="js/abilities.js?v=20261031-light-held-v48"></script>
+<script src="js/rolls.js?v=20261031-light-held-v48"></script>
+<script src="js/character-core.js?v=20261031-light-held-v48"></script>
+<script src="js/resources.js?v=20261031-light-held-v48"></script>
+<script src="js/encounter-actions.js?v=20261031-light-held-v48"></script>
+<script src="js/status.js?v=20261031-light-held-v48"></script>
+<script src="js/consumables.js?v=20261031-light-held-v48"></script>
+<script src="js/sheet-layout.js?v=20261031-light-held-v48"></script>
+<script src="js/app.js?v=20261031-light-held-v48"></script>
 </body>
 </html>
