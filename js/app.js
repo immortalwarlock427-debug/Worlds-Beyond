@@ -634,15 +634,18 @@
   function commitCharacter(result) {
     // Keep the root and existing ability/resource records stable for editors.
     if (result.ok) for (const [key,value] of Object.entries(result.patch)) {
-      if ((key === 'abilities' || key === 'resources') && Array.isArray(state[key])) {
+      if ((key === 'abilities' || key === 'resources') && Array.isArray(state[key]) && Array.isArray(value)) {
         const existing = new Map(state[key].map(item => [item.id,item]));
         const revised = value.map(item => {
           const original = existing.get(item.id);
+          if(original&&result.restoreRecords)for(const key of Object.keys(original))
+            if(!Object.prototype.hasOwnProperty.call(item,key))delete original[key];
           return original ? Object.assign(original,item) : item;
         });
         state[key].splice(0,state[key].length,...revised);
       } else state[key] = value;
     }
+    if(result.ok)for(const key of result.removedKeys||[])delete state[key];
     return result;
   }
   const applyPoolCommand = (command) => commitCharacter(window.WBCharacter.apply(state, command));
@@ -937,76 +940,28 @@
   $('#getAmt').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#getBtn').click(); } });
 
   $('#turnReset').addEventListener('click', () => {
-    state.apAvail = null;
-    state.reactAvail = null;
-    state.parryUsed = false;
-    state.move = null;
-    apUndo = null;
-    mapNote = '';
-    // Given AP carries into the turn after you got it, then it's gone.
-    if (state.apGiven && state.apGiven.fresh && state.apGiven.n > 0) state.apGiven = { n: state.apGiven.n, fresh: false };
-    else state.apGiven = null;
-    // Equipment round resets share the ability lifecycle command below.
-    apTracker.render();
-    reactTracker.render();
-    renderGiven();
-    renderMove();
-    renderDefense();
-    renderEquip();
-    renderMap();
-    save();
-    const oldResourceMaxima=resourceManager.maxima();
-    resourceManager.turnStart();
-    abilityLibrary.turnStart();
-    resourceManager.reconcileMaximums(oldResourceMaxima);
-    statusManager.turnStart();
-    refreshAll(); // Update movement and the battlemap after timed effects expire.
-    // Bleeding out: 4 at the start of each of your turns while at 0 or below, until stabilized.
-    const h = hpNow();
-    if (h != null && h <= 0 && !(window.WBCharacter.health(state).down||{}).stable && !isDead()) applyDamage(4, { bleed: true });
+    const result=formEntryControls.execute({type:'StartTurn'});
+    if(!result.ok){showRoll({kind:'notice',title:'Start my turn',math:result.message});return;}
+    apUndo=null;mapNote='';
+    fillInputs();refreshAll();save();
+    if(result.transitionPlan.bleeding)showDamageNotice(result.transitionPlan.bleeding,true);
   });
 
-  // Long rest: refill every resource and lock in worn gear, with an undo.
+  // Long rest owns only its trackers; Undo keeps unrelated later edits.
   let restUndo = null;
   function undoRest() {
     if (!restUndo) return;
-    Object.assign(state, JSON.parse(restUndo.other));
-    state.fields.hpCur = restUndo.hpCur;
-    state.fields.mpCur = restUndo.mpCur;
-    restUndo = null;
-    fillInputs();
-    resourceManager.render();
-    refreshAll();
-    save();
-    toastEl.hidden = true;
+    const result=formEntryControls.execute({type:'UndoLongRest',receipt:restUndo});
+    if(!result.ok){showRoll({kind:'notice',title:'Undo long rest',math:result.message});return;}
+    restUndo=null;
+    fillInputs();refreshAll();save();
+    toastEl.hidden=true;
   }
   $('#longRest').addEventListener('click', () => {
-    restUndo = {
-      hpCur: state.fields.hpCur, mpCur: state.fields.mpCur,
-      other: JSON.stringify({ abilities: state.abilities, milestoneUses:state.milestoneUses, resources: state.resources, wonderAvail: state.wonderAvail, apAvail: state.apAvail, reactAvail: state.reactAvail, apGiven: state.apGiven, move: state.move, parryUsed: !!state.parryUsed, parryOutsideSpent:state.parryOutsideSpent||0, settled: state.settled, spent: state.spent, equipmentOutsideSpent:state.equipmentOutsideSpent, trauma: state.trauma, down: state.down })
-    };
-    resourceManager.longRest();
-    abilityLibrary.longRest();
-    const hpMax = $('#hpMax').value;
-    const mpMax = $('#mpMax').value;
-    if (hpMax !== '') state.fields.hpCur = hpMax;
-    if (mpMax !== '') state.fields.mpCur = mpMax;
-    state.wonderAvail = null;
-    state.apAvail = null;
-    state.reactAvail = null;
-    state.apGiven = null;
-    state.move = null;
-    apUndo = null;
-    state.parryUsed = false;
-    state.parryOutsideSpent=0;
-    state.trauma = 0;
-    state.down = null;
-    // Everything worn through this rest now counts toward your next level-up.
-    state.settled = Object.assign({}, state.settled);
-    SLOTS.forEach((s) => { if (state.equip[s.k]) state.settled[state.equip[s.k]] = true; });
-    fillInputs();
-    refreshAll();
-    save();
+    const result=formEntryControls.execute({type:'LongRest'});
+    if(!result.ok){showRoll({kind:'notice',title:'Long rest',math:result.message});return;}
+    restUndo=result.restReceipt;apUndo=null;
+    fillInputs();refreshAll();save();
     showRoll({ kind: 'notice', title: 'Long rest', math: 'Health, ' + (kind() === 'holy' ? 'Holy Power' : 'Mana') + ', Wonder, AP, reactions and item uses are full, and Trauma is cleared.', acts: [['undo', 'Undo']] });
   });
 
@@ -1718,22 +1673,22 @@
     opts = opts || {};
     const result=formEntryControls.execute({type:'DamageHealth',amount:amt,source:opts.bleed?'bleeding':'damage'});
     if(!result.ok){showRoll({kind:'notice',title:'Health',math:result.message});return false;}
-    const outcome=result.healthPlan,after=outcome.after,dead=outcome.dead;
-    amt=outcome.amount;
-    const notes = [];
-    if (outcome.mercyCapped) notes.push("Death's Mercy stopped it at " + fmtHp(after));
-    if (dead) notes.push(outcome.threshold === 0 ? 'Below 0 with a Death Threshold of 0' : 'Death Threshold reached');
-    else if (outcome.dropped) notes.push('Unconscious and bleeding out');
-    const acts = [];
-    // Taking more damage than your VIT mod calls for a Concentration check.
-    const concDc = outcome.concentrationDc;
-    if (outcome.concentration) acts.push(['conc', 'Concentration check (DC ' + concDc + ')']);
-    if (outcome.indomitable) acts.push(['indom', 'Indomitable roll']);
-    fillInputs();
-    refreshAll();
-    save();
-    showRoll({ kind: 'notice', title: opts.bleed ? 'Bleeding out' : 'Health', math: (opts.bleed ? 'Lost ' + amt + ' to bleeding' : 'Took ' + amt + ' damage') + '. Health is now ' + fmtHp(after) + '.', note: notes.join(' · ') || undefined, acts, concDc });
+    fillInputs();refreshAll();save();
+    showDamageNotice(result.healthPlan,opts.bleed);
     return true;
+  }
+  function showDamageNotice(outcome,bleeding) {
+    const after=outcome.after,dead=outcome.dead,amt=outcome.amount;
+    const notes=[];
+    if(outcome.mercyCapped)notes.push("Death's Mercy stopped it at "+fmtHp(after));
+    if(dead)notes.push(outcome.threshold===0?'Below 0 with a Death Threshold of 0':'Death Threshold reached');
+    else if(outcome.dropped)notes.push('Unconscious and bleeding out');
+    const acts=[],concDc=outcome.concentrationDc;
+    if(outcome.concentration)acts.push(['conc','Concentration check (DC '+concDc+')']);
+    if(outcome.indomitable)acts.push(['indom','Indomitable roll']);
+    showRoll({kind:'notice',title:bleeding?'Bleeding out':'Health',
+      math:(bleeding?'Lost '+amt+' to bleeding':'Took '+amt+' damage')+'. Health is now '+fmtHp(after)+'.',
+      note:notes.join(' · ')||undefined,acts,concDc});
   }
   function recoveryNotes(plan) {
     return plan.recovered?['Trauma ' + plan.trauma + ': Death Threshold ' + (5 * plan.trauma) + ' closer until your next long rest']:[];

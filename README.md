@@ -26,6 +26,8 @@ Use **Notes** for session reminders, backstory, personality, languages and allie
 
 Health buttons, manual corrections and potion healing now use the same saved-character calculations. Clearing current Health means full Health at the current maximum; clear the maximum to return to advancement. Manual corrections can remain above or below the maximum without adding Trauma. Actual healing that brings you above 0 adds Trauma once. Damage still applies the existing defense and Death's Mercy rules.
 
+Start my turn and Long rest each commit their existing resets together. Turn processing keeps regeneration, effect/status timing and bleeding in order. Rest Undo restores rest trackers while keeping later notes, consumable quantities and manual statuses. Rests do not replenish consumables or remove manual conditions.
+
 Use **Dice** for a free expression such as `3d6+2` and the last 20 timestamped results. Expand a result to show its details at the table. History includes sheet checks, attacks/damage, defenses, healing rolls, stat generation and advancement, and travels with character saves/exports/manual Cloud Saves. Viewing or clearing history never repeats costs or applies effects. Free dice use the expression as written and spend no AP or items.
 
 For custom abilities, enter **Base AP cost** and optionally choose **Discounted by: STR, DEX, INT or FTH**. Cards and Overview favorites show the current price and its base. The discount uses your current modifier, with a minimum of half the base cost rounded up; negative modifiers increase the price, and blank/zero stays free. **None** keeps a flat cost and is the default for existing abilities.
