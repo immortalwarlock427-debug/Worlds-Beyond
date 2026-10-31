@@ -1,6 +1,6 @@
 # Character Automation — Technical Specification and Implementation Plan
 
-**Status:** staged, in development. **First resource-command foundation is merged on main (PR #35).** An automatic/manual trigger engine, form `effects`, arbitrary overcharge caps and a rule editor **do not exist yet**. This document is the shared plan for the DM, ChatGPT, Claude and Codex. Read [CONTEXT.md](CONTEXT.md) for gameplay decisions, [ARCHITECTURE.md](ARCHITECTURE.md) for actual module boundaries, and [CODEX_START_HERE.md](CODEX_START_HERE.md) for the immediate implementation task.
+**Status:** staged, in development. **The resource-command foundation (PR #35) and AP/Mana payment primitives are implemented.** An automatic/manual trigger engine, form `effects`, arbitrary overcharge caps and a rule editor **do not exist yet**. This document is the shared plan for the DM, ChatGPT, Claude and Codex. Read [CONTEXT.md](CONTEXT.md) for gameplay decisions, [ARCHITECTURE.md](ARCHITECTURE.md) for actual module boundaries, and [CODEX_START_HERE.md](CODEX_START_HERE.md) for the immediate implementation task.
 
 **Goal:** let players create unusual homebrew class mechanics without adding bespoke JavaScript for every class. Keep character editing trust-based. Do **not** treat the Rage/Monstrous Form example as a special case.
 
@@ -31,10 +31,10 @@ Do not block independent infrastructure PRs on these choices. Mark a rule-depend
 
 ## 2. Existing implementation — verify before every PR
 
-- `js/character-core.js` exposes pure `WBCharacter.derive(state)` and `WBCharacter.apply(state, command)` **for custom resources only**. PR #35 merged; it is **not yet** the sole authority for AP, Mana, Health, forms, ability use, turn starts or rests.
+- `js/character-core.js` exposes pure `WBCharacter.derive(state)` and `WBCharacter.apply(state, command)` for custom resources, AP and built-in Mana/Holy Power payments/corrections. `SpendPools` validates AP and Mana together; the UI plans form-entry payment before switching worn gear. It is **not yet** the sole authority for combined custom-resource costs, Health, full form/ability transactions, turn starts or rests.
 - `js/resources.js` routes Spend, Restore, Fill, current/max edits, regeneration, long-rest refill and max reconciliation through the first command boundary. Loading and rendering no longer clamp a valid current value above base maximum. With an active +100 resource-max ability effect, 150/200 survives reload; when that duration expires via the New Turn path, its max/current can return to 100. **No configurable hard cap or overcharge policy exists.**
 - `js/abilities.js` retains named form switching and optional AP/Mana/custom form-entry costs, ability uses/durations, and temporary effects including `resource-max`. Existing form `statBonuses` are not a general form-effects array; only active ability effects currently change resource max.
-- `js/app.js` still owns many DOM-driven resource/HP/AP/Mana reads, turn and long-rest orchestration, portrait controls and per-feature undo. `WBEncounter.applyAction` is the existing deterministic *offline encounter* command boundary; it is not the character automation engine.
+- `js/app.js` reads AP/Mana payment values through the pure character derivation and applies command patches; it still owns Health, turn/long-rest orchestration, portrait controls and per-feature undo. `WBEncounter.applyAction` is the existing deterministic *offline encounter* command boundary; it is not the character automation engine.
 - `cloud.html` provides **manual** private Supabase character copies; offline `dm.html` operates on snapshots, so changing DM Health does not currently emit character damage events. Do not claim automatic multiplayer support.
 
 ## 3. Core architecture and invariants
@@ -129,7 +129,7 @@ Provide direct, plain-language feedback on success, rejection, skipped activatio
 
 **A. Resource commands — MERGED (PR #35).** A first pure `WBCharacter` resource command/derive slice, resource UI migration, and 150/200 persistence regression test. Existing abilities/forms/AP still use separate paths. Do not redo A.
 
-**B1. Next Codex PR (no unresolved Rage decision required):** audit the current character command API and add **DOM-free derivation and command integration for AP and built-in Mana/Holy Power**. Match existing Command AP, null/full trackers, form Mana visibility and spending semantics. Migrate only relevant AP/Mana UI hooks that can be safely isolated; unit tests for insufficient cost, legacy saves, max/negative bounds, spending order and no mutation, plus browser regression for abilities/forms. Keep Health, ability activation and automatic triggers out of scope unless required for a single atomic transaction. See [CODEX_START_HERE.md](CODEX_START_HERE.md).
+**B1. AP/Mana payment foundation — IMPLEMENTED:** DOM-free AP/Mana derivation and payment/correction commands preserve null/full trackers, Command-first spending, manual values and form-aware Mana availability. Ability/form callbacks use an atomic AP/Mana payment plan; form costs are derived from the source gear profile before a successful switch. Node and 390px browser tests cover purity, rejects, visibility, legacy values, source-profile payment and export/reload. Turn/rest/undo orchestration and the entire ability/form transaction are not migrated by this step.
 
 **B2. Subsequent focused PRs:** migrate ability activation/form selection and their combined AP/resource payments to commands (preserve form gear/portrait sync); then Health/damage/healing, turn/long-rest orchestration and transaction-level Undo. Add deterministic events when commands exist. Decide AP discount integration order with this work; don't implement competing cost formulas in two modules.
 

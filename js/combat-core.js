@@ -172,6 +172,33 @@
     return { max: sum + gearBonus(state,'hp'), missing };
   }
 
+  function manaPerLevel(score) {
+    if (score >= 28) return 18;
+    if (score >= 25) return 14;
+    if (score >= 22) return 12;
+    if (score >= 19) return 10;
+    if (score >= 16) return 8;
+    if (score >= 13) return 6;
+    return 0;
+  }
+  function manaAtLevel(n, score) {
+    return score == null ? null : n === 1 ? Math.max(0, (score - 12) * 3) : manaPerLevel(score);
+  }
+  // Advancement uses historical INT/FTH and settled level-up snapshots. Current
+  // gear adds only its explicit Max Mana/Holy Power bonus, never retroactive stats.
+  function characterMaxMana(state) {
+    const holy = record(state.fields).manaKind === 'holy';
+    const stat = holy ? 'FTH' : 'INT';
+    if (scoreAt(state,stat,1) == null) return null;
+    let total = 0;
+    for (let n = 1; n <= level(state); n++) {
+      const historical = scoreAt(state,stat,n);
+      const snapshot = record(record(state.lvGear)[n]);
+      if (historical != null) total += manaAtLevel(n,historical + (Number(snapshot[stat]) || 0));
+    }
+    return total + gearBonus(state,holy ? 'holy' : 'mp');
+  }
+
   // Attack / damage resolution. Dice are rolled by an adapter and passed in;
   // the same outcomes can be checked by the sheet, a DM room or the server.
   function attackHits(total, evasion, naturalDie) {
@@ -261,7 +288,7 @@
     level,keyAt,rawAt,asiSum,scoreAt,gearBonus,gearArmor,effectiveScore,
     autoMod,modifier,attackApCost,trackerMax,trackerAvailable,givenAp,apAvailable,
     spendAp,refundAp,movePlan,movementAfter,
-    hitDieFor,healthAtLevel,characterMaxHealth,
+    hitDieFor,healthAtLevel,characterMaxHealth,manaPerLevel,manaAtLevel,characterMaxMana,
     attackHits,dualHits,criticalTotal,damagePacket,offhandDamage,
     armorDamage,dualArmorDamage,overwhelmFloor,resistedDamage,afterArmor,
     defenseResult,deathThreshold,diesAt,damageHealth

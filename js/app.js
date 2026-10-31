@@ -505,30 +505,8 @@
     window.WBAbilities.formStatBonus(state, k));
   const kind = () => (state.fields.manaKind === 'holy' ? 'holy' : 'mana');
   const msStat = () => (kind() === 'holy' ? 'FTH' : 'INT');
-  function manaPerLevel(s) {
-    if (s >= 28) return 18;
-    if (s >= 25) return 14;
-    if (s >= 22) return 12;
-    if (s >= 19) return 10;
-    if (s >= 16) return 8;
-    if (s >= 13) return 6;
-    return 0;
-  }
-  function hitDieFor(s) {
-    if (s >= 46) return '2d12+1d8';
-    if (s >= 43) return '2d12+1d6';
-    if (s >= 40) return '2d12+1d4';
-    if (s >= 37) return '2d12';
-    if (s >= 34) return '1d12+1d10';
-    if (s >= 31) return '1d12+1d8';
-    if (s >= 28) return '1d12+1d6';
-    if (s >= 25) return '1d12+1d4';
-    if (s >= 22) return '1d12';
-    if (s >= 19) return '1d10';
-    if (s >= 16) return '1d8';
-    if (s >= 12) return '1d6';
-    return '1d4';
-  }
+  const manaPerLevel = (s) => window.WBCombat.manaPerLevel(s);
+  const hitDieFor = (s) => window.WBCombat.hitDieFor(s);
   const rowDie = (vit) => (isSet(state.over.hitDie) ? String(state.over.hitDie) : hitDieFor(vit));
   function eachDie(str, fn) {
     let found = false;
@@ -602,7 +580,7 @@
       const vb = scoreAt('VIT', n);
       const mb = scoreAt(ms, n);
       const vit = vb == null ? null : vb + (lg.VIT || 0);
-      const msv = mb == null ? null : mb + (lg[ms] || 0);
+      const msv = mb == null ? null : mb + (Number(lg[ms]) || 0);
       const health = window.WBCombat.healthAtLevel(state, n, vit);
       const die = health.die, dieMax = health.dieMax, gain = health.gain;
       if (vit != null) {
@@ -610,7 +588,7 @@
       }
       let mgain = null;
       if (msv != null) {
-        mgain = n === 1 ? Math.max(0, (msv - 12) * 3) : manaPerLevel(msv);
+        mgain = window.WBCombat.manaAtLevel(n, msv);
         mp += mgain;
       }
       rows.push({ n, vit, msv, die, dieMax, gain, mgain, vg: vb == null ? 0 : (lg.VIT || 0), mg: mb == null ? 0 : (lg[ms] || 0) });
@@ -621,7 +599,7 @@
 
   const AUTO = {
     hpMax: () => (log.hp == null ? '' : log.hp + gear('hp')),
-    mpMax: () => (log.mp == null ? '' : log.mp + gear(kind() === 'holy' ? 'holy' : 'mp')),
+    mpMax: () => { const max = window.WBCombat.characterMaxMana(state); return max == null ? '' : max; },
     hitDie: () => { const v = score('VIT'); return v == null ? '' : hitDieFor(v); },
     evasion: () => 10 + mod('AGL') + gear('ev') + window.WBAbilities.effectBonus(state, 'evasion'),
     armor: () => Math.max(0, armorTotal() + vitArmor() + window.WBAbilities.effectBonus(state, 'armor')),
@@ -650,21 +628,23 @@
   }
   const manaPool = $('#manaPool');
   const resourceManager = window.WBResources.init(() => state, save);
+  const characterPools = () => window.WBCharacter.derive(state);
+  function commitPools(result) {
+    // Keep the root character object stable for the running ability/form editor.
+    if (result.ok) Object.assign(state, result.patch);
+    return result;
+  }
+  const applyPoolCommand = (command) => commitPools(window.WBCharacter.apply(state, command));
   const formEntryControls = {
     getAp: () => apHave(),
     spendAp: (cost) => spendAp(cost),
     getMana: () => {
-      const current = $('#mpCur').value;
-      const maximum = Number($('#mpMax').value);
-      if (!Number.isFinite(maximum) || maximum <= 0) return null;
-      return current === '' ? maximum : Math.max(0, Number(current) || 0);
+      const mana = characterPools().mana;
+      return mana.configured ? mana.current : null;
     },
-    spendMana: (cost) => {
-      const current = $('#mpCur').value;
-      const maximum = Math.max(0, Number($('#mpMax').value) || 0);
-      state.fields.mpCur = String(Math.max(0, (current === '' ? maximum : Number(current) || 0) - cost));
-      $('#mpCur').value = state.fields.mpCur;
-    },
+    spendMana: (cost) => applyPoolCommand({ type: 'SpendMana', amount: cost }),
+    planPools: (costs) => window.WBCharacter.apply(state, { type: 'SpendPools', ...costs }),
+    commitPools,
     refresh: () => refreshAll()
   };
   const abilityLibrary = window.WBAbilities.init(() => state, save, formEntryControls);
@@ -692,9 +672,11 @@
   function makeTracker(o) {
     const t = {
       max() {
+        if (o.read) return o.read().max;
         return window.WBCombat.trackerMax(o.maxEl.value, o.maxEl.placeholder);
       },
       avail() {
+        if (o.read) return o.read().own;
         const m = t.max();
         const a = state[o.key];
         return window.WBCombat.trackerAvailable(a, m);
@@ -726,7 +708,8 @@
       if (!b) return;
       const i = Number(b.dataset.i);
       const a = t.avail();
-      state[o.key] = i < a ? i : i + 1;
+      const value = i < a ? i : i + 1;
+      if (o.set) o.set(value); else state[o.key] = value;
       t.render();
       if (o.after) o.after();
       save();
@@ -735,6 +718,8 @@
   }
   const apTracker = makeTracker({
     key: 'apAvail', maxEl: $('#apMax'), pips: $('#apPips'), count: $('#apCount'), noun: 'Action point', after: () => renderMove(),
+    read: () => characterPools().ap,
+    set: (value) => applyPoolCommand({ type: 'SetAPCurrent', value }),
     format: (a, m) => (m ? a + '/' + m + ' AP' : 'No AP') + (givenAp() ? ' + ' + givenAp() + ' given' : '')
   });
   const reactTracker = makeTracker({
@@ -752,13 +737,13 @@
   // and lasts until it's used or your next turn is over.
   const givenAp = () => window.WBCombat.givenAp(state);
   function setGiven(n) { state.apGiven = { n: Math.max(0, Math.min(40, Math.round(n))), fresh: state.apGiven ? !!state.apGiven.fresh : true }; }
-  const apHave = () => window.WBCombat.apAvailable(state, apTracker.avail());
+  const apHave = () => characterPools().ap.total;
   function spendAp(cost) {
-    Object.assign(state, window.WBCombat.spendAp(state, apTracker.avail(), cost));
+    return applyPoolCommand({ type: 'SpendAP', amount: cost });
   }
   // Getting AP back (an attack that turns out to be an opportunity attack) refills your own first.
   function refundAp(n) {
-    Object.assign(state, window.WBCombat.refundAp(state, apTracker.avail(), apTracker.max(), n));
+    return applyPoolCommand({ type: 'RefundAP', amount: n });
   }
   // One undo for the last Move, Command or Receive.
   let apUndo = null;
@@ -4144,6 +4129,10 @@
     log = computeLog();
     $('#sheetCharacterName').textContent = String(state.fields.charName || '').trim() || 'Worlds Beyond';
     const active = document.activeElement;
+    for (const id of ['mpCur', 'apMax']) {
+      const input = $('#' + id);
+      if (input !== active) input.value = state.fields[id] == null ? '' : state.fields[id];
+    }
     if (levelInput !== active) levelInput.value = String(level());
     STATS.forEach((s) => {
       const el = document.getElementById('score-' + s.k);
@@ -4269,7 +4258,9 @@
         if (!r || num(t.value) !== r.v) delete state.alloc[k];
       }
     } else if (t.hasAttribute('data-field')) {
-      state.fields[t.id] = t.value;
+      if (t.id === 'mpCur') applyPoolCommand({ type: 'SetManaCurrent', value: t.value });
+      else if (t.id === 'apMax') applyPoolCommand({ type: 'SetAPMaximum', value: t.value });
+      else state.fields[t.id] = t.value;
     } else if (t.hasAttribute('data-auto')) {
       // An automatically buffed Movement field displays the effective value.
       // Focusing it for editing shows its unbuffed base; only intentional edits
@@ -4284,7 +4275,8 @@
         delete t.dataset.editingBase;
         delete t.dataset.initialBase;
       }
-      if (t.value.trim() === '') delete state.over[t.id]; else state.over[t.id] = t.value;
+      if (t.id === 'mpMax') applyPoolCommand({ type: 'SetManaMaximum', value: t.value });
+      else if (t.value.trim() === '') delete state.over[t.id]; else state.over[t.id] = t.value;
     } else if (t.dataset && t.dataset.rollLv) {
       const n = t.dataset.rollLv;
       if (t.value.trim() === '') delete state.rolls[n]; else state.rolls[n] = t.value;

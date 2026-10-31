@@ -131,8 +131,6 @@ test('new shared math module loads before app, and app calls extracted functions
  'window.WBCombat.modifier(state, k, level()',
  'window.WBCombat.gearBonus(state, k, true)',
  'window.WBCombat.attackApCost',
- 'window.WBCombat.spendAp(state, apTracker.avail(), cost)',
- 'window.WBCombat.refundAp(state, apTracker.avail(), apTracker.max(), n)',
  'window.WBCombat.movePlan(ft, speedNow(), moveNow(), surgeLeft())'
  ]) assert.ok(app.includes(snippet),snippet);
  assert.doesNotMatch(core.replace(/\/\*[\s\S]*?\*\//g,''),/document\.|localStorage|fetch\(/);
