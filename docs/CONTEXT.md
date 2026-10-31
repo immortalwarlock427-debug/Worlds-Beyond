@@ -19,7 +19,7 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 40)
+## What the site does (Draft 41)
 
 The following features **already exist** in the live site:
 
@@ -28,7 +28,7 @@ The following features **already exist** in the live site:
 - **Equipment:** Pack, Forge, worn slots, weapon actions and bonuses. Named forms use one shared inventory but may wear different equipment profiles.
 - **Custom Ability Library:** create/edit/duplicate/delete/favorite, categories, search/sort/filters, compact display, optional AP/Mana/Holy Power/custom-resource costs, Use action, limited uses, held creations, cooldown, duration, ongoing numerical effects and turn/long-rest processing. Active effects support movement, Armor Rating, Evasion, stat scores and custom-resource maximums.
 - **Forms and portraits:** named ability loadouts can be bidirectionally linked to portraits. Forms change available abilities, can adjust effective stats, gate custom resources/Mana visibility and swap worn equipment. Cooldowns, charges, effects and resource balances carry over. **Named forms may charge optional AP and/or resource entry costs; returning to Base and reselecting the current form are free.** Effective scores may exceed 28 and unlock milestones.
-- **Shared character payments:** `WBCharacter` derives AP and Mana/Holy Power from saved data and applies pure payment/correction commands. Command AP is spent first; AP/Mana costs are validated together. Blank trackers still mean full, hidden Mana retains its balance, and form entry pays against the source gear profile. Full ability/form transactions and rest/turn orchestration remain the next migration.
+- **Shared character payments:** `WBCharacter` derives AP and Mana/Holy Power from saved data and applies pure payment/correction commands. Command AP is spent first; AP/Mana costs are validated together. Blank trackers still mean full, hidden Mana retains its balance, and form entry pays against the source gear profile. Ability Use, named form selection and portrait selection now apply as complete transactions: AP/Mana/custom costs, uses, capacity, cooldown/duration and gear/portrait changes commit together. Failed operations leave the original character untouched. Rest/turn, Health and broader undo orchestration remain separate follow-ups.
 - **Custom resources:** independent named pools with current/max, colors/display, manual spend/restore, turn regeneration, long-rest refill, ability costs and form availability.
 - **Status Effects:** shows active timed ability effects and their bonuses, plus manually added Buff, Debuff, Condition and Other entries with optional expiration timers. Manual statuses are descriptive until an actual rule applies.
 - **Character Battlemap:** blank, Stone Hall and Barrow grids; fog/line of sight, light, terrain, enemies, targeting, AP movement, Surge, free positioning and undo. Its fog-aware planning uses shared `js/routing.js`.

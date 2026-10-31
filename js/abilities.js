@@ -1,5 +1,5 @@
-/* Worlds Beyond: character-specific Ability Library.
-   Records homebrew abilities without enforcing effects or changing combat math. */
+/* Worlds Beyond: ability definitions, derived effects and shared form/activation rules.
+   Runtime UI actions commit through the WBCharacter transaction boundary. */
 (function () {
   'use strict';
   const id = () => 'abil' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
@@ -118,11 +118,15 @@
   // Choosing a portrait from Overview is the inverse of selectLoadout.
   // Prefer the already selected form when multiple forms share one portrait;
   // otherwise pick the first linked form. Unlinked portraits mean Base.
-  function selectPortrait(state, portraitId, controls) {
-    if (!(state.portraits || []).some(x => x.id === portraitId)) return false;
+  function portraitForm(state, portraitId) {
+    if (!(state.portraits || []).some(x => x.id === portraitId)) return null;
     const forms = (state.abilityLoadouts || []).filter(x => x.portraitId === portraitId);
     const current = forms.find(x => x.id === state.activeAbilityLoadoutId);
-    const nextFormId = current ? current.id : forms.length ? forms[0].id : '';
+    return current ? current.id : forms.length ? forms[0].id : '';
+  }
+  function selectPortrait(state, portraitId, controls) {
+    const nextFormId=portraitForm(state,portraitId);
+    if(nextFormId===null)return false;
     if(!commitFormEntry(state,nextFormId,controls).ok)return false;
     state.formId = portraitId;
     return true;
@@ -455,6 +459,8 @@
 
   function init(getState, save, controls) {
     controls = controls || {};
+    const execute=command=>typeof controls.execute==='function'?controls.execute(command):
+      {ok:false,message:'The character command handler is unavailable.'};
 
     const list = document.getElementById('abilityList');
     const search = document.getElementById('abilitySearch');
@@ -731,7 +737,7 @@
         '<p class="favorite-empty">Star abilities in the Abilities tab to keep them here. Only favorites available in your current form appear.</p>';
     }
     function useAbility(ability, output) {
-      const result = activate(getState(), ability.id, controls);
+      const result = execute({type:'ActivateAbility',abilityId:ability.id});
       output.textContent = result.message;
       output.classList.toggle('ability-error', !result.ok);
       if (result.ok && controls.refresh) controls.refresh();
@@ -833,14 +839,12 @@
       save();
     });
     loadoutSelect.addEventListener('change', () => {
-      const state=getState();
-      const check=entryCost(state,loadoutSelect.value,controls);
-      if(!check.ok) {
-        loadoutFeedback.textContent=check.message;
+      const result=execute({type:'EnterForm',formId:loadoutSelect.value});
+      if(!result.ok) {
+        loadoutFeedback.textContent=result.message;
         renderLoadouts(); // Reset a failed selection without losing the form or portrait.
         return;
       }
-      if(!selectLoadout(state,loadoutSelect.value,controls))return;
       resetFilters();
       render();
       save();
@@ -1034,7 +1038,7 @@
   window.WBAbilities = {
     normalizeState, init, activate, checkActivation, filterAbilities, loadoutVisible,
     createLoadout, removeLoadout, setLoadoutMembership,
-    formStatBonus, entryCost, selectLoadout, selectPortrait, configureLoadout,
+    formStatBonus, entryCost, selectLoadout, selectPortrait, portraitForm, configureLoadout,
     resourceAvailable, formManaAvailable, advanceTurn, resetForRest,
     movementBonus, effectiveMovement, effectBonus, resourceMax
   };
