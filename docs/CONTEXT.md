@@ -19,7 +19,7 @@ The up-to-date project reference for Worlds Beyond, a customizable homebrew D&D 
 - Critically evaluate ideas; identify contradictions or unnecessary limits. Write 1.5× or 150% for multipliers.
 - When a rule changes, reconcile Notion, the site and this context. **Do not append a new section for each PR.**
 
-## What the site does (Draft 41)
+## What the site does (Draft 42)
 
 The following features **already exist** in the live site:
 
@@ -41,14 +41,14 @@ The following features **already exist** in the live site:
 ### Known implementation gaps
 
 - DM character imports exclude active temporary ability bonuses from combat stats, retaining current equipment, form bonuses and manual overrides. A visible warning lists each active ability, its bonuses and remaining turns; encounter timers for imported effects are still not implemented.
-- Custom abilities do **not yet** apply stat-based AP discounts. Named form entry can now charge AP and/or Mana/Holy Power or a custom resource; returning to Base remains free.
+- Custom abilities track costs/effects but do not yet offer attack, damage or save-DC rolls. Explicit combat/rest lifecycle and remaining milestone actions still need focused character-sheet work.
 - Existing automated tests include many source-text assertions; real browser-click/390px tests need broader coverage.
 - No authenticated cross-device DM game, join codes, server-authorized encounter commands, or live multiplayer synchronization.
 
 ## Confirmed decisions and delivery status
 
 - **Form-entry cost — implemented:** named forms can charge AP, Mana/Holy Power or a custom pool, or AP plus a resource. Blank defaults to **free** for legacy forms. Entering through a selector or linked portrait checks all costs before spending; returning to **Base is free**, and selecting the already active form costs nothing. Switching worn gear profiles happens with the form.
-- **Ability AP discounts:** add `Discounted by: None / STR / DEX / INT / FTH` per ability, default **None**. Effective AP cost is `max(ceil(base AP / 2), base AP − current modifier)`; negative modifiers raise cost. Compute this in pure `WBCombat` and use it for activation, on-card base/effective prices, `Usable now` and AP-cost filters.
+- **Ability AP discounts — implemented:** `Discounted by: None / STR / DEX / INT / FTH` per ability, default **None**. Effective AP cost is `max(ceil(base AP / 2), base AP − current modifier)`; negative modifiers raise cost, while blank/zero base AP stays free. Shared `WBCombat` math drives activation/payment, library/Overview base/effective badges, `Usable now`, AP bands and sorting. Current modifiers include worn gear, active effects, form bonuses and manual overrides. The saved base price stays unchanged; the discount stat is independent of future attack/save statistics.
 - **Unified movement — implemented:** one shared DOM-free route algorithm used by sheet and DM. Preserve the sheet's fog planning (unseen squares assumed open; only visible standing enemies obstruct planning; travel stops when encountering a newly revealed obstacle). **Allies and downed creatures of either side are traversable at normal cost but cannot be destinations; standing enemies block.** Give DM actors editable `Party`/`Enemy` sides; imported PCs default Party, NPCs Enemy. Retain eight-direction movement unless a separate rule decision changes costs.
 - **Temporary effects on DM import — implemented:** only non-temporary combat stats are imported; active ability effects are shown as individual warnings with bonuses and turns remaining, rather than baked into permanent Armor Rating, Movement, Initiative, or stat-derived values.
 - **Browser tests — baseline implemented:** Playwright scenarios for resource spend/restore, ability AP/cooldown/turn progression, separate forms/gear/resources, timed statuses, export/import, DM import/combat/movement/AP and no sideways scrolling at 390px. CI should run every `tests/` file.
@@ -107,7 +107,7 @@ The following features **already exist** in the live site:
 - **Costs:** a standard action is 10 AP and a spell is 11 AP. A stat's mod lowers the cost of actions in its area:
   STR weapon attacks, shoves and grapples; DEX finesse attacks and hand actions; INT arcane spells and tactical
   actions; FTH holy spells and prayers. The floor is half the normal cost, rounded up (weapon attack minimum 5,
-  spell minimum 6). **Custom abilities currently have flat AP costs, pending the decided stat discount field.** VIT and AGL give no discounts; AGL sets movement.
+  spell minimum 6). **Custom abilities may choose None/STR/DEX/INT/FTH for an AP discount, with a minimum of half their base cost rounded up; blank/zero stays free. None retains the flat price.** VIT and AGL give no discounts; AGL sets movement.
 - **Weapon attack** = 10 − STR or DEX mod, minimum 5. One- and two-handed attacks cost the same.
 - **Dual wielding:** with a one-handed weapon in each hand you choose a main-hand attack, an off-hand attack or a
   both-hands attack, all at the same AP. A one-hand attack does full damage, so an off-hand axe can be thrown on its
@@ -278,4 +278,4 @@ See [ROADMAP.md](ROADMAP.md) for pending items and [ARCHITECTURE.md](ARCHITECTUR
 
 ## Character command foundation (merged PR #35)
 
-`WBCharacter.derive/apply` provides pure, DOM-free **custom resource, AP and Mana/Holy Power** derivation and typed adjustments/payments. The resource UI routes Spend/Restore/Fill, current/max edits, regeneration and long rest through it. Loading, importing and rendering no longer truncate a valid above-base resource when a temporary max modifier is running; an actual max decrease is reconciled through a gameplay transition. **AP/Mana payment primitives and manual pool corrections are migrated; Health, full ability/form transactions and turn/rest orchestration are not yet fully migrated. Automatic triggers, configurable hard overflow caps and the general rule editor do not exist yet.** The details and unresolved choices are in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md); the immediate Codex task is in [CODEX_START_HERE.md](CODEX_START_HERE.md).
+`WBCharacter.derive/apply` provides pure, DOM-free **custom resource, AP and Mana/Holy Power** derivation and typed adjustments/payments. The resource UI routes Spend/Restore/Fill, current/max edits, regeneration and long rest through it. Loading, importing and rendering no longer truncate a valid above-base resource when a temporary max modifier is running; an actual max decrease is reconciled through a gameplay transition. **AP/Mana payment primitives, manual pool corrections and atomic ability/form/portrait transactions are migrated. Ability AP discounts share the activation price. Health, turn/rest orchestration, broader manual tracker commands and transaction-level Undo remain follow-ups. Automatic triggers, configurable hard overflow caps and the general rule editor do not exist yet.** The details and unresolved choices are in [AUTOMATION_PLAN.md](AUTOMATION_PLAN.md); the immediate Codex task is in [CODEX_START_HERE.md](CODEX_START_HERE.md).

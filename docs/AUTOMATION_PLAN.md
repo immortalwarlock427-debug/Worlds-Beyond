@@ -131,7 +131,7 @@ Provide direct, plain-language feedback on success, rejection, skipped activatio
 
 **B1. AP/Mana payment foundation — IMPLEMENTED:** DOM-free AP/Mana derivation and payment/correction commands preserve null/full trackers, Command-first spending, manual values and form-aware Mana availability. Ability/form callbacks use an atomic AP/Mana payment plan; form costs are derived from the source gear profile before a successful switch. Node and 390px browser tests cover purity, rejects, visibility, legacy values, source-profile payment and export/reload. Turn/rest/undo orchestration and the entire ability/form transaction are not migrated by this step.
 
-**B2. Ability/form transaction slice — IMPLEMENTED:** runtime Use and named-form/portrait selection now commit combined AP/Mana/custom costs, charges/capacity, cooldown/duration, gear and portrait changes atomically, with deterministic whole-transaction events. Existing helpers operate on a private copy; failed steps publish nothing. Health, turn/rest, broader manual tracker controls and transaction-level Undo remain subsequent focused slices. The already-decided AP discounts can now build on this activation path without a second cost formula.
+**B2. Ability/form transaction slice — IMPLEMENTED:** runtime Use and named-form/portrait selection now commit combined AP/Mana/custom costs, charges/capacity, cooldown/duration, gear and portrait changes atomically, with deterministic whole-transaction events. Existing helpers operate on a private copy; failed steps publish nothing. Health, turn/rest, broader manual tracker controls and transaction-level Undo remain subsequent focused slices. Ability AP discounts use this activation path and the shared derived price.
 
 **B3. After DM's resource choices:** add form `effects`, hard caps/overflow policy/rest policy, forward-compatible schema migration and threshold display; test all forms/portraits. Do not add Rage-specific settings.
 
@@ -141,7 +141,7 @@ Provide direct, plain-language feedback on success, rejection, skipped activatio
 
 **E. Later:** OR logic, optional reaction suggestions, encounter-owned rule actions, multi-device synchronization, templates, combat-hit/crit/kill events and advanced formulas.
 
-**Separate tracked feature:** custom ability **stat-based AP discounts** are already decided: None/STR/DEX/INT/FTH (None default); effective AP = `max(ceil(base AP / 2), base AP − current effective stat modifier)`, negative modifiers raise cost. Integrate with one ability-activation command and all card/`Usable now`/filter calculations, avoiding a second AP computation path. The timing relative to B2 is a planning decision, not a reason to silently skip this feature.
+**Separate tracked feature — IMPLEMENTED:** custom ability **stat-based AP discounts** use None/STR/DEX/INT/FTH (None default); effective AP = `max(ceil(base AP / 2), base AP − current effective stat modifier)`. Negative modifiers raise cost; blank/zero base AP stays free. The B2 activation transaction, library/favorite badges, Usable now, AP bands and sorting share the derived price. The stored base cost and independent discount stat survive normalization, duplication and v1 exports.
 
 ## 8. Definition of done for every coding PR
 

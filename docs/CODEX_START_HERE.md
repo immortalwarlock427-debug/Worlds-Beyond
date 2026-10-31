@@ -7,28 +7,27 @@
 - PR #35 is **merged**. `js/character-core.js` contains pure, deterministic resource/AP/Mana primitives plus atomic `ActivateAbility`, `EnterForm` and `SelectPortrait` commands. Use buttons, form selectors and portrait selection publish complete command patches, retaining the existing rules. The active +100 max effect 150/200 reload problem has a regression test.
 - **Not implemented:** a single command path for all character state; form `effects`; configurable overcharge/hard caps; automatic/manual rules; trigger queue/editor/log; live session multiplayer.
 - Existing optional form-entry costs (AP, Mana/Holy Power or custom resource) and linked portrait/form gear changes **must be preserved**.
-- Current ability AP discounts (by STR/DEX/INT/FTH) are **planned, not implemented**.
+- Ability AP discounts (None/STR/DEX/INT/FTH, None default) are **implemented** through shared pricing and the atomic activation command. Cards, favorites, readiness, AP bands and sorting agree; base prices remain saved separately.
 - Do not assume the DM has answered Rage overflow/excess/typed-correction/automatic entry-cost choices.
 
-## Your next independent coding task — ability AP discounts
+## Your next independent task — optional ability-card rolls
 
-**Title suggestion:** `Codex: Apply stat discounts consistently to custom ability AP costs`
+**Scope:** continue finishing the character sheet. Add optional attack/damage/save configuration to the existing Ability Library, reusing the weapon roll UI and shared combat rules where applicable. Keep the existing AP-discount stat independent from attack stat, save-DC stat and target-save stat. Blank roll configuration must retain today's cost/tracker-only Use behavior.
 
-**Scope:** add the already-approved optional `Discounted by: None / STR / DEX / INT / FTH` field to abilities, default None. Put the shared math in `WBCombat`: `max(ceil(base AP / 2), base AP − current effective modifier)`; negative modifiers raise cost. None keeps the existing flat cost. Use the same derived price for transaction validation/payment, library/Overview badges, Usable now, AP filters and sorting. Keep this field independent from future attack/DC statistics.
+**Before coding:** inspect the existing weapon popup, approved attack/check rules and persistence boundaries. Confirm only genuinely missing mechanics or roll/payment semantics with the DM; do not infer new gameplay rules from a review suggestion. Wonder and Defy Fate must not apply to attack rolls. Reuse the existing critical/advantage rules where they apply. Treat spells as an eventual ability type, rather than creating a parallel spell list.
 
-**Important tests / behavior:**
-- Build on the B1 pool primitives and B2 `ActivateAbility` transaction. Do not introduce another payment path or duplicate the discount formula in UI handlers.
-- Include worn gear, active ability effects, current-form stat bonuses and manual modifier overrides exactly as current character modifiers do. Zero/blank base cost stays free; old abilities retain flat prices by default.
-- Preserve Command-first payment, atomic rejection, charges/cooldowns/duration, hidden pools, free Base/same-form selection, gear/portrait alignment and source-profile Mana costs.
-- Pure tests must cover the half-cost ceiling, negative modifiers, defaults, live modifier changes and rejected combined costs. Actual 390px tests must prove card/favorite display, filters and the charged amount agree, including export/reload.
-- Do not add spells, attack/damage rolls, automatic triggers, overcharge defaults, new form effects or DM/multiplayer features in this change.
-- Health, turn/rest orchestration, broader manual tracker commands and transaction-level Undo remain focused B2 follow-ups. They do not block this independent, already-decided discount feature.
+**Preserve:**
+- The shared `WBCombat.abilityApCost` formula and `WBAbilities.abilityApCost` state derivation. None stays flat; negative modifiers raise the price; blank/zero remains free. Gear, effects, forms and manual overrides contribute just as they do to current character modifiers.
+- One atomic `ActivateAbility` payment path, Command-first AP, combined cost rejection, charges/cooldowns/duration, source-profile Mana, hidden pools and form/portrait/gear alignment.
+- Legacy abilities, v1 JSON exports, reload/import/cloud copies, independent DM saves and actual phone usability. New roll fields must survive duplication and round trips.
+- Pure tests for any shared rule additions plus relevant 390px browser interactions. Avoid implementing automatic triggers, unapproved resource overflow, new form effects or DM/multiplayer features in this slice.
+- Health, turn/rest orchestration, broader manual tracker commands and transaction-level Undo remain focused B2 follow-ups.
 
 ## Work protocol
 
 1. Fetch latest `main` and inspect open PRs before creating `codex/<task>`.
 2. Read the real modules and tests; propose the smallest safe change. If this work reveals a conflict with established rules, explain the alternatives rather than inventing new rules.
-3. Implement the discount feature, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
+3. Implement the approved ability-roll slice, add pure tests + at least one relevant Playwright interaction, and run CI. Update docs where status changes.
 4. Open one PR with intent, technical boundaries, tests and manual preview instructions. **Do not merge until the DM approves.**
 5. Wait for DM to test/merge before starting the next dependent slice.
 

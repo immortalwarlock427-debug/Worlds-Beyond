@@ -17,7 +17,7 @@ Finish the player character sheet before expanding battlemap, DM, PvP or live-se
 
 Delivery sequence:
 - Phone Overview and navigation: Health, AP/reactions and current-form favorite abilities first; file actions in Character menu, reset separated, profile details still editable.
-- B1/B2 below: shared AP/Mana commands and atomic ability/form payments, followed by the already-decided ability AP discounts.
+- Implemented: B1/B2 shared AP/Mana commands, atomic ability/form payments and optional ability AP stat discounts with matching display/filter/payment prices.
 - Optional rolls on ability cards, with attack stat, AP-discount stat and save-DC/target-save fields kept independent. Reuse shared combat math; Wonder/Defy Fate must not apply to attack rolls. Spells should use the ability system instead of a parallel spell list.
 - Explicit combat/rest lifecycle, then milestone use/AP tracking. Narrative milestones still require table judgment; entering/leaving combat must not become an accidental refill loop. Final reset semantics need a focused design before coding.
 - Character notes, consumables, roll history and free dice. Currency, Temporary Health, innate defenses, AP growth and exhaustion require any missing setting/rule decisions first.
@@ -36,8 +36,8 @@ Keep each stage in a separate reviewable PR; do not implement unapproved mechani
 ## Development queue — one narrow Codex PR per task
 
 1. **B1 — Implemented:** pure AP/Mana derivation, shared payment/correction commands, Command-first spending and source-profile form payments, with Node and phone interaction checks. Full character transactions remain B2 work.
-2. **B2 — Ability/form slice implemented:** runtime activations and form/portrait selection atomically commit costs, uses/capacity, cooldown/duration and gear/portrait changes. Health, turn/rest orchestration, manual tracker controls and transaction-level Undo remain focused follow-ups; they need not block the independent ability-discount task.
-3. **Next — stat discounts for custom ability AP (decided but not built):** None/STR/DEX/INT/FTH; effective cost `max(ceil(base AP/2), base AP − current effective mod)`, including negative modifiers. Implement alongside or immediately following ability command integration; cards, Use, Usable now and filters must agree.
+2. **B2 — Ability/form slice implemented:** runtime activations and form/portrait selection atomically commit costs, uses/capacity, cooldown/duration and gear/portrait changes. Health, turn/rest orchestration, manual tracker controls and transaction-level Undo remain focused follow-ups; optional ability AP discounts now share this transaction path.
+3. **Ability AP stat discounts — Implemented:** None/STR/DEX/INT/FTH; effective cost `max(ceil(base AP/2), base AP − current effective mod)`, including negative modifiers; blank/zero stays free. Cards, favorites, Use, Usable now, AP bands and sorting share the current price while preserving the base cost. **Next character-sheet slice:** optional ability-card rolls, keeping attack, discount and save statistics independent; follow the confirmed roll rules and resolve any missing design choices before coding them.
 4. **B3 — Needs DM resource choices:** derive general `effects` on named forms, configure absolute hard cap and excess policy per resource, expand long-rest policy while preserving legacy defaults, display overflow/thresholds and protect unknown newer save fields. This is **not a Rage-specific feature**.
 5. **C — Automation engine:** ability-owned automatic/manual rules with genuine state-crossing or event triggers, AND requirements, own-character commands, deterministic FIFO event processing, cycle guard, rejection logs and tests.
 6. **D — Ability rule editor:** human-readable rule configuration, activation selector, Test/dry-run, enable/disable and activity log; robust mobile layout and persistence. Coordinate C/D to become usable together.
